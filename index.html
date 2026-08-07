@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>CRM Pipeline — Dellamed</title>
+<title>CRM Dellamed</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <style>
@@ -49,8 +49,7 @@ a{color:var(--teal);text-decoration:none}
 .login-msg{margin-top:16px;padding:12px;border-radius:8px;font-size:.85rem;display:none}
 .login-msg.pending{display:block;background:#FFF8E1;color:#F57F17;border:1px solid #FFE082}
 .login-msg.error{display:block;background:#FFEBEE;color:#C62828;border:1px solid #EF9A9A}
-.logo-text{font-size:2rem;font-weight:800;color:var(--navy);letter-spacing:-1px;margin-bottom:4px}
-.logo-text span{color:var(--teal)}
+.logo-text{font-size:2.4rem;font-weight:800;color:var(--navy);letter-spacing:-1px;margin-bottom:4px}
 
 /* ═══════ PIPELINE VIEW ═══════ */
 .pipeline-header{padding:16px 24px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
@@ -108,10 +107,12 @@ a{color:var(--teal);text-decoration:none}
 .dash-overlay{position:fixed;inset:0;background:var(--bg);z-index:150;overflow-y:auto}
 .dash-topbar{background:var(--navy);color:#fff;padding:14px 24px;display:flex;align-items:center;gap:16px;position:sticky;top:0;z-index:10}
 .dash-topbar h2{flex:1;font-size:1.15rem}
-.dash-filters{padding:16px 24px;display:flex;flex-wrap:wrap;gap:10px;background:#fff;border-bottom:1px solid var(--border)}
-.dash-filters .df-group{display:flex;flex-direction:column;gap:3px}
-.dash-filters .df-group label{font-size:.7rem;font-weight:600;color:var(--text-light);text-transform:uppercase}
-.dash-filters select{min-width:140px;font-size:.8rem;padding:6px 8px}
+.dash-filters{padding:16px 24px;display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px;align-items:end;background:#fff;border-bottom:1px solid var(--border)}
+.dash-filters .df-group{display:flex;flex-direction:column;gap:4px}
+.dash-filters .df-group label{font-size:.7rem;font-weight:600;color:var(--text-light);text-transform:uppercase;white-space:nowrap}
+.dash-filters select{width:100%;font-size:.8rem;padding:6px 8px}
+.field-required label::after{content:' *';color:var(--red);font-weight:700}
+.phone-row{display:flex;gap:6px}.phone-row .phone-ddd{width:72px;flex-shrink:0}.phone-row .phone-num{flex:1}
 .dash-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(360px,1fr));gap:16px;padding:24px}
 .dash-card{background:#fff;border-radius:var(--radius);padding:20px;box-shadow:var(--shadow)}
 .dash-card h4{font-size:.85rem;font-weight:700;color:var(--navy);margin-bottom:12px;text-transform:uppercase;letter-spacing:.3px}
@@ -172,8 +173,8 @@ a{color:var(--teal);text-decoration:none}
 <!-- ═══════ LOGIN SCREEN ═══════ -->
 <div id="loginScreen" class="login-wrap">
   <div class="login-card">
-    <div class="logo-text">DELLA<span>MED</span></div>
-    <h2>CRM Pipeline</h2>
+    <div class="logo-text">DELLAMED</div>
+    <h2>CRM</h2>
     <p>Insira seu e-mail para acessar o sistema</p>
     <input type="text" id="loginNome" placeholder="Seu nome completo">
     <input type="email" id="loginEmail" placeholder="seu.email@empresa.com.br">
@@ -186,7 +187,7 @@ a{color:var(--teal);text-decoration:none}
 <div id="appMain" class="hidden">
   <!-- Top Bar -->
   <div class="topbar">
-    <h1>CRM Pipeline <span>Dellamed</span></h1>
+    <h1>CRM <span>Dellamed</span></h1>
     <div class="topbar-actions">
       <button class="btn btn-gold" onclick="openDashboard()">📊 DASHBOARD</button>
       <button id="btnAdmin" class="btn btn-outline hidden" onclick="openAdmin()">👥 Usuários</button>
@@ -200,7 +201,7 @@ a{color:var(--teal);text-decoration:none}
 
   <!-- Pipeline Header -->
   <div class="pipeline-header">
-    <h2>Pipeline de Prospecção</h2>
+    <h2>Prospecção</h2>
     <div class="search-box">
       <input type="text" id="searchInput" placeholder="Buscar por empresa, contato, cidade..." oninput="renderPipeline()">
     </div>
@@ -232,7 +233,7 @@ a{color:var(--teal);text-decoration:none}
 <!-- ═══════ DASHBOARD ═══════ -->
 <div id="dashOverlay" class="dash-overlay hidden">
   <div class="dash-topbar">
-    <h2>📊 Dashboard — Visão Geral</h2>
+    <h2>📊 Dashboard — Visão Geral CRM</h2>
     <button class="btn btn-outline" onclick="closeDashboard()">✕ Fechar</button>
   </div>
   <div class="dash-filters" id="dashFilters"></div>
@@ -278,7 +279,7 @@ a{color:var(--teal);text-decoration:none}
 // ═══════════════════════════════════════════════════════════════
 //  CONFIG — Substitua API_URL pela URL do seu deploy do Apps Script
 // ═══════════════════════════════════════════════════════════════
-const API_URL = 'https://script.google.com/macros/s/AKfycbxme_1B3lMyGCGPvkvvziTNVEa1ahBT_AyEYzXbroyS2F2vydRjftY0i53vetZQIm4iUw/exec';
+const API_URL = 'COLE_AQUI_A_URL_DO_APPS_SCRIPT';
 const ADMIN_EMAIL = 'bianca.lima@dellamed.com.br';
 
 // ═══════ STATE ═══════
@@ -476,6 +477,18 @@ function openForm(row) {
   const body = document.getElementById('formBody');
   const dis = canEdit ? '' : 'disabled';
 
+  const rq = currentUser.admin ? '' : ' field-required';
+  // Split phone values (stored as "Tel1 | Tel2")
+  const phones = (lead ? lead['Telefone'] : '').split('|').map(s => s.trim());
+  const tel1 = phones[0] || '';
+  const tel2 = phones[1] || '';
+  // Parse DDD + number from formatted phone
+  function splitPhone(p) {
+    const m = p.match(/^\(?(\d{2})\)?\s*(.*)$/);
+    return m ? { ddd: m[1], num: m[2] } : { ddd: '', num: p };
+  }
+  const p1 = splitPhone(tel1), p2 = splitPhone(tel2);
+
   body.innerHTML = `
     <div class="field"><label>Status</label>
       <select id="f_status" ${dis}>${(config.status||[]).map(s => `<option ${lead && lead['Status']===s?'selected':''}>${s}</option>`).join('')}</select>
@@ -483,22 +496,31 @@ function openForm(row) {
     <div class="field"><label>Prospect (Vendedor)</label>
       <input id="f_prospect" value="${esc(isEdit ? lead['Prospect'] : currentUser.nome)}" ${dis}>
     </div>
-    <div class="field"><label>Time Comercial</label>
+    <div class="field${rq}"><label>Time Comercial</label>
       <select id="f_time" ${dis}><option value="">Selecione...</option>${(config.timeComercial||[]).map(t => `<option ${lead && lead['Time Comercial']===t?'selected':''}>${t}</option>`).join('')}</select>
     </div>
     <div class="field"><label>Razão Social</label>
-      <input id="f_razao" value="${esc(lead ? lead['Razão Social'] : '')}" ${dis} required>
+      <input id="f_razao" value="${esc(lead ? lead['Razão Social'] : '')}" ${dis}>
     </div>
     <div class="field"><label>CNPJ</label>
-      <input id="f_cnpj" value="${esc(lead ? lead['CNPJ'] : '')}" ${dis}>
+      <input id="f_cnpj" value="${esc(lead ? lead['CNPJ'] : '')}" ${dis} placeholder="00.000.000/0000-00" maxlength="18" oninput="maskCNPJ(this)">
     </div>
-    <div class="field"><label>Contato Principal</label>
+    <div class="field${rq}"><label>Contato Principal</label>
       <input id="f_contato" value="${esc(lead ? lead['Contato Principal'] : '')}" ${dis}>
     </div>
-    <div class="field"><label>Telefone</label>
-      <input id="f_tel" value="${esc(lead ? lead['Telefone'] : '')}" ${dis}>
+    <div class="field${rq}"><label>Telefone 1</label>
+      <div class="phone-row">
+        <input class="phone-ddd" id="f_ddd1" value="${esc(p1.ddd)}" ${dis} placeholder="(00)" maxlength="4" oninput="maskDDD(this)">
+        <input class="phone-num" id="f_num1" value="${esc(p1.num)}" ${dis} placeholder="00000-0000" maxlength="10" oninput="maskPhone(this)">
+      </div>
     </div>
-    <div class="field"><label>E-mail</label>
+    <div class="field"><label>Telefone 2</label>
+      <div class="phone-row">
+        <input class="phone-ddd" id="f_ddd2" value="${esc(p2.ddd)}" ${dis} placeholder="(00)" maxlength="4" oninput="maskDDD(this)">
+        <input class="phone-num" id="f_num2" value="${esc(p2.num)}" ${dis} placeholder="00000-0000" maxlength="10" oninput="maskPhone(this)">
+      </div>
+    </div>
+    <div class="field${rq}"><label>E-mail</label>
       <input id="f_email" value="${esc(lead ? lead['E-mail'] : '')}" ${dis}>
     </div>
     <div class="field"><label>Cidade</label>
@@ -507,23 +529,23 @@ function openForm(row) {
     <div class="field"><label>UF</label>
       <select id="f_uf" ${dis}><option value="">—</option>${(config.ufs||[]).map(u => `<option ${lead && lead['UF']===u?'selected':''}>${u}</option>`).join('')}</select>
     </div>
-    <div class="field"><label>Canal Principal</label>
+    <div class="field${rq}"><label>Canal Principal</label>
       <select id="f_canal" ${dis}><option value="">Selecione...</option>${(config.canalPrincipal||[]).map(c => `<option ${lead && lead['Canal Principal']===c?'selected':''}>${c}</option>`).join('')}</select>
     </div>
     <div class="field"><label>Linha de Interesse</label>
       <div id="f_linha_ms" class="multi-sel" data-field="linhaInteresse" data-selected="${esc(lead ? lead['Linha de Interesse'] : '')}"></div>
     </div>
-    <div class="field"><label>Produto(s) de Interesse</label>
-      <input id="f_produto" value="${esc(lead ? lead['Produto(s) de Interesse'] : '')}" ${dis} placeholder="D30, D90, D12...">
+    <div class="field full"><label>Produto(s) de Interesse</label>
+      <textarea id="f_produto" rows="2" ${dis} placeholder="D30, D90, D12...">${esc(lead ? lead['Produto(s) de Interesse'] : '')}</textarea>
     </div>
-    <div class="field"><label>Data Primeiro Contato</label>
+    <div class="field${rq}"><label>Data Primeiro Contato</label>
       <input type="text" id="f_dtprim" value="${esc(lead ? lead['Data Primeiro Contato'] : '')}" ${dis} placeholder="dd/mm/aaaa">
     </div>
     <div class="field"><label>Data Último Contato</label>
       <input type="text" id="f_dtult" value="${esc(lead ? lead['Data Último Contato'] : '')}" ${dis} placeholder="dd/mm/aaaa">
     </div>
-    <div class="field"><label>Próxima Ação</label>
-      <input id="f_proxacao" value="${esc(lead ? lead['Próxima Ação'] : '')}" ${dis}>
+    <div class="field full"><label>Próxima Ação</label>
+      <textarea id="f_proxacao" rows="2" ${dis}>${esc(lead ? lead['Próxima Ação'] : '')}</textarea>
     </div>
     <div class="field"><label>Data Próxima Ação</label>
       <input type="text" id="f_dtprox" value="${esc(lead ? lead['Data Próxima Ação'] : '')}" ${dis} placeholder="dd/mm/aaaa">
@@ -549,6 +571,15 @@ function closeForm() {
 }
 
 async function saveLead() {
+  // Assemble phone fields: "(DD) XXXXX-XXXX | (DD) XXXXX-XXXX"
+  const ddd1 = gv('f_ddd1').replace(/\D/g,'');
+  const num1 = gv('f_num1');
+  const ddd2 = gv('f_ddd2').replace(/\D/g,'');
+  const num2 = gv('f_num2');
+  const tel1 = ddd1 && num1 ? `(${ddd1}) ${num1}` : num1 || '';
+  const tel2 = ddd2 && num2 ? `(${ddd2}) ${num2}` : num2 || '';
+  const telFull = [tel1, tel2].filter(Boolean).join(' | ');
+
   const lead = {
     'Status': gv('f_status'),
     'Prospect': gv('f_prospect'),
@@ -556,7 +587,7 @@ async function saveLead() {
     'Razão Social': gv('f_razao'),
     'CNPJ': gv('f_cnpj'),
     'Contato Principal': gv('f_contato'),
-    'Telefone': gv('f_tel'),
+    'Telefone': telFull,
     'E-mail': gv('f_email'),
     'Cidade': gv('f_cidade'),
     'UF': gv('f_uf'),
@@ -571,7 +602,20 @@ async function saveLead() {
     'Observações': gv('f_obs'),
   };
 
-  if (!lead['Razão Social']) { toast('Razão Social é obrigatório.', 'err'); return; }
+  // Validation: admin has no required fields; others must fill these:
+  if (!currentUser.admin) {
+    const required = [
+      { field: 'Time Comercial', label: 'Time Comercial' },
+      { field: 'Contato Principal', label: 'Contato Principal' },
+      { field: 'E-mail', label: 'E-mail' },
+      { field: 'Canal Principal', label: 'Canal Principal' },
+      { field: 'Data Primeiro Contato', label: 'Data Primeiro Contato' },
+    ];
+    for (const r of required) {
+      if (!lead[r.field]) { toast(`Campo obrigatório: ${r.label}`, 'err'); return; }
+    }
+    if (!tel1) { toast('Campo obrigatório: Telefone 1', 'err'); return; }
+  }
 
   let res;
   if (editingRow) {
@@ -719,11 +763,11 @@ function buildDashFilters() {
   container.innerHTML = filters.map(f => `
     <div class="df-group">
       <label>${f.label}</label>
-      <select id="${f.id}" multiple size="1" onchange="renderDashboard()" style="min-width:130px">
+      <select id="${f.id}" multiple size="1" onchange="renderDashboard()">
         ${f.opts.map(o => `<option value="${o}">${o}</option>`).join('')}
       </select>
     </div>
-  `).join('') + '<div class="df-group" style="justify-content:flex-end"><label>&nbsp;</label><button class="btn btn-sm btn-teal" onclick="clearDashFilters()">Limpar filtros</button></div>';
+  `).join('') + '<div class="df-group"><label>&nbsp;</label><button class="btn btn-sm btn-teal" style="width:100%" onclick="clearDashFilters()">Limpar filtros</button></div>';
 }
 
 function clearDashFilters() {
@@ -966,6 +1010,29 @@ const _origGetFiltered = getFilteredLeads;
     return data;
   };
 })();
+
+// ═══════ INPUT MASKS ═══════
+function maskCNPJ(el) {
+  let v = el.value.replace(/\D/g, '').substring(0, 14);
+  if (v.length > 12) v = v.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{1,2})/, '$1.$2.$3/$4-$5');
+  else if (v.length > 8) v = v.replace(/^(\d{2})(\d{3})(\d{3})(\d{1,4})/, '$1.$2.$3/$4');
+  else if (v.length > 5) v = v.replace(/^(\d{2})(\d{3})(\d{1,3})/, '$1.$2.$3');
+  else if (v.length > 2) v = v.replace(/^(\d{2})(\d{1,3})/, '$1.$2');
+  el.value = v;
+}
+
+function maskDDD(el) {
+  let v = el.value.replace(/\D/g, '').substring(0, 2);
+  if (v.length > 0) v = '(' + v;
+  if (v.length > 2) v = v + ')';
+  el.value = v;
+}
+
+function maskPhone(el) {
+  let v = el.value.replace(/\D/g, '').substring(0, 9);
+  if (v.length > 4) v = v.replace(/^(\d{4,5})(\d{1,4})/, '$1-$2');
+  el.value = v;
+}
 
 // ═══════ INIT ═══════
 checkSavedLogin();
