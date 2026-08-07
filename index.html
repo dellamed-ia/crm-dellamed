@@ -136,7 +136,25 @@ input:focus,select:focus,textarea:focus{border-color:var(--teal)}
 .toast.ok{background:var(--green)}.toast.err{background:var(--red)}
 @keyframes tIn{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:none}}
 
-/* LOADER */
+/* MAIN FILTERS */
+.main-flt{padding:12px 24px;display:flex;flex-wrap:wrap;gap:10px;align-items:end;background:#fff;border-bottom:1px solid var(--border)}
+.main-flt .fg{display:flex;flex-direction:column;gap:3px}
+.main-flt .fg label{font-size:.7rem;font-weight:600;color:var(--muted);text-transform:uppercase}
+.main-flt select,.main-flt input{font-size:.82rem;padding:6px 8px;min-width:120px}
+.st-pills{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.st-pill{padding:5px 12px;border-radius:16px;font-size:.75rem;font-weight:600;cursor:pointer;border:2px solid transparent;transition:all .15s;user-select:none}
+.st-pill:hover{filter:brightness(.9)}.st-pill.active{border-color:var(--navy);box-shadow:0 0 0 2px rgba(10,42,78,.2)}
+
+/* LEADS TABLE */
+.leads-tbl-wrap{padding:0 24px 24px;overflow-x:auto}
+.leads-tbl{width:100%;border-collapse:collapse;font-size:.82rem;background:#fff;border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow)}
+.leads-tbl th{background:var(--navy);color:#fff;padding:10px 12px;text-align:left;font-size:.72rem;text-transform:uppercase;white-space:nowrap;position:sticky;top:0}
+.leads-tbl td{padding:8px 12px;border-bottom:1px solid var(--border);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.leads-tbl tr{cursor:pointer;transition:background .1s}
+.leads-tbl tr:hover td{background:#f0f4ff}
+.temp-badge{padding:2px 8px;border-radius:4px;font-size:.7rem;font-weight:600}
+.tb-frio{background:#E3F2FD;color:#1565C0}.tb-morno{background:#FFF3E0;color:#E65100}.tb-quente{background:#FFEBEE;color:#C62828}
+.tbl-count{font-size:.82rem;color:var(--muted);padding:8px 24px}
 .loader{display:inline-block;width:36px;height:36px;border:3px solid rgba(0,0,0,.1);border-top-color:var(--teal);border-radius:50%;animation:spin .6s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 .loading{display:flex;align-items:center;justify-content:center;min-height:60vh;flex-direction:column;gap:12px;color:var(--muted)}
@@ -188,7 +206,20 @@ input:focus,select:focus,textarea:focus{border-color:var(--teal)}
     <h2>Prospecção</h2>
     <div class="search-box"><input type="text" id="inSearch" placeholder="Buscar por empresa, contato, cidade..."></div>
   </div>
-  <div id="pipeCols" class="pipe-cols"></div>
+  <!-- MAIN FILTERS -->
+  <div class="main-flt" id="mainFlt">
+    <div class="fg"><label>Status</label><div class="st-pills" id="stPills"></div></div>
+    <div class="fg"><label>Prospect</label><select id="fltProspect" onchange="renderAll()"><option value="">Todos</option></select></div>
+    <div class="fg"><label>Time Comercial</label><select id="fltTime" onchange="renderAll()"><option value="">Todos</option></select></div>
+    <div class="fg"><label>Data de</label><input type="date" id="fltDe" onchange="renderAll()"></div>
+    <div class="fg"><label>Data até</label><input type="date" id="fltAte" onchange="renderAll()"></div>
+    <div class="fg"><label>&nbsp;</label><button class="btn btn-sm btn-teal" onclick="clearMainFlt()">Limpar</button></div>
+  </div>
+  <!-- TABLE -->
+  <div class="tbl-count" id="tblCount"></div>
+  <div class="leads-tbl-wrap"><table class="leads-tbl"><thead><tr>
+    <th>Nº</th><th>Data</th><th>Status</th><th>Temp.</th><th>Prospect</th><th>Time</th><th>Razão Social</th><th>Cidade</th><th>UF</th><th>Canal</th><th>Contato</th><th>Telefone</th><th>Próx. Ação</th><th>Data Próx.</th>
+  </tr></thead><tbody id="tblBody"></tbody></table></div>
   <div id="loadMain" class="loading"><div class="loader"></div><span>Carregando dados...</span></div>
 </div>
 
@@ -265,7 +296,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--teal)}
 // ═══════════════════════════════════════════════════════════════
 //  CONFIG — Cole a URL do deploy do Apps Script aqui
 // ═══════════════════════════════════════════════════════════════
-const API_URL = 'https://script.google.com/macros/s/AKfycbwn43yGwRyB5TMq8G1q8WcQJj8dJx5R4eNOmEtmsKT2XDFVPyYqzdnGTGxApT0uAJCGPg/exec';
+const API_URL = 'COLE_AQUI_A_URL_DO_APPS_SCRIPT';
 const ADMIN_EMAIL = 'bianca.lima@dellamed.com.br';
 
 // ═══════ STATE ═══════
@@ -327,12 +358,13 @@ async function initApp() {
   if (d.error) { toast(d.error,'err'); return; }
   LEADS = d.leads || [];
   $('loadMain').classList.add('hidden');
-  renderPipe();
+  buildMainFilters();
+  renderAll();
 }
 
 async function reload() {
   const d = await api('GET',{action:'getData'});
-  if (!d.error) { LEADS = d.leads||[]; renderPipe(); }
+  if (!d.error) { LEADS = d.leads||[]; buildMainFilters(); renderAll(); }
 }
 
 // ═══════ TEMPERATURE ═══════
@@ -344,27 +376,91 @@ function temp(s) {
   return '';
 }
 
-// ═══════ PIPELINE ═══════
-function renderPipe() {
+// ═══════ PIPELINE / TABLE ═══════
+let activeStatus = ''; // '' = all
+
+function buildMainFilters() {
+  // Status pills
+  const pills = $('stPills');
+  pills.innerHTML = '<span class="st-pill active" style="background:#e0e3eb;color:var(--navy)" onclick="filterSt(\'\')">Todos</span>' +
+    ST.map(s => '<span class="st-pill" style="background:'+ST_C[s]+';color:#fff" onclick="filterSt(\''+s+'\')">'+s+'</span>').join('');
+  // Prospect dropdown
+  const pros = [...new Set(LEADS.map(l=>l['Prospect']).filter(Boolean))].sort();
+  $('fltProspect').innerHTML = '<option value="">Todos</option>' + pros.map(p=>'<option>'+esc(p)+'</option>').join('');
+  // Time dropdown
+  const tms = [...new Set(LEADS.map(l=>l['Time Comercial']).filter(Boolean))].sort();
+  $('fltTime').innerHTML = '<option value="">Todos</option>' + tms.map(t=>'<option>'+esc(t)+'</option>').join('');
+}
+
+function filterSt(s) {
+  activeStatus = s;
+  document.querySelectorAll('.st-pill').forEach(p => p.classList.remove('active'));
+  const pills = document.querySelectorAll('.st-pill');
+  pills.forEach(p => { if ((s==='' && p.textContent==='Todos') || p.textContent===s) p.classList.add('active'); });
+  renderAll();
+}
+
+function getMainFiltered() {
+  let data = [...LEADS];
   const q = ($('inSearch').value||'').toLowerCase();
-  let data = LEADS;
-  if (q) data = data.filter(l => [l['Razão Social'],l['Contato Principal'],l['Cidade'],l['Prospect'],l['Canal Principal']].join(' ').toLowerCase().includes(q));
-  const g = {}; ST.forEach(s => g[s]=[]);
-  data.forEach(l => { const s=l['Status']||'Novo'; (g[s]||g['Novo']).push(l); });
-  $('pipeCols').innerHTML = ST.map(s => {
-    const it = g[s], cls = ST_S[s]||'';
-    return '<div class="pipe-col"><div class="col-hdr '+cls+'"><span>'+s+'</span><span class="cnt">'+it.length+'</span></div><div class="col-body">'+it.map(renderCard).join('')+'</div></div>';
+  if (q) data = data.filter(l => [l['Razão Social'],l['Contato Principal'],l['Cidade'],l['Prospect'],l['Canal Principal'],l['Produto(s) de Interesse']].join(' ').toLowerCase().includes(q));
+  if (activeStatus) data = data.filter(l => (l['Status']||'Novo') === activeStatus);
+  const fp = $('fltProspect').value; if (fp) data = data.filter(l => l['Prospect']===fp);
+  const ft = $('fltTime').value; if (ft) data = data.filter(l => l['Time Comercial']===ft);
+  const de = $('fltDe').value, ate = $('fltAte').value;
+  if (de || ate) {
+    data = data.filter(l => {
+      const raw = l['Data']||''; const p = raw.split('/');
+      if (p.length < 3) return true;
+      const iso = p[2]+'-'+p[1]+'-'+p[0]; // yyyy-mm-dd
+      if (de && iso < de) return false;
+      if (ate && iso > ate) return false;
+      return true;
+    });
+  }
+  return data;
+}
+
+function renderAll() {
+  const data = getMainFiltered();
+  $('tblCount').textContent = data.length + ' lead' + (data.length !== 1 ? 's' : '') + ' encontrado' + (data.length !== 1 ? 's' : '');
+  const tbody = $('tblBody');
+  if (data.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="14" style="text-align:center;padding:24px;color:var(--muted)">Nenhum lead encontrado.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = data.map(l => {
+    const t = temp(l['Status']);
+    const tc = t ? '<span class="temp-badge tb-'+t.toLowerCase()+'">'+t+'</span>' : '';
+    return '<tr onclick="openForm('+l._row+')">'+
+      '<td>'+esc(l['Nº']||'')+'</td>'+
+      '<td>'+esc(l['Data']||'')+'</td>'+
+      '<td><span class="temp-badge" style="background:'+ST_C[l['Status']]||'#ccc'+';color:#fff">'+esc(l['Status']||'')+'</span></td>'+
+      '<td>'+tc+'</td>'+
+      '<td>'+esc(l['Prospect']||'')+'</td>'+
+      '<td>'+esc(l['Time Comercial']||'')+'</td>'+
+      '<td style="font-weight:600;color:var(--navy)">'+esc(l['Razão Social']||'')+'</td>'+
+      '<td>'+esc(l['Cidade']||'')+'</td>'+
+      '<td>'+esc(l['UF']||'')+'</td>'+
+      '<td>'+esc(l['Canal Principal']||'')+'</td>'+
+      '<td>'+esc(l['Contato Principal']||'')+'</td>'+
+      '<td>'+esc(l['Telefone']||'')+'</td>'+
+      '<td>'+esc(l['Próxima Ação']||'')+'</td>'+
+      '<td>'+esc(l['Data Próxima Ação']||'')+'</td>'+
+      '</tr>';
   }).join('');
 }
 
-function renderCard(l) {
-  const t = temp(l['Status']), tc = t?'t-'+t.toLowerCase():'';
-  const tb = t ? '<span class="ct '+t.toLowerCase()+'">'+t+'</span>' : '';
-  return '<div class="card '+tc+'" onclick="openForm('+l._row+')">'+
-    '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:6px"><div class="cn">'+esc(l['Razão Social']||'Sem nome')+'</div>'+tb+'</div>'+
-    '<div class="ci">'+(l['Contato Principal']?'👤 '+esc(l['Contato Principal']):'')+(l['Cidade']?'<br>📍 '+esc(l['Cidade'])+(l['UF']?'/'+esc(l['UF']):''):'')+(l['Telefone']?'<br>📱 '+esc(l['Telefone']):'')+'</div>'+
-    '<div class="tags">'+(l['Canal Principal']?'<span class="tag">'+esc(l['Canal Principal'])+'</span>':'')+(l['Linha de Interesse']?'<span class="tag">'+esc(l['Linha de Interesse'])+'</span>':'')+'</div>'+
-    '<div class="cf"><span>👤 '+esc(l['Prospect']||'—')+'</span><span>'+(l['Data Último Contato']||l['Data']||'')+'</span></div></div>';
+function clearMainFlt() {
+  activeStatus = '';
+  $('fltProspect').value = '';
+  $('fltTime').value = '';
+  $('fltDe').value = '';
+  $('fltAte').value = '';
+  $('inSearch').value = '';
+  document.querySelectorAll('.st-pill').forEach(p => p.classList.remove('active'));
+  document.querySelector('.st-pill').classList.add('active');
+  renderAll();
 }
 
 // ═══════ FORM ═══════
@@ -481,11 +577,11 @@ function mPH(el){let v=el.value.replace(/\D/g,'').substring(0,9);if(v.length>4)v
 let dCharts = [];
 
 function openDash() {
-  if(typeof Chart==='undefined'){toast('Chart.js ainda carregando, tente em 2s.','err');return;}
+  if(typeof Chart==='undefined'){toast('Chart.js carregando... tente novamente em 2 segundos.','err');return;}
   $('scDash').classList.remove('hidden');
   buildDF(); renderDash();
 }
-function closeDash(){$('scDash').classList.add('hidden');dCharts.forEach(c=>c.destroy());dCharts=[];}
+function closeDash(){$('scDash').classList.add('hidden');dCharts.forEach(c=>{try{c.destroy();}catch(e){}});dCharts=[];}
 
 function buildDF() {
   const yrs=[...new Set(LEADS.map(l=>{const m=(l['Data']||'').match(/(\d{4})$/);return m?m[1]:''}).filter(Boolean))].sort();
@@ -572,7 +668,7 @@ $('fSave').onclick = saveLead;
 $('fDel').onclick = delLead;
 $('dClose').onclick = closeDash;
 $('aClose').onclick = closeAdmin;
-$('inSearch').oninput = renderPipe;
+$('inSearch').oninput = renderAll;
 $('modForm').onclick = e=>{if(e.target===$('modForm'))closeForm();};
 $('modAdmin').onclick = e=>{if(e.target===$('modAdmin'))closeAdmin();};
 $('inEmail').onkeydown = e=>{if(e.key==='Enter')doLogin();};
