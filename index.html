@@ -4,8 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>CRM Dellamed</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <style>
 /* ═══════ RESET & BASE ═══════ */
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -299,26 +301,36 @@ const STATUS_CLASS = {
 
 // ═══════ API ═══════
 async function api(method, body) {
+  if (!API_URL || API_URL.includes('COLE_AQUI')) {
+    return { error: 'Configure a URL do Apps Script no código (variável API_URL).' };
+  }
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 15000);
   try {
+    let r;
     if (method === 'GET') {
-      const r = await fetch(API_URL + '?' + new URLSearchParams(body), { method: 'GET' });
-      return await r.json();
+      r = await fetch(API_URL + '?' + new URLSearchParams(body), { method: 'GET', signal: controller.signal });
     } else {
-      const r = await fetch(API_URL, {
+      r = await fetch(API_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain' },
-        body: JSON.stringify(body)
+        body: JSON.stringify(body),
+        signal: controller.signal
       });
-      return await r.json();
     }
+    clearTimeout(timeout);
+    return await r.json();
   } catch (e) {
+    clearTimeout(timeout);
     console.error(e);
+    if (e.name === 'AbortError') return { error: 'Timeout — servidor não respondeu em 15s. Tente novamente.' };
     return { error: 'Falha de conexão. Verifique se a URL do Apps Script está configurada.' };
   }
 }
 
 // ═══════ AUTH ═══════
 function checkSavedLogin() {
+  if (!API_URL || API_URL.includes('COLE_AQUI')) return; // don't auto-login if API not configured
   const saved = localStorage.getItem('crm_user');
   if (saved) {
     try {
