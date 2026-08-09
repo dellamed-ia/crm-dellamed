@@ -642,13 +642,24 @@ async function openAdmin(){
   const r=await api('GET',{action:'getUsers'}); if(r.error){toast(r.error,'err');return;}
   $('aBody').innerHTML=(r.users||[]).map(u=>{
     const bc=u.status==='aprovado'?'b-ok':u.status==='pendente'?'b-pend':'b-rej';
-    const act=u.status==='pendente'?'<button class="btn btn-green btn-sm" onclick="admAct(\'approve\',\''+u.email+'\')">Aprovar</button> <button class="btn btn-danger btn-sm" onclick="admAct(\'reject\',\''+u.email+'\')">Rejeitar</button>':u.email===ADMIN_EMAIL?'<span style="color:var(--muted);font-size:.78rem">Admin</span>':'<button class="btn btn-danger btn-sm" onclick="admAct(\'reject\',\''+u.email+'\')">Revogar</button>';
+    let act='';
+    if(u.email===ADMIN_EMAIL){
+      act='<span style="color:var(--muted);font-size:.78rem">Admin</span>';
+    } else if(u.status==='pendente'){
+      act='<button class="btn btn-green btn-sm" onclick="admAct(\'approve\',\''+u.email+'\')">Aprovar</button> '+
+          '<button class="btn btn-danger btn-sm" onclick="admAct(\'reject\',\''+u.email+'\')">Rejeitar</button> '+
+          '<button class="btn btn-sm" style="background:#78909C;color:#fff" onclick="admDel(\''+u.email+'\',\''+esc(u.nome)+'\')">Excluir</button>';
+    } else {
+      act='<button class="btn btn-danger btn-sm" onclick="admAct(\'reject\',\''+u.email+'\')">Revogar</button> '+
+          '<button class="btn btn-sm" style="background:#78909C;color:#fff" onclick="admDel(\''+u.email+'\',\''+esc(u.nome)+'\')">Excluir</button>';
+    }
     return '<tr><td>'+esc(u.email)+'</td><td>'+esc(u.nome)+'</td><td><span class="badge '+bc+'">'+u.status+'</span></td><td>'+(u.data||'')+'</td><td>'+act+'</td></tr>';
   }).join('');
   $('modAdmin').classList.remove('hidden');
 }
 function closeAdmin(){$('modAdmin').classList.add('hidden');}
 async function admAct(a,em){const r=await api('POST',{action:a==='approve'?'approveUser':'rejectUser',requesterEmail:U.email,email:em});if(r.ok){toast(a==='approve'?'Aprovado!':'Revogado.','ok');openAdmin();}else toast(r.error||'Erro.','err');}
+async function admDel(em,nome){if(!confirm('Excluir o usuário '+nome+' ('+em+') permanentemente?'))return;const r=await api('POST',{action:'deleteUser',requesterEmail:U.email,email:em});if(r.ok){toast('Usuário excluído.','ok');openAdmin();}else toast(r.error||'Erro ao excluir.','err');}
 
 // ═══════ UTILS ═══════
 function $(id){return document.getElementById(id);}
