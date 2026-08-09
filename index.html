@@ -136,14 +136,23 @@ input:focus,select:focus,textarea:focus{border-color:var(--teal)}
 .toast.ok{background:var(--green)}.toast.err{background:var(--red)}
 @keyframes tIn{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:none}}
 
+/* TABS */
+.tabs{display:flex;gap:0;padding:0 24px;background:#fff;border-bottom:2px solid var(--border)}
+.tab{padding:12px 24px;font-size:.88rem;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:3px solid transparent;transition:all .2s;user-select:none}
+.tab:hover{color:var(--navy)}
+.tab.active{color:var(--navy);border-bottom-color:var(--teal)}
+
 /* MAIN FILTERS */
 .main-flt{padding:12px 24px;display:flex;flex-wrap:wrap;gap:10px;align-items:end;background:#fff;border-bottom:1px solid var(--border)}
 .main-flt .fg{display:flex;flex-direction:column;gap:3px}
 .main-flt .fg label{font-size:.7rem;font-weight:600;color:var(--muted);text-transform:uppercase}
 .main-flt select,.main-flt input{font-size:.82rem;padding:6px 8px;min-width:120px}
-.st-pills{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
-.st-pill{padding:5px 12px;border-radius:16px;font-size:.75rem;font-weight:600;cursor:pointer;border:2px solid transparent;transition:all .15s;user-select:none}
-.st-pill:hover{filter:brightness(.9)}.st-pill.active{border-color:var(--navy);box-shadow:0 0 0 2px rgba(10,42,78,.2)}
+.st-pills{display:flex;gap:10px;flex-wrap:wrap;align-items:stretch}
+.st-pill{min-width:100px;padding:10px 14px;border-radius:var(--radius);cursor:pointer;border:2px solid transparent;transition:all .2s;user-select:none;background:#fff;box-shadow:var(--shadow);display:flex;flex-direction:column;align-items:center;gap:2px}
+.st-pill .sp-val{font-size:1.5rem;font-weight:800;line-height:1}
+.st-pill .sp-lbl{font-size:.68rem;font-weight:600;text-transform:uppercase;letter-spacing:.3px;opacity:.85}
+.st-pill:hover{transform:translateY(-2px);box-shadow:0 4px 16px rgba(10,42,78,.12)}
+.st-pill.active{border-color:var(--navy);box-shadow:0 0 0 3px rgba(10,42,78,.15)}
 
 /* LEADS TABLE */
 .leads-tbl-wrap{padding:0 24px 24px;overflow-x:auto}
@@ -203,12 +212,18 @@ input:focus,select:focus,textarea:focus{border-color:var(--teal)}
     </div>
   </div>
   <div class="pipe-header">
-    <h2>Prospecção</h2>
+    <h2 id="secTitle">Prospecção</h2>
     <div class="search-box"><input type="text" id="inSearch" placeholder="Buscar por empresa, contato, cidade..."></div>
   </div>
+  <!-- TABS -->
+  <div class="tabs">
+    <div class="tab active" id="tabLeads" onclick="switchTab('leads')">📋 Prospecção</div>
+    <div class="tab" id="tabWA" onclick="switchTab('wa')">💬 WhatsApp</div>
+  </div>
+  <!-- STATUS KPIs -->
+  <div style="padding:0 24px 8px;display:flex;gap:10px;flex-wrap:wrap" id="stPills"></div>
   <!-- MAIN FILTERS -->
   <div class="main-flt" id="mainFlt">
-    <div class="fg"><label>Status</label><div class="st-pills" id="stPills"></div></div>
     <div class="fg"><label>Prospect</label><select id="fltProspect" onchange="renderAll()"><option value="">Todos</option></select></div>
     <div class="fg"><label>Time Comercial</label><select id="fltTime" onchange="renderAll()"><option value="">Todos</option></select></div>
     <div class="fg"><label>Data de</label><input type="date" id="fltDe" onchange="renderAll()"></div>
@@ -238,7 +253,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--teal)}
 
 <!-- DASHBOARD -->
 <div id="scDash" class="dash hidden">
-  <div class="dash-top"><h2>📊 Dashboard — Visão Geral CRM</h2><button class="btn btn-outline" id="dClose">✕ Fechar</button></div>
+  <div class="dash-top"><h2 id="dashTitle">📊 Dashboard — Visão Geral CRM</h2><button class="btn btn-outline" id="dClose">✕ Fechar</button></div>
   <div class="dash-flt" id="dFilters"></div>
   <div class="kpis" id="dKpis"></div>
   <div class="dgrid" id="dGrid"></div>
@@ -300,7 +315,7 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbwn43yGwRyB5TMq8G1q8WcQ
 const ADMIN_EMAIL = 'bianca.lima@dellamed.com.br';
 
 // ═══════ STATE ═══════
-let U = null, LEADS = [], CFG = {}, editRow = null;
+let U = null, LEADS = [], WA_LEADS = [], CFG = {}, editRow = null, curTab = 'leads';
 const ST = ['Novo','Contato feito','Proposta enviada','Negociando','Ganho','Perdido','Inativo'];
 const ST_C = {'Novo':'#42A5F5','Contato feito':'#66BB6A','Proposta enviada':'#29B6F6','Negociando':'#FFA726','Ganho':'#43A047','Perdido':'#E53935','Inativo':'#AB47BC'};
 const ST_S = {'Novo':'s-novo','Contato feito':'s-contato','Proposta enviada':'s-proposta','Negociando':'s-negociando','Ganho':'s-ganho','Perdido':'s-perdido','Inativo':'s-inativo'};
@@ -352,19 +367,25 @@ async function initApp() {
   $('scApp').classList.remove('hidden');
   $('uName').innerHTML = '<b>'+esc(U.nome)+'</b>';
   if (U.admin) $('btnAdmin').classList.remove('hidden');
-  const [c,d] = await Promise.all([api('GET',{action:'getConfig'}), api('GET',{action:'getData'})]);
+  const [c,d,w] = await Promise.all([api('GET',{action:'getConfig'}), api('GET',{action:'getData'}), api('GET',{action:'getWAData'})]);
   if (c.error) { toast(c.error,'err'); return; }
   CFG = c;
   if (d.error) { toast(d.error,'err'); return; }
   LEADS = d.leads || [];
+  WA_LEADS = (w.leads || []);
   $('loadMain').classList.add('hidden');
   buildMainFilters();
   renderAll();
 }
 
 async function reload() {
-  const d = await api('GET',{action:'getData'});
-  if (!d.error) { LEADS = d.leads||[]; buildMainFilters(); renderAll(); }
+  if (curTab==='leads') {
+    const d = await api('GET',{action:'getData'});
+    if (!d.error) { LEADS = d.leads||[]; buildMainFilters(); renderAll(); }
+  } else {
+    const d = await api('GET',{action:'getWAData'});
+    if (!d.error) { WA_LEADS = d.leads||[]; buildMainFilters(); renderAll(); }
+  }
 }
 
 // ═══════ TEMPERATURE ═══════
@@ -376,32 +397,58 @@ function temp(s) {
   return '';
 }
 
+// ═══════ TABS ═══════
+function switchTab(tab) {
+  curTab = tab;
+  activeStatus = '';
+  $('tabLeads').classList.toggle('active', tab==='leads');
+  $('tabWA').classList.toggle('active', tab==='wa');
+  $('secTitle').textContent = tab==='leads' ? 'Prospecção' : 'WhatsApp';
+  $('inSearch').value = '';
+  $('fltProspect').value = ''; $('fltTime').value = ''; $('fltDe').value = ''; $('fltAte').value = '';
+  buildMainFilters();
+  renderAll();
+}
+
+function curData() { return curTab==='leads' ? LEADS : WA_LEADS; }
+
 // ═══════ PIPELINE / TABLE ═══════
 let activeStatus = ''; // '' = all
 
 function buildMainFilters() {
-  // Status pills
-  const pills = $('stPills');
-  pills.innerHTML = '<span class="st-pill active" style="background:#e0e3eb;color:var(--navy)" onclick="filterSt(\'\')">Todos</span>' +
-    ST.map(s => '<span class="st-pill" style="background:'+ST_C[s]+';color:#fff" onclick="filterSt(\''+s+'\')">'+s+'</span>').join('');
-  // Prospect dropdown
-  const pros = [...new Set(LEADS.map(l=>l['Prospect']).filter(Boolean))].sort();
+  updateStatusKPIs();
+  const data = curData();
+  const pros = [...new Set(data.map(l=>l['Prospect']).filter(Boolean))].sort();
   $('fltProspect').innerHTML = '<option value="">Todos</option>' + pros.map(p=>'<option>'+esc(p)+'</option>').join('');
-  // Time dropdown
-  const tms = [...new Set(LEADS.map(l=>l['Time Comercial']).filter(Boolean))].sort();
+  const tms = [...new Set(data.map(l=>l['Time Comercial']).filter(Boolean))].sort();
   $('fltTime').innerHTML = '<option value="">Todos</option>' + tms.map(t=>'<option>'+esc(t)+'</option>').join('');
+}
+
+function updateStatusKPIs() {
+  const data = curData();
+  const total = data.length;
+  const counts = {}; ST.forEach(s => counts[s] = 0);
+  LEADS.forEach(l => { const s = l['Status']||'Novo'; if(counts[s]!==undefined) counts[s]++; });
+  const pills = $('stPills');
+  pills.innerHTML =
+    '<div class="st-pill'+(activeStatus===''?' active':'')+'" onclick="filterSt(\'\')">'+
+      '<span class="sp-val" style="color:var(--navy)">'+total+'</span>'+
+      '<span class="sp-lbl" style="color:var(--navy)">Todos</span></div>' +
+    ST.map(s =>
+      '<div class="st-pill'+(activeStatus===s?' active':'')+'" style="border-bottom:3px solid '+ST_C[s]+'" onclick="filterSt(\''+s+'\')">'+
+        '<span class="sp-val" style="color:'+ST_C[s]+'">'+counts[s]+'</span>'+
+        '<span class="sp-lbl" style="color:var(--text)">'+s+'</span></div>'
+    ).join('');
 }
 
 function filterSt(s) {
   activeStatus = s;
-  document.querySelectorAll('.st-pill').forEach(p => p.classList.remove('active'));
-  const pills = document.querySelectorAll('.st-pill');
-  pills.forEach(p => { if ((s==='' && p.textContent==='Todos') || p.textContent===s) p.classList.add('active'); });
+  updateStatusKPIs();
   renderAll();
 }
 
 function getMainFiltered() {
-  let data = [...LEADS];
+  let data = [...curData()];
   const q = ($('inSearch').value||'').toLowerCase();
   if (q) data = data.filter(l => [l['Razão Social'],l['Contato Principal'],l['Cidade'],l['Prospect'],l['Canal Principal'],l['Produto(s) de Interesse']].join(' ').toLowerCase().includes(q));
   if (activeStatus) data = data.filter(l => (l['Status']||'Novo') === activeStatus);
@@ -458,38 +505,38 @@ function clearMainFlt() {
   $('fltDe').value = '';
   $('fltAte').value = '';
   $('inSearch').value = '';
-  document.querySelectorAll('.st-pill').forEach(p => p.classList.remove('active'));
-  document.querySelector('.st-pill').classList.add('active');
+  updateStatusKPIs();
   renderAll();
 }
 
 // ═══════ FORM ═══════
 function openForm(row) {
   editRow = row||null;
-  const L = editRow ? LEADS.find(l=>l._row===editRow) : null;
+  const L = editRow ? curData().find(l=>l._row===editRow) : null;
   const isE = !!L;
   const canE = !isE || U.admin || (L['Prospect']||'').toLowerCase()===U.nome.toLowerCase();
   $('fTitle').textContent = isE ? (canE?'Editar Lead':'Visualizar Lead') : 'Novo Lead';
   $('fDel').classList.toggle('hidden', !isE||!U.admin);
   const dis = canE?'':'disabled';
-  const rq = U.admin ? '' : ' fld-req';
+  const rq = (curTab==='wa') ? ' fld-req' : (U.admin ? '' : ' fld-req');
+  const rqWA = (curTab==='wa') ? ' fld-req' : '';
   // Parse phones
   const phs = (L?L['Telefone']:'').split('|').map(s=>s.trim());
   function sp(p){const m=p.match(/^\(?(\d{2})\)?\s*(.*)$/);return m?{d:m[1],n:m[2]}:{d:'',n:p};}
   const p1=sp(phs[0]||''), p2=sp(phs[1]||'');
 
   $('fBody').innerHTML =
-    fld('Status','<select id="f_st" '+dis+'>'+((CFG.status||[]).map(s=>'<option'+(L&&L['Status']===s?' selected':'')+'>'+s+'</option>')).join('')+'</select>')+
-    fld('Prospect (Vendedor)','<input id="f_pr" value="'+esc(isE?L['Prospect']:U.nome)+'" '+dis+'>')+
+    fld('Status','<select id="f_st" '+dis+'>'+((CFG.status||[]).map(s=>'<option'+(L&&L['Status']===s?' selected':'')+'>'+s+'</option>')).join('')+'</select>',rqWA)+
+    fld('Prospect (Vendedor)','<input id="f_pr" value="'+esc(isE?L['Prospect']:U.nome)+'" '+dis+'>',rqWA)+
     fld('Time Comercial','<select id="f_tm" '+dis+'><option value="">Selecione...</option>'+((CFG.timeComercial||[]).map(t=>'<option'+(L&&L['Time Comercial']===t?' selected':'')+'>'+t+'</option>')).join('')+'</select>',rq)+
-    fld('Razão Social','<input id="f_rs" value="'+esc(L?L['Razão Social']:'')+'" '+dis+'>')+
-    fld('CNPJ','<input id="f_cnpj" value="'+esc(L?L['CNPJ']:'')+'" '+dis+' placeholder="00.000.000/0000-00" maxlength="18" oninput="mCNPJ(this)">')+
+    fld('Razão Social','<input id="f_rs" value="'+esc(L?L['Razão Social']:'')+'" '+dis+'>',rqWA)+
+    fld('CNPJ','<input id="f_cnpj" value="'+esc(L?L['CNPJ']:'')+'" '+dis+' placeholder="00.000.000/0000-00" maxlength="18" oninput="mCNPJ(this)">',rqWA)+
     fld('Contato Principal','<input id="f_cp" value="'+esc(L?L['Contato Principal']:'')+'" '+dis+'>',rq)+
     fld('Telefone 1','<div class="phone-row"><input class="ph-ddd" id="f_d1" value="'+esc(p1.d?'('+p1.d+')':'')+'" '+dis+' placeholder="(00)" maxlength="4" oninput="mDDD(this)"><input class="ph-num" id="f_n1" value="'+esc(p1.n)+'" '+dis+' placeholder="00000-0000" maxlength="10" oninput="mPH(this)"></div>',rq)+
     fld('Telefone 2','<div class="phone-row"><input class="ph-ddd" id="f_d2" value="'+esc(p2.d?'('+p2.d+')':'')+'" '+dis+' placeholder="(00)" maxlength="4" oninput="mDDD(this)"><input class="ph-num" id="f_n2" value="'+esc(p2.n)+'" '+dis+' placeholder="00000-0000" maxlength="10" oninput="mPH(this)"></div>')+
     fld('E-mail','<input id="f_em" value="'+esc(L?L['E-mail']:'')+'" '+dis+'>',rq)+
     fld('Cidade','<input id="f_ci" value="'+esc(L?L['Cidade']:'')+'" '+dis+'>')+
-    fld('UF','<select id="f_uf" '+dis+'><option value="">—</option>'+((CFG.ufs||[]).map(u=>'<option'+(L&&L['UF']===u?' selected':'')+'>'+u+'</option>')).join('')+'</select>')+
+    fld('UF','<select id="f_uf" '+dis+'><option value="">—</option>'+((CFG.ufs||[]).map(u=>'<option'+(L&&L['UF']===u?' selected':'')+'>'+u+'</option>')).join('')+'</select>',rqWA)+
     fld('Canal Principal','<select id="f_ca" '+dis+'><option value="">Selecione...</option>'+((CFG.canalPrincipal||[]).map(c=>'<option'+(L&&L['Canal Principal']===c?' selected':'')+'>'+c+'</option>')).join('')+'</select>',rq)+
     fld('Linha de Interesse','<div id="ms_li" class="msel" data-sel="'+esc(L?L['Linha de Interesse']:'')+'"></div>')+
     fldF('Produto(s) de Interesse','<textarea id="f_pd" rows="2" '+dis+' placeholder="D30, D90, D12...">'+esc(L?L['Produto(s) de Interesse']:'')+'</textarea>')+
@@ -522,21 +569,26 @@ async function saveLead() {
     'Próxima Ação':gv('f_pa'),'Data Próxima Ação':gv('f_da'),
     'Motivo da Perda':msVal('ms_mp'),'Observações':gv('f_ob'),
   };
-  if (!U.admin) {
+  if (curTab === 'wa') {
+    const waReq=[['Status','Status'],['Prospect','Prospect'],['Time Comercial','Time Comercial'],['Razão Social','Razão Social'],['CNPJ','CNPJ'],['UF','UF'],['Contato Principal','Contato Principal'],['Canal Principal','Canal Principal']];
+    for (const [f,l] of waReq) if(!lead[f]){toast('Campo obrigatório: '+l,'err');return;}
+    if (!t1){toast('Campo obrigatório: Telefone 1','err');return;}
+  } else if (!U.admin) {
     const req=[['Time Comercial','Time Comercial'],['Contato Principal','Contato Principal'],['E-mail','E-mail'],['Canal Principal','Canal Principal'],['Data Primeiro Contato','Data Primeiro Contato']];
     for (const [f,l] of req) if(!lead[f]){toast('Campo obrigatório: '+l,'err');return;}
     if (!t1){toast('Campo obrigatório: Telefone 1','err');return;}
   }
+  const addAct = curTab==='wa'?'addWA':'addLead', editAct = curTab==='wa'?'editWA':'editLead';
   const r = editRow
-    ? await api('POST',{action:'editLead',userEmail:U.email,row:editRow,lead})
-    : await api('POST',{action:'addLead',userEmail:U.email,lead});
+    ? await api('POST',{action:editAct,userEmail:U.email,row:editRow,lead})
+    : await api('POST',{action:addAct,userEmail:U.email,lead});
   if (r.ok){toast(editRow?'Lead atualizado!':'Lead cadastrado!','ok');closeForm();await reload();}
   else toast(r.error||'Erro ao salvar.','err');
 }
 
 async function delLead() {
   if (!editRow||!confirm('Excluir este lead?')) return;
-  const r=await api('POST',{action:'deleteLead',userEmail:U.email,row:editRow});
+  const r=await api('POST',{action:curTab==='wa'?'deleteWA':'deleteLead',userEmail:U.email,row:editRow});
   if(r.ok){toast('Excluído.','ok');closeForm();await reload();}
   else toast(r.error||'Erro.','err');
 }
@@ -579,18 +631,20 @@ let dCharts = [];
 function openDash() {
   if(typeof Chart==='undefined'){toast('Chart.js carregando... tente novamente em 2 segundos.','err');return;}
   $('scDash').classList.remove('hidden');
+  $('dashTitle').textContent = '📊 Dashboard — ' + (curTab==='wa'?'WhatsApp':'Prospecção');
   buildDF(); renderDash();
 }
 function closeDash(){$('scDash').classList.add('hidden');dCharts.forEach(c=>{try{c.destroy();}catch(e){}});dCharts=[];}
 
 function buildDF() {
-  const yrs=[...new Set(LEADS.map(l=>{const m=(l['Data']||'').match(/(\d{4})$/);return m?m[1]:''}).filter(Boolean))].sort();
+  const src = curData();
+  const yrs=[...new Set(src.map(l=>{const m=(l['Data']||'').match(/(\d{4})$/);return m?m[1]:''}).filter(Boolean))].sort();
   const mos=['01','02','03','04','05','06','07','08','09','10','11','12'];
-  const pros=[...new Set(LEADS.map(l=>l['Prospect']).filter(Boolean))].sort();
-  const tms=[...new Set(LEADS.map(l=>l['Time Comercial']).filter(Boolean))].sort();
-  const cas=[...new Set(LEADS.map(l=>l['Canal Principal']).filter(Boolean))].sort();
-  const ufs=[...new Set(LEADS.map(l=>l['UF']).filter(Boolean))].sort();
-  const mts=[...new Set(LEADS.flatMap(l=>(l['Motivo da Perda']||'').split(',').map(s=>s.trim())).filter(Boolean))].sort();
+  const pros=[...new Set(src.map(l=>l['Prospect']).filter(Boolean))].sort();
+  const tms=[...new Set(src.map(l=>l['Time Comercial']).filter(Boolean))].sort();
+  const cas=[...new Set(src.map(l=>l['Canal Principal']).filter(Boolean))].sort();
+  const ufs=[...new Set(src.map(l=>l['UF']).filter(Boolean))].sort();
+  const mts=[...new Set(src.flatMap(l=>(l['Motivo da Perda']||'').split(',').map(s=>s.trim())).filter(Boolean))].sort();
   const tps=['Frio','Morno','Quente'];
   const fs=[{id:'dfA',l:'Ano',o:yrs},{id:'dfM',l:'Mês',o:mos},{id:'dfP',l:'Prospect',o:pros},{id:'dfT',l:'Time Comercial',o:tms},{id:'dfC',l:'Canal Principal',o:cas},{id:'dfU',l:'UF',o:ufs},{id:'dfMo',l:'Motivo Perda',o:mts},{id:'dfTp',l:'Temperatura',o:tps}];
   $('dFilters').innerHTML=fs.map(f=>'<div class="dfg"><label>'+f.l+'</label><select id="'+f.id+'" multiple size="1" onchange="renderDash()">'+f.o.map(o=>'<option value="'+o+'">'+o+'</option>').join('')+'</select></div>').join('')+'<div class="dfg"><label>&nbsp;</label><button class="btn btn-sm btn-teal" style="width:100%" onclick="clearDF()">Limpar filtros</button></div>';
@@ -598,7 +652,7 @@ function buildDF() {
 function clearDF(){document.querySelectorAll('#dFilters select').forEach(s=>{for(const o of s.options)o.selected=false;});renderDash();}
 
 function gfLeads() {
-  let d=[...LEADS];const gs=id=>{const e=$(id);if(!e)return[];return Array.from(e.selectedOptions).map(o=>o.value);};
+  let d=[...curData()];const gs=id=>{const e=$(id);if(!e)return[];return Array.from(e.selectedOptions).map(o=>o.value);};
   const fA=gs('dfA'),fM=gs('dfM'),fP=gs('dfP'),fT=gs('dfT'),fC=gs('dfC'),fU=gs('dfU'),fMo=gs('dfMo'),fTp=gs('dfTp');
   if(fA.length)d=d.filter(l=>{const p=(l['Data']||'').split('/');return p.length>=3&&fA.includes(p[2]);});
   if(fM.length)d=d.filter(l=>{const p=(l['Data']||'').split('/');return p.length>=2&&fM.includes(p[1]);});
