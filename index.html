@@ -696,6 +696,7 @@ function getMainFiltered() {
 }
 
 function renderAll() {
+  updateStatusKPIs();
   let data = getMainFiltered();
 
   // Sort
@@ -1037,15 +1038,21 @@ function gfLeads() {
 
 function renderDash() {
   dCharts.forEach(c=>{try{c.destroy();}catch(e){}});dCharts=[];
-  const allData = dashData();
-  const d=gfLeads(),tot=d.length;
-  const totAll=allData.length;
-  const gan=allData.filter(l=>l['Status']==='Ganho').length;
-  const per=allData.filter(l=>l['Status']==='Perdido').length;
-  const neg=allData.filter(l=>l['Status']==='Negociando').length;
-  const frio=allData.filter(l=>temp(l['Status'])==='Frio').length;
-  const morno=allData.filter(l=>temp(l['Status'])==='Morno').length;
-  const quente=allData.filter(l=>temp(l['Status'])==='Quente').length;
+  // Get data filtered by dropdowns but NOT by KPI click
+  const savedKpi = dashKpiFilter;
+  dashKpiFilter = '';
+  const dropdownFiltered = gfLeads();
+  dashKpiFilter = savedKpi;
+  // Get data filtered by EVERYTHING (including KPI click) for charts
+  const d = gfLeads();
+
+  const totAll=dropdownFiltered.length;
+  const gan=dropdownFiltered.filter(l=>l['Status']==='Ganho').length;
+  const per=dropdownFiltered.filter(l=>l['Status']==='Perdido').length;
+  const neg=dropdownFiltered.filter(l=>l['Status']==='Negociando').length;
+  const frio=dropdownFiltered.filter(l=>temp(l['Status'])==='Frio').length;
+  const morno=dropdownFiltered.filter(l=>temp(l['Status'])==='Morno').length;
+  const quente=dropdownFiltered.filter(l=>temp(l['Status'])==='Quente').length;
   const tx=totAll>0?((gan/totAll)*100).toFixed(1):'0';
 
   function kpiCard(val,label,filterKey,color) {
