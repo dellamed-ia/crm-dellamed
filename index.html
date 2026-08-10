@@ -267,7 +267,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--teal)}
       <button class="btn hidden" id="btnDashWA" style="background:var(--navy-light);color:#fff" onclick="setDashSrc('wa')">💬 DASHBOARD WHATSAPP</button>
       <button id="btnAdmin" class="btn btn-outline hidden">👥 Usuários</button>
       <button id="btnTransfers" class="btn btn-outline hidden">📝 Alterações</button>
-      <div class="bell-wrap" id="bellWrap">
+      <div class="bell-wrap hidden" id="bellWrap">
         <button class="bell-btn" onclick="toggleBell()">🔔<span class="bell-badge hidden" id="bellBadge">0</span></button>
         <div class="bell-dd" id="bellDD"></div>
       </div>
@@ -461,9 +461,15 @@ async function initApp() {
   $('scLogin').classList.add('hidden');
   $('scApp').classList.remove('hidden');
   $('uName').innerHTML = '<b>'+esc(U.nome)+'</b>';
-  if (U.admin) { $('btnAdmin').classList.remove('hidden'); $('btnTransfers').classList.remove('hidden'); }
-  checkNotifications();
-  setInterval(checkNotifications, 60000); // check every 60s
+  // Admin: mostra Usuários e Alterações, esconde sino
+  // Não-admin: esconde Usuários e Alterações, mostra sino
+  $('btnAdmin').classList.toggle('hidden', !U.admin);
+  $('btnTransfers').classList.toggle('hidden', !U.admin);
+  $('bellWrap').classList.toggle('hidden', U.admin);
+  if (!U.admin) {
+    checkNotifications();
+    setInterval(checkNotifications, 60000);
+  }
   const c = await api('GET',{action:'getConfig'});
   if (c.error) { toast(c.error,'err'); return; }
   CFG = c;
@@ -787,7 +793,7 @@ function openForm(row) {
   const isE = !!L;
   const canE = true; // todos editam; só admin exclui
   $('fTitle').textContent = isE ? 'Editar Lead' : 'Novo Lead';
-  const canDel = isE && (U.admin || (L['Prospect']||'').toLowerCase()===U.nome.toLowerCase());
+  const canDel = isE && U.admin;
   $('fDel').classList.toggle('hidden', !canDel);
   const dis = canE?'':'disabled';
   const rq = U.admin ? '' : ' fld-req';
@@ -1124,6 +1130,7 @@ function pal(n){const b=['#0A2A4E','#00897B','#FFB300','#5C6BC0','#26A69A','#EC4
 
 // ═══════ ADMIN ═══════
 async function openAdmin(){
+  if (!U.admin) { toast('Acesso restrito à administradora.','err'); return; }
   const r=await api('GET',{action:'getUsers'}); if(r.error){toast(r.error,'err');return;}
   $('aBody').innerHTML=(r.users||[]).map(u=>{
     const bc=u.status==='aprovado'?'b-ok':u.status==='pendente'?'b-pend':'b-rej';
@@ -1149,19 +1156,41 @@ async function requestTransfer() {
   if (!editRow) return;
   const L = curData().find(l=>l._row===editRow);
   if (!L) return;
+
+  // Primeiro salva o lead com os dados atuais do form
+  const d1=$('f_d1').value.replace(/\D/g,''),n1=$('f_n1').value,d2=$('f_d2').value.replace(/\D/g,''),n2=$('f_n2').value;
+  const t1=d1&&n1?'('+d1+') '+n1:n1||'', t2=d2&&n2?'('+d2+') '+n2:n2||'';
+  const lead = {
+    'Status':gv('f_st'),'Prospect':L['Prospect'],'Time Comercial':gv('f_tm'),
+    'Razão Social':gv('f_rs'),'CNPJ':gv('f_cnpj'),'Contato Principal':gv('f_cp'),
+    'Telefone':[t1,t2].filter(Boolean).join(' | '),'E-mail':gv('f_em'),
+    'Cidade':gv('f_ci'),'UF':gv('f_uf'),'Canal Principal':gv('f_ca'),
+    'Linha de Interesse':msVal('ms_li'),'Produto(s) de Interesse':gv('f_pd'),
+    'Data Primeiro Contato':gv('f_dp'),'Data Último Contato':gv('f_du'),
+    'Próxima Ação':gv('f_pa'),'Data Próxima Ação':gv('f_da'),
+    'Valor do Pedido':gv('f_vl'),'Nº do Pedido':gv('f_np'),
+    'Motivo da Perda':msVal('ms_mp'),'Observações':gv('f_ob'),
+  };
+
+  const editAct = curTab==='wa'?'editWA':'editLead';
+  const saveR = await api('POST',{action:editAct,userEmail:U.email,row:editRow,lead});
+  if (!saveR.ok) { toast(saveR.error||'Erro ao salvar.','err'); return; }
+
+  // Depois envia solicitação de transferência
   const r = await api('POST', {
     action: 'requestTransfer',
     userEmail: U.email,
     sheetName: curTab==='wa'?'WHATSAPP':'LEADS',
     row: editRow,
-    razaoSocial: L['Razão Social']||'',
+    razaoSocial: lead['Razão Social']||'',
     prospectAtual: L['Prospect']||''
   });
-  if (r.ok) { toast('AGUARDANDO AUTORIZAÇÃO','ok'); closeForm(); }
+  if (r.ok) { toast('AGUARDANDO AUTORIZAÇÃO','ok'); closeForm(); await reload(); }
   else toast(r.error||'Erro','err');
 }
 
 async function openTransfers() {
+  if (!U.admin) { toast('Acesso restrito à administradora.','err'); return; }
   const r = await api('GET',{action:'getTransfers'});
   if (r.error) { toast(r.error,'err'); return; }
   const items = r.transfers||[];
