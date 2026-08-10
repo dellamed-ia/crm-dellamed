@@ -494,6 +494,7 @@ async function doLogin() {
     setTimeout(()=>initApp(), 400);
   } else {
     prog.classList.remove('show');
+    $('loginMsg').style.display='';
     if (r.pending) loginMsg('SOLICITAÇÃO ENVIADA! Aguarde a aprovação da administradora.','pending');
     else loginMsg(r.message||r.error||'Erro.','error');
   }
