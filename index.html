@@ -149,6 +149,12 @@ input:focus,select:focus,textarea:focus{border-color:var(--teal)}
 .toast.ok{background:var(--green)}.toast.err{background:var(--red)}
 @keyframes tIn{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:none}}
 
+/* DASH TOGGLE */
+.dash-toggle{display:flex;background:rgba(255,255,255,.12);border-radius:8px;overflow:hidden;border:1.5px solid rgba(255,255,255,.2)}
+.dtg{padding:7px 16px;font-size:.82rem;font-weight:600;color:rgba(255,255,255,.6);background:transparent;transition:all .2s;white-space:nowrap}
+.dtg:hover{color:#fff}
+.dtg.active{background:var(--gold);color:var(--navy);box-shadow:0 2px 8px rgba(0,0,0,.15)}
+
 /* TABS */
 .tabs{display:flex;gap:0;padding:0 24px;background:#fff;border-bottom:2px solid var(--border)}
 .tab{padding:12px 24px;font-size:.88rem;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:3px solid transparent;transition:all .2s;user-select:none}
@@ -218,8 +224,10 @@ input:focus,select:focus,textarea:focus{border-color:var(--teal)}
   <div class="topbar">
     <h1>CRM <span>Dellamed</span></h1>
     <div class="topbar-actions">
-      <button class="btn btn-gold" id="btnDash" onclick="openDash('leads')">📊 DASHBOARD</button>
-      <button class="btn" id="btnDashWA" style="background:#25D366;color:#fff" onclick="openDash('wa')">💬 DASH WHATS</button>
+      <div class="dash-toggle" id="dashToggle">
+        <button class="dtg active" id="dtgGeral" onclick="setDashSrc('leads')">📊 GERAL</button>
+        <button class="dtg" id="dtgWA" onclick="setDashSrc('wa')">💬 WHATSAPP</button>
+      </div>
       <button id="btnAdmin" class="btn btn-outline hidden">👥 Usuários</button>
       <button class="btn btn-teal" id="btnNew">+ Novo Lead</button>
       <div class="user-badge"><span id="uName"></span><button class="btn btn-outline btn-sm" id="btnLogout">Sair</button></div>
@@ -418,12 +426,20 @@ function switchTab(tab) {
   $('tabLeads').classList.toggle('active', tab==='leads');
   $('tabWA').classList.toggle('active', tab==='wa');
   $('secTitle').textContent = tab==='leads' ? 'Prospecção' : 'WhatsApp';
-  $('btnDash').textContent = tab==='wa' ? '📊 DASH WHATS' : '📊 DASHBOARD';
   $('inSearch').value = '';
   $('fltProspect').value = ''; $('fltTime').value = ''; $('fltDe').value = ''; $('fltAte').value = '';
   buildMainFilters();
   renderAll();
 }
+
+function setDashSrc(src) {
+  dashSrc = src;
+  $('dtgGeral').classList.toggle('active', src==='leads');
+  $('dtgWA').classList.toggle('active', src==='wa');
+  openDash();
+}
+
+function dashData() { return dashSrc==='wa' ? WA_LEADS : LEADS; }
 
 function curData() { return curTab==='leads' ? LEADS : WA_LEADS; }
 
@@ -672,17 +688,16 @@ function toggleGanhoReq(){
 // ═══════ DASHBOARD ═══════
 let dCharts = [], dashSrc = 'leads';
 
-function openDash(src) {
+function openDash() {
   if(typeof Chart==='undefined'){toast('Chart.js carregando... tente novamente em 2 segundos.','err');return;}
-  dashSrc = src || curTab;
   $('scDash').classList.remove('hidden');
-  $('dashTitle').textContent = dashSrc==='wa' ? '💬 Dashboard — WhatsApp' : '📊 Dashboard — Prospecção';
+  $('dashTitle').textContent = dashSrc==='wa' ? '💬 Dashboard — WhatsApp' : '📊 Dashboard — Geral';
   buildDF(); renderDash();
 }
 function closeDash(){$('scDash').classList.add('hidden');dCharts.forEach(c=>{try{c.destroy();}catch(e){}});dCharts=[];}
 
 function buildDF() {
-  const src = curData();
+  const src = dashData();
   const yrs=[...new Set(src.map(l=>{const m=(l['Data']||'').match(/(\d{4})$/);return m?m[1]:''}).filter(Boolean))].sort();
   const mos=['01','02','03','04','05','06','07','08','09','10','11','12'];
   const pros=[...new Set(src.map(l=>l['Prospect']).filter(Boolean))].sort();
@@ -697,7 +712,7 @@ function buildDF() {
 function clearDF(){document.querySelectorAll('#dFilters select').forEach(s=>{for(const o of s.options)o.selected=false;});renderDash();}
 
 function gfLeads() {
-  let d=[...curData()];const gs=id=>{const e=$(id);if(!e)return[];return Array.from(e.selectedOptions).map(o=>o.value);};
+  let d=[...dashData()];const gs=id=>{const e=$(id);if(!e)return[];return Array.from(e.selectedOptions).map(o=>o.value);};
   const fA=gs('dfA'),fM=gs('dfM'),fP=gs('dfP'),fT=gs('dfT'),fC=gs('dfC'),fU=gs('dfU'),fMo=gs('dfMo'),fTp=gs('dfTp');
   if(fA.length)d=d.filter(l=>{const p=(l['Data']||'').split('/');return p.length>=3&&fA.includes(p[2]);});
   if(fM.length)d=d.filter(l=>{const p=(l['Data']||'').split('/');return p.length>=2&&fM.includes(p[1]);});
@@ -769,7 +784,6 @@ function toast(m,t){const e=document.createElement('div');e.className='toast '+(
 // ═══════ EVENT LISTENERS ═══════
 $('btnLogin').onclick = doLogin;
 $('btnLogout').onclick = doLogout;
-$('btnDash').onclick = openDash;
 $('btnNew').onclick = ()=>openForm();
 $('btnAdmin').onclick = openAdmin;
 $('fClose').onclick = closeForm;
