@@ -146,13 +146,19 @@ input:focus,select:focus,textarea:focus{border-color:var(--teal)}
 .admin-badge{background:var(--red);color:#fff;font-size:.65rem;font-weight:700;min-width:18px;height:18px;border-radius:9px;display:inline-flex;align-items:center;justify-content:center;padding:0 5px;margin-left:4px;vertical-align:middle;animation:badgePulse 2s ease-in-out infinite}
 @keyframes badgePulse{0%,100%{transform:scale(1)}50%{transform:scale(1.15)}}
 
-/* GAUGE */
-.gauge-container{display:flex;flex-direction:column;align-items:center;padding:10px 0}
-.gauge-svg{max-width:280px;width:100%}
-.gauge-legend{display:flex;gap:20px;margin-top:12px;justify-content:center}
-.gauge-leg{display:flex;align-items:center;gap:6px;font-size:.82rem}
-.gauge-leg .gd{width:12px;height:12px;border-radius:3px}
-.gauge-leg b{font-size:1.1rem}
+/* THERMOMETER BAR */
+.thermo-container{padding:16px 0}
+.thermo-bar-wrap{position:relative;height:36px;border-radius:18px;overflow:hidden;background:#e8e8e8;display:flex}
+.thermo-seg{height:100%;display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:700;color:#fff;transition:width .6s ease;min-width:0}
+.thermo-seg span{text-shadow:0 1px 3px rgba(0,0,0,.3);white-space:nowrap}
+.thermo-labels{display:flex;justify-content:space-between;margin-top:10px}
+.thermo-lbl{display:flex;align-items:center;gap:6px;font-size:.82rem}
+.thermo-lbl .td{width:14px;height:14px;border-radius:4px;flex-shrink:0}
+.thermo-lbl b{font-size:1.15rem;color:var(--navy)}
+.thermo-lbl small{color:var(--muted);font-size:.72rem}
+.thermo-indicator{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:12px}
+.thermo-score{font-size:1.6rem;font-weight:800;line-height:1}
+.thermo-score-lbl{font-size:.78rem;color:var(--muted);text-transform:uppercase}
 .btn-loading{opacity:.7;pointer-events:none;position:relative}
 .btn-loading::after{content:'';display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .5s linear infinite;margin-left:8px;vertical-align:middle}
 .bell-dd{position:absolute;top:100%;right:0;width:320px;background:#fff;border-radius:8px;box-shadow:0 8px 32px rgba(0,0,0,.18);z-index:20;max-height:300px;overflow-y:auto;display:none}
@@ -1224,50 +1230,30 @@ function renderDash() {
 function renderGauge(containerId, score, counts, total) {
   const el = $(containerId);
   if (!el) return;
-  // score: 0-100, counts: [frio, morno, quente]
-  const cx=140, cy=130, r=100, sw=24;
-  const needleAngle = Math.PI + (score/100)*Math.PI; // 180° to 360°
-  const nx = cx + (r-10)*Math.cos(needleAngle);
-  const ny = cy + (r-10)*Math.sin(needleAngle);
-
-  // Arc segments
-  function arc(startPct, endPct, color) {
-    const s = Math.PI + startPct*Math.PI;
-    const e = Math.PI + endPct*Math.PI;
-    const x1=cx+r*Math.cos(s), y1=cy+r*Math.sin(s);
-    const x2=cx+r*Math.cos(e), y2=cy+r*Math.sin(e);
-    const lg = (endPct-startPct)>0.5?1:0;
-    return '<path d="M'+x1+','+y1+' A'+r+','+r+' 0 '+lg+',1 '+x2+','+y2+'" fill="none" stroke="'+color+'" stroke-width="'+sw+'" stroke-linecap="round"/>';
-  }
-
-  const pFrio=counts[0]/total, pMorno=counts[1]/total, pQuente=counts[2]/total;
+  const pFrio = Math.round((counts[0]/total)*100)||0;
+  const pMorno = Math.round((counts[1]/total)*100)||0;
+  const pQuente = 100 - pFrio - pMorno;
   const label = score<33?'FRIO':score<66?'MORNO':'QUENTE';
   const labelColor = score<33?'#42A5F5':score<66?'#FFA726':'#EF5350';
+  const emoji = score<33?'🔵':score<66?'🟡':'🔴';
 
-  el.innerHTML = '<div class="gauge-container">' +
-    '<svg class="gauge-svg" viewBox="0 0 280 170">' +
-    // Background track
-    '<path d="M'+( cx-r)+','+cy+' A'+r+','+r+' 0 0,1 '+(cx+r)+','+cy+'" fill="none" stroke="#e8e8e8" stroke-width="'+sw+'" stroke-linecap="round"/>' +
-    // Colored segments
-    arc(0, pFrio, '#42A5F5') +
-    arc(pFrio, pFrio+pMorno, '#FFA726') +
-    arc(pFrio+pMorno, 1, '#EF5350') +
-    // Needle
-    '<line x1="'+cx+'" y1="'+cy+'" x2="'+nx+'" y2="'+ny+'" stroke="'+labelColor+'" stroke-width="3" stroke-linecap="round"/>' +
-    '<circle cx="'+cx+'" cy="'+cy+'" r="6" fill="'+labelColor+'"/>' +
-    '<circle cx="'+cx+'" cy="'+cy+'" r="3" fill="#fff"/>' +
-    // Score text
-    '<text x="'+cx+'" y="'+(cy-20)+'" text-anchor="middle" font-size="28" font-weight="800" fill="'+labelColor+'" font-family="Arial">'+score+'</text>' +
-    '<text x="'+cx+'" y="'+(cy-2)+'" text-anchor="middle" font-size="11" font-weight="600" fill="'+labelColor+'" font-family="Arial">'+label+'</text>' +
-    // Min/Max labels
-    '<text x="'+(cx-r-5)+'" y="'+(cy+18)+'" text-anchor="middle" font-size="9" fill="#42A5F5" font-family="Arial">Frio</text>' +
-    '<text x="'+(cx+r+5)+'" y="'+(cy+18)+'" text-anchor="middle" font-size="9" fill="#EF5350" font-family="Arial">Quente</text>' +
-    '</svg>' +
-    '<div class="gauge-legend">' +
-    '<div class="gauge-leg"><div class="gd" style="background:#42A5F5"></div>Frio <b>'+counts[0]+'</b></div>' +
-    '<div class="gauge-leg"><div class="gd" style="background:#FFA726"></div>Morno <b>'+counts[1]+'</b></div>' +
-    '<div class="gauge-leg"><div class="gd" style="background:#EF5350"></div>Quente <b>'+counts[2]+'</b></div>' +
-    '</div></div>';
+  el.innerHTML = '<div class="thermo-container">' +
+    '<div class="thermo-indicator">' +
+      '<span class="thermo-score" style="color:'+labelColor+'">'+emoji+' '+label+'</span>' +
+    '</div>' +
+    '<div style="margin-top:14px">' +
+      '<div class="thermo-bar-wrap">' +
+        (pFrio>0?'<div class="thermo-seg" style="width:'+pFrio+'%;background:linear-gradient(90deg,#1E88E5,#42A5F5)"><span>'+counts[0]+'</span></div>':'')+
+        (pMorno>0?'<div class="thermo-seg" style="width:'+pMorno+'%;background:linear-gradient(90deg,#FB8C00,#FFA726)"><span>'+counts[1]+'</span></div>':'')+
+        (pQuente>0?'<div class="thermo-seg" style="width:'+pQuente+'%;background:linear-gradient(90deg,#E53935,#EF5350)"><span>'+counts[2]+'</span></div>':'')+
+      '</div>' +
+    '</div>' +
+    '<div class="thermo-labels">' +
+      '<div class="thermo-lbl"><div class="td" style="background:#42A5F5"></div><div>Frio<br><b>'+counts[0]+'</b> <small>('+pFrio+'%)</small></div></div>' +
+      '<div class="thermo-lbl"><div class="td" style="background:#FFA726"></div><div>Morno<br><b>'+counts[1]+'</b> <small>('+pMorno+'%)</small></div></div>' +
+      '<div class="thermo-lbl"><div class="td" style="background:#EF5350"></div><div>Quente<br><b>'+counts[2]+'</b> <small>('+pQuente+'%)</small></div></div>' +
+    '</div>' +
+  '</div>';
 }
 
 function mkC(id,type,labels,vals,colors){
