@@ -134,6 +134,17 @@ input:focus,select:focus,textarea:focus{border-color:var(--teal)}
 /* TOAST */
 .toast{position:fixed;bottom:24px;right:24px;padding:14px 22px;border-radius:8px;color:#fff;font-size:.88rem;font-weight:500;z-index:300;animation:tIn .3s ease;box-shadow:0 8px 24px rgba(0,0,0,.2)}
 
+/* NOTIFICATION BELL */
+.bell-wrap{position:relative;cursor:pointer}
+.bell-btn{background:none;color:#fff;font-size:1.3rem;position:relative;padding:4px 8px}
+.bell-badge{position:absolute;top:-2px;right:0;background:var(--red);color:#fff;font-size:.6rem;font-weight:700;min-width:16px;height:16px;border-radius:8px;display:flex;align-items:center;justify-content:center;padding:0 4px}
+.bell-dd{position:absolute;top:100%;right:0;width:320px;background:#fff;border-radius:8px;box-shadow:0 8px 32px rgba(0,0,0,.18);z-index:20;max-height:300px;overflow-y:auto;display:none}
+.bell-dd.open{display:block}
+.bell-item{padding:12px 16px;border-bottom:1px solid var(--border);font-size:.82rem;color:var(--text)}
+.bell-item b{color:var(--navy)}
+.bell-item small{color:var(--muted);font-size:.72rem}
+.bell-empty{padding:20px;text-align:center;color:var(--muted);font-size:.82rem}
+
 /* THERMOMETER */
 .thermo-wrap{display:flex;align-items:center;gap:24px;padding:8px 0}
 .thermo{position:relative;width:48px;height:200px;display:flex;flex-direction:column;justify-content:flex-end;border-radius:24px 24px 50% 50%;background:#F5F6FA;overflow:hidden;box-shadow:inset 0 2px 8px rgba(0,0,0,.1)}
@@ -255,6 +266,11 @@ input:focus,select:focus,textarea:focus{border-color:var(--teal)}
       <button class="btn btn-gold" id="btnDashGeral" onclick="setDashSrc('leads')">📊 DASHBOARD MULTICANAIS</button>
       <button class="btn hidden" id="btnDashWA" style="background:var(--navy-light);color:#fff" onclick="setDashSrc('wa')">💬 DASHBOARD WHATSAPP</button>
       <button id="btnAdmin" class="btn btn-outline hidden">👥 Usuários</button>
+      <button id="btnTransfers" class="btn btn-outline hidden">📝 Alterações</button>
+      <div class="bell-wrap" id="bellWrap">
+        <button class="bell-btn" onclick="toggleBell()">🔔<span class="bell-badge hidden" id="bellBadge">0</span></button>
+        <div class="bell-dd" id="bellDD"></div>
+      </div>
       <button class="btn btn-teal" id="btnNew">+ Novo Lead</button>
       <div class="user-badge"><span id="uName"></span><button class="btn btn-outline btn-sm" id="btnLogout">Sair</button></div>
     </div>
@@ -352,6 +368,16 @@ input:focus,select:focus,textarea:focus{border-color:var(--teal)}
   </div>
 </div>
 
+<!-- TRANSFERS MODAL -->
+<div id="modTransfers" class="overlay hidden">
+  <div class="modal" style="max-width:780px">
+    <div class="mhd"><h3>📝 Alterações de Leads</h3><button class="mx" id="tClose">✕</button></div>
+    <div class="mbody full" style="display:block;padding:0">
+      <table class="atbl"><thead><tr><th>Data</th><th>Solicitante</th><th>Lead</th><th>De</th><th>Para</th><th>Status</th><th>Ações</th></tr></thead><tbody id="tBody"></tbody></table>
+    </div>
+  </div>
+</div>
+
 <!-- CHART.JS (loaded async, never blocks page) -->
 <script>
 (function(){
@@ -435,7 +461,9 @@ async function initApp() {
   $('scLogin').classList.add('hidden');
   $('scApp').classList.remove('hidden');
   $('uName').innerHTML = '<b>'+esc(U.nome)+'</b>';
-  if (U.admin) $('btnAdmin').classList.remove('hidden');
+  if (U.admin) { $('btnAdmin').classList.remove('hidden'); $('btnTransfers').classList.remove('hidden'); }
+  checkNotifications();
+  setInterval(checkNotifications, 60000); // check every 60s
   const c = await api('GET',{action:'getConfig'});
   if (c.error) { toast(c.error,'err'); return; }
   CFG = c;
@@ -618,7 +646,11 @@ window.sfRemove = function(containerId, val) {
 function sfVal(id) { const w = $(id); return w && w._getSelected ? w._getSelected() : []; }
 
 function updateStatusKPIs() {
-  const data = curData();
+  // Count by status using all filters EXCEPT the status filter
+  const savedStatus = activeStatus;
+  activeStatus = '';
+  const data = getMainFiltered();
+  activeStatus = savedStatus;
   const total = data.length;
   const counts = {}; ST.forEach(s => counts[s] = 0);
   data.forEach(l => { const s = l['Status']||'Novo'; if(counts[s]!==undefined) counts[s]++; });
@@ -754,7 +786,8 @@ function openForm(row) {
   const isE = !!L;
   const canE = true; // todos editam; só admin exclui
   $('fTitle').textContent = isE ? 'Editar Lead' : 'Novo Lead';
-  $('fDel').classList.toggle('hidden', !isE||!U.admin);
+  const canDel = isE && (U.admin || (L['Prospect']||'').toLowerCase()===U.nome.toLowerCase());
+  $('fDel').classList.toggle('hidden', !canDel);
   const dis = canE?'':'disabled';
   const rq = U.admin ? '' : ' fld-req';
   const isGanho = L ? (L['Status']||'').toLowerCase()==='ganho' : false;
@@ -766,7 +799,14 @@ function openForm(row) {
 
   $('fBody').innerHTML =
     fld('Status','<select id="f_st" '+dis+' onchange="toggleGanhoReq()">'+((CFG.status||[]).map(s=>'<option'+(L&&L['Status']===s?' selected':'')+'>'+s+'</option>')).join('')+'</select>',rq)+
-    fld('Prospect (Vendedor)','<input id="f_pr" value="'+esc(isE?L['Prospect']:U.nome)+'" '+dis+'>',rq)+
+    fld('Prospect (Vendedor)',
+      (U.admin
+        ? '<input id="f_pr" value="'+esc(isE?L['Prospect']:U.nome)+'" '+dis+'>'
+        : '<input id="f_pr" value="'+esc(isE?L['Prospect']:U.nome)+'" readonly style="background:#f0f0f0;cursor:not-allowed">' +
+          (isE && (L['Prospect']||'').toLowerCase()!==U.nome.toLowerCase()
+            ? ' <button type="button" class="btn btn-sm btn-teal" style="margin-top:4px;font-size:.72rem" onclick="requestTransfer()">🔄 Alterar para meu usuário</button>'
+            : '')
+      ),rq)+
     fld('Time Comercial','<select id="f_tm" '+dis+'><option value="">Selecione...</option>'+((CFG.timeComercial||[]).map(t=>'<option'+(L&&L['Time Comercial']===t?' selected':'')+'>'+t+'</option>')).join('')+'</select>',rq)+
     fld('Razão Social','<input id="f_rs" value="'+esc(L?L['Razão Social']:'')+'" '+dis+'>',rq)+
     fld('CNPJ','<input id="f_cnpj" value="'+esc(L?L['CNPJ']:'')+'" '+dis+' placeholder="00.000.000/0000-00" maxlength="18" oninput="mCNPJ(this)">',rq)+
@@ -1097,6 +1137,71 @@ function closeAdmin(){$('modAdmin').classList.add('hidden');}
 async function admAct(a,em){const r=await api('POST',{action:a==='approve'?'approveUser':'rejectUser',requesterEmail:U.email,email:em});if(r.ok){toast(a==='approve'?'Aprovado!':'Revogado.','ok');openAdmin();}else toast(r.error||'Erro.','err');}
 async function admDel(em,nome){if(!confirm('Excluir o usuário '+nome+' ('+em+') permanentemente?'))return;const r=await api('POST',{action:'deleteUser',requesterEmail:U.email,email:em});if(r.ok){toast('Usuário excluído.','ok');openAdmin();}else toast(r.error||'Erro ao excluir.','err');}
 
+// ═══════ TRANSFERS ═══════
+async function requestTransfer() {
+  if (!editRow) return;
+  const L = curData().find(l=>l._row===editRow);
+  if (!L) return;
+  const r = await api('POST', {
+    action: 'requestTransfer',
+    userEmail: U.email,
+    sheetName: curTab==='wa'?'WHATSAPP':'LEADS',
+    row: editRow,
+    razaoSocial: L['Razão Social']||'',
+    prospectAtual: L['Prospect']||''
+  });
+  if (r.ok) { toast('AGUARDANDO AUTORIZAÇÃO','ok'); closeForm(); }
+  else toast(r.error||'Erro','err');
+}
+
+async function openTransfers() {
+  const r = await api('GET',{action:'getTransfers'});
+  if (r.error) { toast(r.error,'err'); return; }
+  const items = r.transfers||[];
+  $('tBody').innerHTML = items.length ? items.map(t => {
+    const bc = t.status==='pendente'?'b-pend':t.status==='aprovado'?'b-ok':'b-rej';
+    const act = t.status==='pendente'
+      ? '<button class="btn btn-green btn-sm" onclick="actTransfer(\'approve\','+t._row+')">Aprovar</button> <button class="btn btn-danger btn-sm" onclick="actTransfer(\'reject\','+t._row+')">Recusar</button>'
+      : '<span class="badge '+bc+'">'+t.status+'</span>';
+    return '<tr><td style="font-size:.78rem;white-space:nowrap">'+esc(t.data)+'</td><td>'+esc(t.nome)+'</td><td title="'+esc(t.razaoSocial)+'" style="max-width:160px;overflow:hidden;text-overflow:ellipsis">'+esc(t.razaoSocial)+'</td><td>'+esc(t.prospectAtual)+'</td><td>'+esc(t.novoProspect)+'</td><td><span class="badge '+bc+'">'+t.status+'</span></td><td>'+act+'</td></tr>';
+  }).join('') : '<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--muted)">Nenhuma solicitação.</td></tr>';
+  $('modTransfers').classList.remove('hidden');
+}
+function closeTransfers(){$('modTransfers').classList.add('hidden');}
+
+async function actTransfer(action, row) {
+  const r = await api('POST',{action:action==='approve'?'approveTransfer':'rejectTransfer',requesterEmail:U.email,row:row});
+  if (r.ok) { toast(action==='approve'?'Transferência aprovada!':'Transferência recusada.','ok'); openTransfers(); await reload(); }
+  else toast(r.error||'Erro','err');
+}
+
+// ═══════ NOTIFICATIONS BELL ═══════
+async function checkNotifications() {
+  if (!U) return;
+  const r = await api('GET',{action:'getNotifications',email:U.email});
+  if (r.error) return;
+  const notifs = r.notifications||[];
+  const badge = $('bellBadge');
+  if (notifs.length > 0) {
+    badge.textContent = notifs.length;
+    badge.classList.remove('hidden');
+  } else {
+    badge.classList.add('hidden');
+  }
+  $('bellDD').innerHTML = notifs.length
+    ? notifs.map(n => '<div class="bell-item"><b>'+esc(n.razaoSocial)+'</b><br>Transferência <b style="color:'+(n.status==='aprovado'?'var(--teal)':'var(--red)')+'">'+n.status+'</b><br><small>'+esc(n.resolvidoEm)+'</small></div>').join('')
+    : '<div class="bell-empty">Sem notificações</div>';
+}
+
+function toggleBell() {
+  const dd = $('bellDD');
+  dd.classList.toggle('open');
+  // Mark as seen
+  if (dd.classList.contains('open')) {
+    $('bellBadge').classList.add('hidden');
+  }
+}
+
 // ═══════ UTILS ═══════
 function $(id){return document.getElementById(id);}
 function gv(id){const e=$(id);return e?(e.value||'').trim():'';}
@@ -1108,6 +1213,10 @@ $('btnLogin').onclick = doLogin;
 $('btnLogout').onclick = doLogout;
 $('btnNew').onclick = ()=>openForm();
 $('btnAdmin').onclick = openAdmin;
+$('btnTransfers').onclick = openTransfers;
+$('tClose').onclick = closeTransfers;
+$('modTransfers').onclick = e=>{if(e.target===$('modTransfers'))closeTransfers();};
+document.addEventListener('click',e=>{if(!$('bellWrap').contains(e.target))$('bellDD').classList.remove('open');});
 $('fClose').onclick = closeForm;
 $('fCancel').onclick = closeForm;
 $('fSave').onclick = saveLead;
