@@ -133,6 +133,19 @@ input:focus,select:focus,textarea:focus{border-color:var(--teal)}
 
 /* TOAST */
 .toast{position:fixed;bottom:24px;right:24px;padding:14px 22px;border-radius:8px;color:#fff;font-size:.88rem;font-weight:500;z-index:300;animation:tIn .3s ease;box-shadow:0 8px 24px rgba(0,0,0,.2)}
+
+/* THERMOMETER */
+.thermo-wrap{display:flex;align-items:center;gap:24px;padding:8px 0}
+.thermo{position:relative;width:48px;height:200px;display:flex;flex-direction:column;justify-content:flex-end;border-radius:24px 24px 50% 50%;background:#F5F6FA;overflow:hidden;box-shadow:inset 0 2px 8px rgba(0,0,0,.1)}
+.thermo-fill{width:100%;transition:height .6s ease;border-radius:0 0 50% 50%}
+.thermo-bulb{width:64px;height:64px;border-radius:50%;position:absolute;bottom:-8px;left:50%;transform:translateX(-50%);box-shadow:0 4px 12px rgba(0,0,0,.15);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:.85rem;color:#fff;z-index:2}
+.thermo-labels{display:flex;flex-direction:column;gap:12px;flex:1}
+.thermo-row{display:flex;align-items:center;gap:10px}
+.thermo-dot{width:14px;height:14px;border-radius:50%;flex-shrink:0}
+.thermo-info{display:flex;flex-direction:column}
+.thermo-info b{font-size:1.1rem;color:var(--navy)}
+.thermo-info small{font-size:.72rem;color:var(--muted)}
+.thermo-pct{font-size:1.4rem;font-weight:800;min-width:50px;text-align:right}
 .toast.ok{background:var(--green)}.toast.err{background:var(--red)}
 @keyframes tIn{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:none}}
 
@@ -205,7 +218,8 @@ input:focus,select:focus,textarea:focus{border-color:var(--teal)}
   <div class="topbar">
     <h1>CRM <span>Dellamed</span></h1>
     <div class="topbar-actions">
-      <button class="btn btn-gold" id="btnDash">📊 DASHBOARD</button>
+      <button class="btn btn-gold" id="btnDash" onclick="openDash('leads')">📊 DASHBOARD</button>
+      <button class="btn" id="btnDashWA" style="background:#25D366;color:#fff" onclick="openDash('wa')">💬 DASH WHATS</button>
       <button id="btnAdmin" class="btn btn-outline hidden">👥 Usuários</button>
       <button class="btn btn-teal" id="btnNew">+ Novo Lead</button>
       <div class="user-badge"><span id="uName"></span><button class="btn btn-outline btn-sm" id="btnLogout">Sair</button></div>
@@ -404,6 +418,7 @@ function switchTab(tab) {
   $('tabLeads').classList.toggle('active', tab==='leads');
   $('tabWA').classList.toggle('active', tab==='wa');
   $('secTitle').textContent = tab==='leads' ? 'Prospecção' : 'WhatsApp';
+  $('btnDash').textContent = tab==='wa' ? '📊 DASH WHATS' : '📊 DASHBOARD';
   $('inSearch').value = '';
   $('fltProspect').value = ''; $('fltTime').value = ''; $('fltDe').value = ''; $('fltAte').value = '';
   buildMainFilters();
@@ -516,8 +531,8 @@ function openForm(row) {
   editRow = row||null;
   const L = editRow ? curData().find(l=>l._row===editRow) : null;
   const isE = !!L;
-  const canE = !isE || U.admin || (L['Prospect']||'').toLowerCase()===U.nome.toLowerCase();
-  $('fTitle').textContent = isE ? (canE?'Editar Lead':'Visualizar Lead') : 'Novo Lead';
+  const canE = true; // todos editam; só admin exclui
+  $('fTitle').textContent = isE ? 'Editar Lead' : 'Novo Lead';
   $('fDel').classList.toggle('hidden', !isE||!U.admin);
   const dis = canE?'':'disabled';
   const rq = (curTab==='wa') ? ' fld-req' : (U.admin ? '' : ' fld-req');
@@ -655,12 +670,13 @@ function toggleGanhoReq(){
 }
 
 // ═══════ DASHBOARD ═══════
-let dCharts = [];
+let dCharts = [], dashSrc = 'leads';
 
-function openDash() {
+function openDash(src) {
   if(typeof Chart==='undefined'){toast('Chart.js carregando... tente novamente em 2 segundos.','err');return;}
+  dashSrc = src || curTab;
   $('scDash').classList.remove('hidden');
-  $('dashTitle').textContent = '📊 Dashboard — ' + (curTab==='wa'?'WhatsApp':'Prospecção');
+  $('dashTitle').textContent = dashSrc==='wa' ? '💬 Dashboard — WhatsApp' : '📊 Dashboard — Prospecção';
   buildDF(); renderDash();
 }
 function closeDash(){$('scDash').classList.add('hidden');dCharts.forEach(c=>{try{c.destroy();}catch(e){}});dCharts=[];}
