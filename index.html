@@ -143,6 +143,10 @@ input:focus,select:focus,textarea:focus{border-color:var(--teal)}
 .bell-wrap{position:relative;cursor:pointer}
 .bell-btn{background:none;color:#fff;font-size:1.3rem;position:relative;padding:4px 8px}
 .bell-badge{position:absolute;top:-2px;right:0;background:var(--red);color:#fff;font-size:.6rem;font-weight:700;min-width:16px;height:16px;border-radius:8px;display:flex;align-items:center;justify-content:center;padding:0 4px}
+.admin-badge{background:var(--red);color:#fff;font-size:.65rem;font-weight:700;min-width:18px;height:18px;border-radius:9px;display:inline-flex;align-items:center;justify-content:center;padding:0 5px;margin-left:4px;vertical-align:middle;animation:badgePulse 2s ease-in-out infinite}
+@keyframes badgePulse{0%,100%{transform:scale(1)}50%{transform:scale(1.15)}}
+.btn-loading{opacity:.7;pointer-events:none;position:relative}
+.btn-loading::after{content:'';display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .5s linear infinite;margin-left:8px;vertical-align:middle}
 .bell-dd{position:absolute;top:100%;right:0;width:320px;background:#fff;border-radius:8px;box-shadow:0 8px 32px rgba(0,0,0,.18);z-index:20;max-height:300px;overflow-y:auto;display:none}
 .bell-dd.open{display:block}
 .bell-item{padding:12px 16px;border-bottom:1px solid var(--border);font-size:.82rem;color:var(--text)}
@@ -274,8 +278,8 @@ input:focus,select:focus,textarea:focus{border-color:var(--teal)}
     <div class="topbar-actions">
       <button class="btn btn-gold" id="btnDashGeral" onclick="setDashSrc('leads')">📊 DASHBOARD MULTICANAIS</button>
       <button class="btn hidden" id="btnDashWA" style="background:var(--navy-light);color:#fff" onclick="setDashSrc('wa')">💬 DASHBOARD WHATSAPP</button>
-      <button id="btnAdmin" class="btn btn-outline hidden">👥 Usuários</button>
-      <button id="btnTransfers" class="btn btn-outline hidden">📝 Alterações</button>
+      <button id="btnAdmin" class="btn btn-outline hidden" style="position:relative">👥 Usuários <span class="admin-badge hidden" id="badgeUsers">0</span></button>
+      <button id="btnTransfers" class="btn btn-outline hidden" style="position:relative">📝 Alterações <span class="admin-badge hidden" id="badgeTransfers">0</span></button>
       <div class="bell-wrap hidden" id="bellWrap">
         <button class="bell-btn" onclick="toggleBell()">🔔<span class="bell-badge hidden" id="bellBadge">0</span></button>
         <div class="bell-dd" id="bellDD"></div>
@@ -488,7 +492,10 @@ async function initApp() {
   $('btnAdmin').classList.toggle('hidden', !U.admin);
   $('btnTransfers').classList.toggle('hidden', !U.admin);
   $('bellWrap').classList.toggle('hidden', U.admin);
-  if (!U.admin) {
+  if (U.admin) {
+    checkAdminPending();
+    setInterval(checkAdminPending, 60000);
+  } else {
     checkNotifications();
     setInterval(checkNotifications, 60000);
   }
@@ -870,7 +877,18 @@ function fld(lbl,html,extra){return '<div class="fld'+(extra||'')+'"><label>'+lb
 function fldF(lbl,html){return '<div class="fld full"><label>'+lbl+'</label>'+html+'</div>';}
 function closeForm(){$('modForm').classList.add('hidden');editRow=null;pendingTransfer=false;assignedProspect='';}
 
+let saving = false;
 async function saveLead() {
+  if (saving) return;
+  const saveBtn = $('fSave');
+  saving = true;
+  saveBtn.classList.add('btn-loading');
+  saveBtn.textContent = 'Salvando...';
+  try { await _doSaveLead(); }
+  finally { saving = false; saveBtn.classList.remove('btn-loading'); saveBtn.textContent = 'Salvar'; }
+}
+
+async function _doSaveLead() {
   const d1=$('f_d1').value.replace(/\D/g,''),n1=$('f_n1').value,d2=$('f_d2').value.replace(/\D/g,''),n2=$('f_n2').value;
   const t1=d1&&n1?'('+d1+') '+n1:n1||'', t2=d2&&n2?'('+d2+') '+n2:n2||'';
   const lead = {
@@ -1197,7 +1215,7 @@ async function openAdmin(){
   $('modAdmin').classList.remove('hidden');
 }
 function closeAdmin(){$('modAdmin').classList.add('hidden');}
-async function admAct(a,em){const r=await api('POST',{action:a==='approve'?'approveUser':'rejectUser',requesterEmail:U.email,email:em});if(r.ok){toast(a==='approve'?'Aprovado!':'Revogado.','ok');openAdmin();}else toast(r.error||'Erro.','err');}
+async function admAct(a,em){const r=await api('POST',{action:a==='approve'?'approveUser':'rejectUser',requesterEmail:U.email,email:em});if(r.ok){toast(a==='approve'?'Aprovado!':'Revogado.','ok');openAdmin();checkAdminPending();}else toast(r.error||'Erro.','err');}
 async function admDel(em,nome){if(!confirm('Excluir o usuário '+nome+' ('+em+') permanentemente?'))return;const r=await api('POST',{action:'deleteUser',requesterEmail:U.email,email:em});if(r.ok){toast('Usuário excluído.','ok');openAdmin();}else toast(r.error||'Erro ao excluir.','err');}
 
 // ═══════ TRANSFERS ═══════
@@ -1248,7 +1266,7 @@ function closeTransfers(){$('modTransfers').classList.add('hidden');}
 
 async function actTransfer(action, row) {
   const r = await api('POST',{action:action==='approve'?'approveTransfer':'rejectTransfer',requesterEmail:U.email,row:row});
-  if (r.ok) { toast(action==='approve'?'Transferência aprovada!':'Transferência recusada.','ok'); openTransfers(); await reload(); }
+  if (r.ok) { toast(action==='approve'?'Transferência aprovada!':'Transferência recusada.','ok'); openTransfers(); checkAdminPending(); await reload(); }
   else toast(r.error||'Erro','err');
 }
 
@@ -1287,6 +1305,27 @@ async function clearNotifications() {
   $('bellDD').classList.remove('open');
   $('bellBadge').classList.add('hidden');
   toast('Notificações limpas.', 'ok');
+}
+
+// ═══════ ADMIN PENDING BADGES ═══════
+async function checkAdminPending() {
+  if (!U || !U.admin) return;
+  // Check pending users
+  const u = await api('GET', { action: 'getUsers' });
+  if (!u.error && u.users) {
+    const pending = u.users.filter(x => x.status === 'pendente').length;
+    const b = $('badgeUsers');
+    if (pending > 0) { b.textContent = pending; b.classList.remove('hidden'); }
+    else { b.classList.add('hidden'); }
+  }
+  // Check pending transfers
+  const t = await api('GET', { action: 'getTransfers' });
+  if (!t.error && t.transfers) {
+    const pending = t.transfers.filter(x => x.status === 'pendente').length;
+    const b = $('badgeTransfers');
+    if (pending > 0) { b.textContent = pending; b.classList.remove('hidden'); }
+    else { b.classList.add('hidden'); }
+  }
 }
 
 // ═══════ UTILS ═══════
