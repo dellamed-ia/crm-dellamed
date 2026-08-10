@@ -458,7 +458,12 @@ async function api(method, body, attempt) {
     const text = await r.text();
     console.log('API response:', text.substring(0,200));
     try { return JSON.parse(text); }
-    catch(pe) { console.error('JSON parse error:', pe, text.substring(0,500)); return { error: 'Resposta inválida do servidor.' }; }
+    catch(pe) {
+      console.error('JSON parse error:', pe, text.substring(0,500));
+      // Show beginning of server response to help debug
+      const preview = text.substring(0,100).replace(/<[^>]+>/g,'').trim();
+      return { error: 'Erro no servidor: ' + (preview || 'resposta vazia') };
+    }
   } catch(e) {
     clearTimeout(tm);
     if (e.name === 'AbortError' && (!attempt || attempt < 2)) {
