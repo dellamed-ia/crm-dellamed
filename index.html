@@ -8,7 +8,7 @@
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
   --navy:#0A2A4E;--navy-light:#153d6b;--teal:#00897B;--teal-light:#26A69A;
-  --gold:#FFB300;--red:#E53935;--green:#43A047;--orange:#FB8C00;
+  --gold:#FFB300;--red:#E53935;--green:#00897B;--orange:#FB8C00;
   --bg:#F5F6FA;--card:#fff;--text:#1a1a2e;--muted:#6b7280;--border:#e0e3eb;
   --frio:#42A5F5;--morno:#FFA726;--quente:#EF5350;
   --radius:10px;--shadow:0 2px 12px rgba(10,42,78,.08);
@@ -27,7 +27,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--teal)}
 .btn-outline{background:transparent;border:1.5px solid rgba(255,255,255,.3);color:#fff}.btn-outline:hover{border-color:#fff}
 .btn-sm{padding:5px 12px;font-size:.78rem}
 .btn-danger{background:var(--red);color:#fff}.btn-danger:hover{filter:brightness(1.1)}
-.btn-green{background:var(--green);color:#fff}
+.btn-green{background:var(--teal);color:#fff}
 
 /* TOPBAR */
 .topbar{background:var(--navy);color:#fff;padding:12px 24px;display:flex;align-items:center;gap:16px;position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,.2)}
@@ -129,7 +129,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--teal)}
 .atbl td{padding:10px 14px;border-bottom:1px solid var(--border)}
 .atbl tr:hover td{background:#f8f9ff}
 .badge{padding:3px 10px;border-radius:10px;font-size:.72rem;font-weight:600}
-.b-ok{background:#E8F5E9;color:#2E7D32}.b-pend{background:#FFF8E1;color:#F57F17}.b-rej{background:#FFEBEE;color:#C62828}
+.b-ok{background:#E0F2F1;color:#00695C}.b-pend{background:#FFF8E1;color:#F57F17}.b-rej{background:#FFEBEE;color:#C62828}
 
 /* TOAST */
 .toast{position:fixed;bottom:24px;right:24px;padding:14px 22px;border-radius:8px;color:#fff;font-size:.88rem;font-weight:500;z-index:300;animation:tIn .3s ease;box-shadow:0 8px 24px rgba(0,0,0,.2)}
@@ -175,7 +175,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--teal)}
 .sf-dd.open{display:block}
 .sf-dd::-webkit-scrollbar{width:5px}.sf-dd::-webkit-scrollbar-track{background:transparent}.sf-dd::-webkit-scrollbar-thumb{background:rgba(10,42,78,.2);border-radius:3px}
 .sf-opt{padding:6px 10px;cursor:pointer;font-size:.82rem;display:flex;align-items:center;gap:6px;transition:background .1s;white-space:nowrap}
-.sf-opt:hover,.sf-opt.hl{background:#E8F5E9}
+.sf-opt:hover,.sf-opt.hl{background:#E0F2F1}
 .sf-opt.sel{background:var(--teal);color:#fff}
 .sf-opt input[type="checkbox"]{flex-shrink:0;width:14px;height:14px;accent-color:var(--teal);pointer-events:none;margin:0}
 .sf-clear{position:absolute;right:6px;top:8px;background:none;color:var(--muted);font-size:1rem;padding:0 4px;cursor:pointer;display:none}
@@ -217,10 +217,10 @@ input:focus,select:focus,textarea:focus{border-color:var(--teal)}
 
 /* STATUS COLORS */
 .s-novo{background:#E3F2FD;color:#1565C0}
-.s-contato{background:#E8F5E9;color:#2E7D32}
+.s-contato{background:#E0F2F1;color:#00695C}
 .s-proposta{background:#E1F5FE;color:#0277BD}
 .s-negociando{background:#FFF3E0;color:#E65100}
-.s-ganho{background:#E8F5E9;color:#1B5E20}
+.s-ganho{background:#E0F2F1;color:#004D40}
 .s-perdido{background:#FFEBEE;color:#B71C1C}
 .s-inativo{background:#F3E5F5;color:#6A1B9A}
 
@@ -253,7 +253,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--teal)}
     <h1>CRM <span>Dellamed</span></h1>
     <div class="topbar-actions">
       <button class="btn btn-gold" id="btnDashGeral" onclick="setDashSrc('leads')">📊 DASHBOARD MULTICANAIS</button>
-      <button class="btn hidden" id="btnDashWA" style="background:#25D366;color:#fff" onclick="setDashSrc('wa')">💬 DASHBOARD WHATSAPP</button>
+      <button class="btn hidden" id="btnDashWA" style="background:var(--navy-light);color:#fff" onclick="setDashSrc('wa')">💬 DASHBOARD WHATSAPP</button>
       <button id="btnAdmin" class="btn btn-outline hidden">👥 Usuários</button>
       <button class="btn btn-teal" id="btnNew">+ Novo Lead</button>
       <div class="user-badge"><span id="uName"></span><button class="btn btn-outline btn-sm" id="btnLogout">Sair</button></div>
@@ -332,7 +332,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--teal)}
     <div class="leg-box">
       <h4>📋 Status do Lead</h4>
       <div class="leg-item"><div class="leg-dot" style="background:#42A5F5"></div><b>Novo</b> — <small>Cadastrado, aguardando contato.</small></div>
-      <div class="leg-item"><div class="leg-dot" style="background:#66BB6A"></div><b>Contato feito</b> — <small>Já houve conversa.</small></div>
+      <div class="leg-item"><div class="leg-dot" style="background:#26A69A"></div><b>Contato feito</b> — <small>Já houve conversa.</small></div>
       <div class="leg-item"><div class="leg-dot" style="background:#29B6F6"></div><b>Proposta enviada</b> — <small>Orçamento enviado.</small></div>
       <div class="leg-item"><div class="leg-dot" style="background:var(--orange)"></div><b>Negociando</b> — <small>Tratativa ativa.</small></div>
       <div class="leg-item"><div class="leg-dot" style="background:var(--green)"></div><b>Ganho</b> — <small>Fechou pedido.</small></div>
@@ -382,15 +382,15 @@ const ADMIN_EMAIL = 'bianca.lima@dellamed.com.br';
 // ═══════ STATE ═══════
 let U = null, LEADS = [], WA_LEADS = [], CFG = {}, editRow = null, curTab = 'leads', waError = '';
 const ST = ['Novo','Contato feito','Proposta enviada','Negociando','Ganho','Perdido','Inativo'];
-const ST_C = {'Novo':'#42A5F5','Contato feito':'#66BB6A','Proposta enviada':'#29B6F6','Negociando':'#FFA726','Ganho':'#43A047','Perdido':'#E53935','Inativo':'#AB47BC'};
+const ST_C = {'Novo':'#42A5F5','Contato feito':'#26A69A','Proposta enviada':'#29B6F6','Negociando':'#FFA726','Ganho':'#00897B','Perdido':'#E53935','Inativo':'#AB47BC'};
 const ST_S = {'Novo':'s-novo','Contato feito':'s-contato','Proposta enviada':'s-proposta','Negociando':'s-negociando','Ganho':'s-ganho','Perdido':'s-perdido','Inativo':'s-inativo'};
 
 // ═══════ API ═══════
-async function api(method, body) {
+async function api(method, body, attempt) {
   if (!API_URL || API_URL.includes('COLE_AQUI'))
     return { error: 'Configure a variável API_URL no código com a URL do Apps Script.' };
   const ac = new AbortController();
-  const tm = setTimeout(() => ac.abort(), 15000);
+  const tm = setTimeout(() => ac.abort(), 45000);
   try {
     const opts = method === 'GET'
       ? { method:'GET', signal:ac.signal }
@@ -401,7 +401,11 @@ async function api(method, body) {
     return await r.json();
   } catch(e) {
     clearTimeout(tm);
-    return { error: e.name==='AbortError' ? 'Timeout (15s). Tente novamente.' : 'Falha de conexão.' };
+    // Retry once on timeout
+    if (e.name === 'AbortError' && (!attempt || attempt < 2)) {
+      return api(method, body, (attempt||0) + 1);
+    }
+    return { error: e.name==='AbortError' ? 'Servidor não respondeu. Tente novamente.' : 'Falha de conexão.' };
   }
 }
 
@@ -418,7 +422,7 @@ async function doLogin() {
   if (!email) return loginMsg('Preencha o e-mail.','error');
   const r = await api('POST',{action:'login',email,nome});
   if (r.ok) { U={email:r.email,nome:r.nome,admin:r.admin}; localStorage.setItem('crm_user',JSON.stringify(U)); initApp(); }
-  else if (r.pending) loginMsg(r.message,'pending');
+  else if (r.pending) loginMsg('SOLICITAÇÃO ENVIADA! Aguarde a aprovação da administradora.','pending');
   else loginMsg(r.message||r.error||'Erro.','error');
 }
 
@@ -432,11 +436,13 @@ async function initApp() {
   $('scApp').classList.remove('hidden');
   $('uName').innerHTML = '<b>'+esc(U.nome)+'</b>';
   if (U.admin) $('btnAdmin').classList.remove('hidden');
-  const [c,d,w] = await Promise.all([api('GET',{action:'getConfig'}), api('GET',{action:'getData'}), api('GET',{action:'getWAData'})]);
+  const c = await api('GET',{action:'getConfig'});
   if (c.error) { toast(c.error,'err'); return; }
   CFG = c;
+  const d = await api('GET',{action:'getData'});
   if (d.error) { toast(d.error,'err'); return; }
   LEADS = d.leads || [];
+  const w = await api('GET',{action:'getWAData'});
   if (w.error) { waError = w.error; toast('WhatsApp: ' + w.error, 'err'); WA_LEADS = []; }
   else { waError = ''; WA_LEADS = w.leads || []; }
   console.log('LEADS:', LEADS.length, '| WA_LEADS:', WA_LEADS.length, waError ? '| WA erro: '+waError : '');
@@ -717,7 +723,7 @@ function renderAll() {
       '<td title="'+esc(l['Canal Principal']||'')+'">'+esc(l['Canal Principal']||'')+'</td>'+
       '<td title="'+esc(l['Contato Principal']||'')+'">'+esc(l['Contato Principal']||'')+'</td>'+
       '<td style="font-size:.78rem" title="'+esc(l['Telefone']||'')+'">'+esc(l['Telefone']||'')+'</td>'+
-      '<td style="white-space:nowrap;font-weight:500;color:var(--green)">'+esc(l['Valor do Pedido']||'')+'</td>'+
+      '<td style="white-space:nowrap;font-weight:500;color:var(--teal)">'+esc(l['Valor do Pedido']||'')+'</td>'+
       '<td>'+esc(l['Nº do Pedido']||'')+'</td>'+
       '<td style="max-width:180px;overflow:hidden;text-overflow:ellipsis" title="'+esc(l['Próxima Ação']||'')+'">'+esc(l['Próxima Ação']||'')+'</td>'+
       '<td style="font-size:.78rem">'+esc(l['Data Próxima Ação']||'')+'</td>'+
@@ -1067,7 +1073,7 @@ function mkC(id,type,labels,vals,colors){
 }
 function cntBy(d,f){const m={};d.forEach(l=>{const v=l[f]||'(vazio)';m[v]=(m[v]||0)+1;});const s=Object.entries(m).sort((a,b)=>b[1]-a[1]);return{l:s.map(x=>x[0]),v:s.map(x=>x[1])};}
 function cntByM(d,f){const m={};d.forEach(l=>{const vs=(l[f]||'').split(',').map(s=>s.trim()).filter(Boolean);if(!vs.length)vs.push('(vazio)');vs.forEach(v=>{m[v]=(m[v]||0)+1;});});const s=Object.entries(m).sort((a,b)=>b[1]-a[1]);return{l:s.map(x=>x[0]),v:s.map(x=>x[1])};}
-function pal(n){const b=['#0A2A4E','#00897B','#FFB300','#5C6BC0','#26A69A','#EC407A','#FF7043','#42A5F5','#66BB6A','#AB47BC','#29B6F6','#FFA726','#78909C','#8D6E63','#7E57C2','#26C6DA'];return Array.from({length:n},(_,i)=>b[i%b.length]);}
+function pal(n){const b=['#0A2A4E','#00897B','#FFB300','#5C6BC0','#26A69A','#EC407A','#FF7043','#42A5F5','#26A69A','#AB47BC','#29B6F6','#FFA726','#78909C','#8D6E63','#7E57C2','#26C6DA'];return Array.from({length:n},(_,i)=>b[i%b.length]);}
 
 // ═══════ ADMIN ═══════
 async function openAdmin(){
