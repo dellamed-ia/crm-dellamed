@@ -347,7 +347,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--teal)}
   <div class="modal" style="max-width:700px">
     <div class="mhd"><h3>👥 Gerenciar Usuários</h3><button class="mx" id="aClose">✕</button></div>
     <div class="mbody full" style="display:block;padding:0">
-      <table class="atbl"><thead><tr><th>E-mail</th><th>Nome</th><th>Status</th><th>Data</th><th>Ações</th></tr></thead><tbody id="aBody"></tbody></table>
+      <table class="atbl"><thead><tr><th>E-mail</th><th>Nome</th><th>Status</th><th>Cadastro</th><th>Último Acesso</th><th>Ações</th></tr></thead><tbody id="aBody"></tbody></table>
     </div>
   </div>
 </div>
@@ -1085,7 +1085,7 @@ async function openAdmin(){
       act='<button class="btn btn-danger btn-sm" onclick="admAct(\'reject\',\''+u.email+'\')">Revogar</button> '+
           '<button class="btn btn-sm" style="background:#78909C;color:#fff" onclick="admDel(\''+u.email+'\',\''+esc(u.nome)+'\')">Excluir</button>';
     }
-    return '<tr><td>'+esc(u.email)+'</td><td>'+esc(u.nome)+'</td><td><span class="badge '+bc+'">'+u.status+'</span></td><td>'+(u.data||'')+'</td><td>'+act+'</td></tr>';
+    return '<tr><td>'+esc(u.email)+'</td><td>'+esc(u.nome)+'</td><td><span class="badge '+bc+'">'+u.status+'</span></td><td>'+(u.data||'')+'</td><td style="font-size:.78rem;color:var(--navy);white-space:nowrap">'+(u.ultimoAcesso||'—')+'</td><td>'+act+'</td></tr>';
   }).join('');
   $('modAdmin').classList.remove('hidden');
 }
