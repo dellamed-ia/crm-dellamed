@@ -166,8 +166,8 @@ input:focus,select:focus,textarea:focus{border-color:var(--teal)}
 .tab.active{color:var(--navy);border-bottom-color:var(--teal)}
 
 /* MAIN FILTERS */
-.main-flt{padding:12px 24px;display:flex;flex-wrap:wrap;gap:10px;align-items:end;background:#fff;border-bottom:1px solid var(--border)}
-.main-flt .fg{display:flex;flex-direction:column;gap:3px;position:relative}
+.main-flt{padding:12px 24px;display:flex;flex-wrap:wrap;gap:10px;align-items:end;background:#fff;border-bottom:1px solid var(--border);overflow:visible}
+.main-flt .fg{display:flex;flex-direction:column;gap:3px;position:relative;min-width:140px;flex:1;max-width:200px}
 .main-flt .fg label{font-size:.7rem;font-weight:600;color:var(--muted);text-transform:uppercase}
 .main-flt select,.main-flt input{font-size:.82rem;padding:6px 8px;min-width:120px}
 /* Searchable filter dropdown */
@@ -192,7 +192,12 @@ input:focus,select:focus,textarea:focus{border-color:var(--teal)}
 .st-pill.active{border-color:var(--navy);box-shadow:0 0 0 3px rgba(10,42,78,.15)}
 
 /* LEADS TABLE */
-.leads-tbl-wrap{padding:0 24px 24px;overflow-x:auto;max-height:calc(100vh - 360px);overflow-y:auto}
+.leads-tbl-wrap{padding:0 24px 24px;overflow-x:auto;max-height:calc(100vh - 380px);overflow-y:auto}
+.leads-tbl-wrap::-webkit-scrollbar{width:6px}
+.leads-tbl-wrap::-webkit-scrollbar:horizontal{height:0;display:none}
+.leads-tbl-wrap::-webkit-scrollbar-track{background:transparent}
+.leads-tbl-wrap::-webkit-scrollbar-thumb{background:rgba(10,42,78,.2);border-radius:3px}
+.leads-tbl-wrap::-webkit-scrollbar-thumb:hover{background:rgba(10,42,78,.4)}
 .leads-tbl{width:100%;border-collapse:separate;border-spacing:0;font-size:.82rem;background:#fff;border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow)}
 .leads-tbl th{background:var(--navy);color:#fff;padding:12px 14px;text-align:left;font-size:.72rem;text-transform:uppercase;white-space:nowrap;position:sticky;top:0;z-index:2;cursor:pointer;user-select:none;transition:background .15s}
 .leads-tbl th:hover{background:var(--navy-light)}
@@ -270,7 +275,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--teal)}
   <!-- STATUS KPIs -->
   <div style="padding:0 24px 8px;display:flex;gap:10px;flex-wrap:wrap" id="stPills"></div>
   <!-- MAIN FILTERS -->
-  <div class="main-flt" id="mainFlt" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;align-items:start">
+  <div class="main-flt" id="mainFlt">
     <div class="fg"><label>Prospect</label><div class="sf-wrap" id="sfProspect"></div></div>
     <div class="fg"><label>Time Comercial</label><div class="sf-wrap" id="sfTime"></div></div>
     <div class="fg"><label>UF</label><div class="sf-wrap" id="sfUF"></div></div>
@@ -436,7 +441,9 @@ async function initApp() {
   CFG = c;
   if (d.error) { toast(d.error,'err'); return; }
   LEADS = d.leads || [];
-  WA_LEADS = (w.leads || []);
+  if (w.error) { console.warn('WhatsApp:', w.error); WA_LEADS = []; }
+  else { WA_LEADS = w.leads || []; }
+  console.log('LEADS:', LEADS.length, '| WA_LEADS:', WA_LEADS.length);
   $('loadMain').classList.add('hidden');
   buildMainFilters();
   renderAll();
@@ -676,7 +683,13 @@ function renderAll() {
   $('tblCount').textContent = data.length + ' lead' + (data.length !== 1 ? 's' : '') + ' encontrado' + (data.length !== 1 ? 's' : '');
   const tbody = $('tblBody');
   if (data.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="16" style="text-align:center;padding:24px;color:var(--muted)">Nenhum lead encontrado.</td></tr>';
+    const isWA = curTab === 'wa';
+    const srcTotal = curData().length;
+    let msg = 'Nenhum lead encontrado.';
+    if (isWA && srcTotal === 0) {
+      msg = 'A aba WHATSAPP está sem dados. Verifique na planilha Google Sheets se: (1) a aba se chama exatamente WHATSAPP; (2) a linha 1 tem os mesmos headers da aba LEADS; (3) os dados começam na linha 2.';
+    }
+    tbody.innerHTML = '<tr><td colspan="16" style="text-align:center;padding:32px 16px;color:var(--muted);white-space:normal;line-height:1.6">'+msg+'</td></tr>';
     return;
   }
   tbody.innerHTML = data.map(l => {
@@ -729,8 +742,7 @@ function openForm(row) {
   $('fTitle').textContent = isE ? 'Editar Lead' : 'Novo Lead';
   $('fDel').classList.toggle('hidden', !isE||!U.admin);
   const dis = canE?'':'disabled';
-  const rq = (curTab==='wa') ? ' fld-req' : (U.admin ? '' : ' fld-req');
-  const rqWA = (curTab==='wa') ? ' fld-req' : '';
+  const rq = U.admin ? '' : ' fld-req';
   const isGanho = L ? (L['Status']||'').toLowerCase()==='ganho' : false;
   const ganhoRq = isGanho ? ' fld-req' : '';
   // Parse phones
@@ -739,17 +751,17 @@ function openForm(row) {
   const p1=sp(phs[0]||''), p2=sp(phs[1]||'');
 
   $('fBody').innerHTML =
-    fld('Status','<select id="f_st" '+dis+' onchange="toggleGanhoReq()">'+((CFG.status||[]).map(s=>'<option'+(L&&L['Status']===s?' selected':'')+'>'+s+'</option>')).join('')+'</select>',rqWA)+
-    fld('Prospect (Vendedor)','<input id="f_pr" value="'+esc(isE?L['Prospect']:U.nome)+'" '+dis+'>',rqWA)+
+    fld('Status','<select id="f_st" '+dis+' onchange="toggleGanhoReq()">'+((CFG.status||[]).map(s=>'<option'+(L&&L['Status']===s?' selected':'')+'>'+s+'</option>')).join('')+'</select>',rq)+
+    fld('Prospect (Vendedor)','<input id="f_pr" value="'+esc(isE?L['Prospect']:U.nome)+'" '+dis+'>',rq)+
     fld('Time Comercial','<select id="f_tm" '+dis+'><option value="">Selecione...</option>'+((CFG.timeComercial||[]).map(t=>'<option'+(L&&L['Time Comercial']===t?' selected':'')+'>'+t+'</option>')).join('')+'</select>',rq)+
-    fld('Razão Social','<input id="f_rs" value="'+esc(L?L['Razão Social']:'')+'" '+dis+'>',rqWA)+
-    fld('CNPJ','<input id="f_cnpj" value="'+esc(L?L['CNPJ']:'')+'" '+dis+' placeholder="00.000.000/0000-00" maxlength="18" oninput="mCNPJ(this)">',rqWA)+
+    fld('Razão Social','<input id="f_rs" value="'+esc(L?L['Razão Social']:'')+'" '+dis+'>',rq)+
+    fld('CNPJ','<input id="f_cnpj" value="'+esc(L?L['CNPJ']:'')+'" '+dis+' placeholder="00.000.000/0000-00" maxlength="18" oninput="mCNPJ(this)">',rq)+
     fld('Contato Principal','<input id="f_cp" value="'+esc(L?L['Contato Principal']:'')+'" '+dis+'>',rq)+
     fld('Telefone 1','<div class="phone-row"><input class="ph-ddd" id="f_d1" value="'+esc(p1.d?'('+p1.d+')':'')+'" '+dis+' placeholder="(00)" maxlength="4" oninput="mDDD(this)"><input class="ph-num" id="f_n1" value="'+esc(p1.n)+'" '+dis+' placeholder="00000-0000" maxlength="10" oninput="mPH(this)"></div>',rq)+
     fld('Telefone 2','<div class="phone-row"><input class="ph-ddd" id="f_d2" value="'+esc(p2.d?'('+p2.d+')':'')+'" '+dis+' placeholder="(00)" maxlength="4" oninput="mDDD(this)"><input class="ph-num" id="f_n2" value="'+esc(p2.n)+'" '+dis+' placeholder="00000-0000" maxlength="10" oninput="mPH(this)"></div>')+
     fld('E-mail','<input id="f_em" value="'+esc(L?L['E-mail']:'')+'" '+dis+'>',rq)+
     fld('Cidade','<input id="f_ci" value="'+esc(L?L['Cidade']:'')+'" '+dis+'>')+
-    fld('UF','<select id="f_uf" '+dis+'><option value="">—</option>'+((CFG.ufs||[]).map(u=>'<option'+(L&&L['UF']===u?' selected':'')+'>'+u+'</option>')).join('')+'</select>',rqWA)+
+    fld('UF','<select id="f_uf" '+dis+'><option value="">—</option>'+((CFG.ufs||[]).map(u=>'<option'+(L&&L['UF']===u?' selected':'')+'>'+u+'</option>')).join('')+'</select>',rq)+
     fld('Canal Principal','<select id="f_ca" '+dis+'><option value="">Selecione...</option>'+((CFG.canalPrincipal||[]).map(c=>'<option'+(L&&L['Canal Principal']===c?' selected':'')+'>'+c+'</option>')).join('')+'</select>',rq)+
     fld('Linha de Interesse','<div id="ms_li" class="msel" data-sel="'+esc(L?L['Linha de Interesse']:'')+'"></div>')+
     fldF('Produto(s) de Interesse','<textarea id="f_pd" rows="2" '+dis+' placeholder="D30, D90, D12...">'+esc(L?L['Produto(s) de Interesse']:'')+'</textarea>')+
@@ -785,17 +797,19 @@ async function saveLead() {
     'Valor do Pedido':gv('f_vl'),'Nº do Pedido':gv('f_np'),
     'Motivo da Perda':msVal('ms_mp'),'Observações':gv('f_ob'),
   };
-  // Ganho validation: Valor + Nº Pedido required for ALL users in BOTH tabs
+  // Ganho: Valor + Nº Pedido required for ALL users in BOTH tabs
   if (lead['Status']==='Ganho') {
     if (!lead['Valor do Pedido']){toast('Status Ganho exige: Valor do Pedido','err');return;}
     if (!lead['Nº do Pedido']){toast('Status Ganho exige: Nº do Pedido','err');return;}
   }
-  if (curTab === 'wa') {
-    const waReq=[['Status','Status'],['Prospect','Prospect'],['Time Comercial','Time Comercial'],['Razão Social','Razão Social'],['CNPJ','CNPJ'],['UF','UF'],['Contato Principal','Contato Principal'],['Canal Principal','Canal Principal']];
-    for (const [f,l] of waReq) if(!lead[f]){toast('Campo obrigatório: '+l,'err');return;}
-    if (!t1){toast('Campo obrigatório: Telefone 1','err');return;}
-  } else if (!U.admin) {
-    const req=[['Time Comercial','Time Comercial'],['Contato Principal','Contato Principal'],['E-mail','E-mail'],['Canal Principal','Canal Principal'],['Data Primeiro Contato','Data Primeiro Contato']];
+  // Required fields for non-admin in BOTH tabs
+  if (!U.admin) {
+    const req=[
+      ['Status','Status'],['Prospect','Prospect'],['Time Comercial','Time Comercial'],
+      ['Razão Social','Razão Social'],['CNPJ','CNPJ'],['Contato Principal','Contato Principal'],
+      ['E-mail','E-mail'],['UF','UF'],['Canal Principal','Canal Principal'],
+      ['Data Primeiro Contato','Data Primeiro Contato']
+    ];
     for (const [f,l] of req) if(!lead[f]){toast('Campo obrigatório: '+l,'err');return;}
     if (!t1){toast('Campo obrigatório: Telefone 1','err');return;}
   }
@@ -919,13 +933,14 @@ function closeDash(){$('scDash').classList.add('hidden');dCharts.forEach(c=>{try
 
 function buildDF() {
   const src = dashData();
+  function duniq(arr){const m=new Map();arr.filter(Boolean).forEach(v=>{const k=v.trim().toLowerCase();if(!m.has(k))m.set(k,v.trim())});return[...m.values()].sort((a,b)=>a.toLowerCase().localeCompare(b.toLowerCase(),'pt-BR'));}
   const yrs=[...new Set(src.map(l=>{const m=(l['Data']||'').match(/(\d{4})$/);return m?m[1]:''}).filter(Boolean))].sort();
   const mos=['01','02','03','04','05','06','07','08','09','10','11','12'];
-  const pros=[...new Set(src.map(l=>l['Prospect']).filter(Boolean))].sort();
-  const tms=[...new Set(src.map(l=>l['Time Comercial']).filter(Boolean))].sort();
-  const cas=[...new Set(src.map(l=>l['Canal Principal']).filter(Boolean))].sort();
-  const ufs=[...new Set(src.map(l=>l['UF']).filter(Boolean))].sort();
-  const mts=[...new Set(src.flatMap(l=>(l['Motivo da Perda']||'').split(',').map(s=>s.trim())).filter(Boolean))].sort();
+  const pros=duniq(src.map(l=>l['Prospect']));
+  const tms=duniq(src.map(l=>l['Time Comercial']));
+  const cas=duniq(src.map(l=>l['Canal Principal']));
+  const ufs=duniq(src.map(l=>l['UF']));
+  const mts=duniq(src.flatMap(l=>(l['Motivo da Perda']||'').split(',').map(s=>s.trim())));
   const tps=['Frio','Morno','Quente'];
   const fs=[{id:'dfA',l:'Ano',o:yrs},{id:'dfM',l:'Mês',o:mos},{id:'dfP',l:'Prospect',o:pros},{id:'dfT',l:'Time Comercial',o:tms},{id:'dfC',l:'Canal Principal',o:cas},{id:'dfU',l:'UF',o:ufs},{id:'dfMo',l:'Motivo Perda',o:mts},{id:'dfTp',l:'Temperatura',o:tps}];
   $('dFilters').innerHTML=fs.map(f=>'<div class="dfg"><label>'+f.l+'</label><select id="'+f.id+'" multiple size="1" onchange="renderDash()">'+f.o.map(o=>'<option value="'+o+'">'+o+'</option>').join('')+'</select></div>').join('')+'<div class="dfg"><label>&nbsp;</label><button class="btn btn-sm btn-teal" style="width:100%" onclick="clearDF()">Limpar filtros</button></div>';
