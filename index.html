@@ -844,7 +844,7 @@ function openForm(row) {
             : '')
       ),rq)+
     fld('Atribuir ao Prospect',
-      '<div style="display:flex;gap:6px;align-items:center"><input id="f_assign" placeholder="e-mail do vendedor (opcional)" style="flex:1;font-size:.8rem">' +
+      '<div style="display:flex;gap:6px;align-items:center"><input id="f_assign" placeholder="EMAIL DO VENDEDOR" style="flex:1;font-size:.8rem">' +
       '<button type="button" class="btn btn-sm" style="background:var(--navy);color:#fff;font-size:.7rem;white-space:nowrap" onclick="lookupAssign()">Buscar</button></div>' +
       '<div id="assignResult" style="font-size:.75rem;margin-top:4px;color:var(--muted)"></div>')+
     fld('Time Comercial','<select id="f_tm" '+dis+'><option value="">Selecione...</option>'+((CFG.timeComercial||[]).map(t=>'<option'+(L&&L['Time Comercial']===t?' selected':'')+'>'+t+'</option>')).join('')+'</select>',rq)+
@@ -884,11 +884,20 @@ async function saveLead() {
   saving = true;
   saveBtn.classList.add('btn-loading');
   saveBtn.textContent = 'Salvando...';
-  try { await _doSaveLead(); }
-  finally { saving = false; saveBtn.classList.remove('btn-loading'); saveBtn.textContent = 'Salvar'; }
+  try {
+    await _doSaveLead();
+  } catch(err) {
+    console.error('Erro ao salvar:', err);
+    toast('Erro: ' + (err.message || err), 'err');
+  } finally {
+    saving = false;
+    saveBtn.classList.remove('btn-loading');
+    saveBtn.textContent = 'Salvar';
+  }
 }
 
 async function _doSaveLead() {
+  const assignEmail = gv('f_assign') || '';
   const d1=$('f_d1').value.replace(/\D/g,''),n1=$('f_n1').value,d2=$('f_d2').value.replace(/\D/g,''),n2=$('f_n2').value;
   const t1=d1&&n1?'('+d1+') '+n1:n1||'', t2=d2&&n2?'('+d2+') '+n2:n2||'';
   const lead = {
@@ -935,10 +944,10 @@ async function _doSaveLead() {
       pendingTransfer = false;
       if (tr.ok) { toast('Lead salvo. SOLICITAÇÃO ENVIADA!','ok'); }
       else { toast('Lead salvo, mas erro na solicitação: '+(tr.error||''),'err'); }
-    } else if (assignedProspect && gv('f_assign')) {
+    } else if (assignedProspect && assignEmail) {
       // Notificar o prospect atribuído
       await api('POST', {
-        action:'notifyAssign', assignEmail:gv('f_assign'),
+        action:'notifyAssign', assignEmail: assignEmail,
         razaoSocial:lead['Razão Social']||'', fromUser:U.nome
       });
       toast('Lead salvo e atribuído a '+assignedProspect+'!','ok');
