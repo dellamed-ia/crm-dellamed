@@ -285,6 +285,8 @@ input:focus,select:focus,textarea:focus{border-color:var(--teal)}
         <div class="bell-dd" id="bellDD"></div>
       </div>
       <button class="btn btn-teal" id="btnNew">+ Novo Lead</button>
+      <button class="btn btn-outline btn-sm" id="btnRefresh" onclick="doRefresh()" title="Atualizar dados">🔄</button>
+      <button class="btn btn-outline btn-sm" id="btnRefresh" onclick="forceRefresh()" title="Atualizar dados">🔄</button>
       <div class="user-badge"><span id="uName"></span><button class="btn btn-outline btn-sm" id="btnLogout">Sair</button></div>
     </div>
   </div>
@@ -313,7 +315,8 @@ input:focus,select:focus,textarea:focus{border-color:var(--teal)}
   <div class="tbl-count" id="tblCount"></div>
   <div class="leads-tbl-wrap"><table class="leads-tbl"><thead><tr id="tblHead">
     <th data-key="Nº" onclick="sortCol('Nº')">Nº <span class="sort-arrow"></span></th>
-    <th data-key="Data" onclick="sortCol('Data')">Data <span class="sort-arrow"></span></th>
+    <th data-key="Data" onclick="sortCol('Data')">Data Registro <span class="sort-arrow"></span></th>
+    <th data-key="Data Primeiro Contato" onclick="sortCol('Data Primeiro Contato')">Data 1º Contato <span class="sort-arrow"></span></th>
     <th data-key="Status" onclick="sortCol('Status')">Status <span class="sort-arrow"></span></th>
     <th data-key="Temperatura Lead" onclick="sortCol('Temperatura Lead')">Temp. <span class="sort-arrow"></span></th>
     <th data-key="Prospect" onclick="sortCol('Prospect')">Prospect <span class="sort-arrow"></span></th>
@@ -435,16 +438,20 @@ async function api(method, body, attempt) {
       ? { method:'GET', signal:ac.signal }
       : { method:'POST', headers:{'Content-Type':'text/plain'}, body:JSON.stringify(body), signal:ac.signal };
     const url = method === 'GET' ? API_URL + '?' + new URLSearchParams(body) : API_URL;
+    console.log('API', method, body.action||'', url.substring(0,60));
     const r = await fetch(url, opts);
     clearTimeout(tm);
-    return await r.json();
+    const text = await r.text();
+    console.log('API response:', text.substring(0,200));
+    try { return JSON.parse(text); }
+    catch(pe) { console.error('JSON parse error:', pe, text.substring(0,500)); return { error: 'Resposta inválida do servidor.' }; }
   } catch(e) {
     clearTimeout(tm);
-    // Retry once on timeout
     if (e.name === 'AbortError' && (!attempt || attempt < 2)) {
       return api(method, body, (attempt||0) + 1);
     }
-    return { error: e.name==='AbortError' ? 'Servidor não respondeu. Tente novamente.' : 'Falha de conexão.' };
+    console.error('API error:', e);
+    return { error: e.name==='AbortError' ? 'Servidor não respondeu. Tente novamente.' : 'Falha de conexão: '+e.message };
   }
 }
 
@@ -522,6 +529,32 @@ async function reload() {
     const d = await api('GET',{action:'getWAData'});
     if (!d.error) { WA_LEADS = d.leads||[]; buildMainFilters(); renderAll(); }
   }
+}
+
+async function doRefresh() {
+  const btn = $('btnRefresh');
+  btn.classList.add('btn-loading');
+  try {
+    const [d, w] = await Promise.all([api('GET',{action:'getData'}), api('GET',{action:'getWAData'})]);
+    if (!d.error) LEADS = d.leads||[];
+    if (!w.error) WA_LEADS = w.leads||[];
+    buildMainFilters(); renderAll();
+    toast('Dados atualizados!','ok');
+  } catch(e) { toast('Erro ao atualizar','err'); }
+  finally { btn.classList.remove('btn-loading'); }
+}
+
+async function forceRefresh() {
+  toast('Atualizando...','ok');
+  const [d, w] = await Promise.all([
+    api('GET',{action:'getData'}),
+    api('GET',{action:'getWAData'})
+  ]);
+  if (!d.error) LEADS = d.leads||[];
+  if (!w.error) WA_LEADS = w.leads||[];
+  buildMainFilters();
+  renderAll();
+  toast('Dados atualizados!','ok');
 }
 
 // ═══════ TEMPERATURE ═══════
@@ -771,7 +804,7 @@ function renderAll() {
         msg = 'A aba WHATSAPP está sem dados. Verifique na planilha Google Sheets se: (1) a aba se chama exatamente WHATSAPP; (2) a linha 1 tem os mesmos headers da aba LEADS; (3) os dados começam na linha 2.';
       }
     }
-    tbody.innerHTML = '<tr><td colspan="16" style="text-align:center;padding:32px 16px;color:var(--muted);white-space:normal;line-height:1.6">'+msg+'</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="17" style="text-align:center;padding:32px 16px;color:var(--muted);white-space:normal;line-height:1.6">'+msg+'</td></tr>';
     return;
   }
   tbody.innerHTML = data.map(l => {
@@ -781,6 +814,7 @@ function renderAll() {
     return '<tr onclick="openForm('+l._row+')">'+
       '<td style="text-align:center;color:var(--muted);font-size:.75rem">'+esc(l['Nº']||'')+'</td>'+
       '<td style="font-size:.78rem">'+esc(l['Data']||'')+'</td>'+
+      '<td style="font-size:.78rem">'+esc(l['Data Primeiro Contato']||'')+'</td>'+
       '<td><span class="st-badge" style="background:'+sc+'">'+esc(l['Status']||'')+'</span></td>'+
       '<td>'+tc+'</td>'+
       '<td style="font-weight:500" title="'+esc(l['Prospect']||'')+'">'+esc(l['Prospect']||'')+'</td>'+
@@ -833,7 +867,13 @@ function openForm(row) {
   function sp(p){const m=p.match(/^\(?(\d{2})\)?\s*(.*)$/);return m?{d:m[1],n:m[2]}:{d:'',n:p};}
   const p1=sp(phs[0]||''), p2=sp(phs[1]||'');
 
+  // Auto-fill today's date for new leads
+  const today = new Date();
+  const todayStr = String(today.getDate()).padStart(2,'0')+'/'+String(today.getMonth()+1).padStart(2,'0')+'/'+today.getFullYear();
+  const dataValue = isE ? (L['Data']||'') : todayStr;
+
   $('fBody').innerHTML =
+    fld('Data Registro','<input id="f_data" value="'+esc(dataValue)+'" placeholder="dd/mm/aaaa" maxlength="10" oninput="mDate(this)" '+(isE?'readonly style="background:#f0f0f0;cursor:not-allowed"':'')+'><div class="fld-err" id="err_data">Formato inválido. Use dd/mm/aaaa</div>')+
     fld('Status','<select id="f_st" '+dis+' onchange="toggleGanhoReq()">'+((CFG.status||[]).map(s=>'<option'+(L&&L['Status']===s?' selected':'')+'>'+s+'</option>')).join('')+'</select>',rq)+
     fld('Prospect (Vendedor)',
       (U.admin
@@ -901,6 +941,7 @@ async function _doSaveLead() {
   const d1=$('f_d1').value.replace(/\D/g,''),n1=$('f_n1').value,d2=$('f_d2').value.replace(/\D/g,''),n2=$('f_n2').value;
   const t1=d1&&n1?'('+d1+') '+n1:n1||'', t2=d2&&n2?'('+d2+') '+n2:n2||'';
   const lead = {
+    'Data':gv('f_data'),
     'Status':gv('f_st'),'Prospect':assignedProspect||gv('f_pr'),'Time Comercial':gv('f_tm'),
     'Razão Social':gv('f_rs'),'CNPJ':gv('f_cnpj'),'Contato Principal':gv('f_cp'),
     'Telefone':[t1,t2].filter(Boolean).join(' | '),'E-mail':gv('f_em'),
@@ -929,9 +970,13 @@ async function _doSaveLead() {
   }
   if (!validateDates()) return;
   const addAct = curTab==='wa'?'addWA':'addLead', editAct = curTab==='wa'?'editWA':'editLead';
+  console.log('Salvando lead:', JSON.stringify(lead).substring(0,200));
+  console.log('Action:', editRow ? editAct : addAct, 'Row:', editRow);
   const r = editRow
     ? await api('POST',{action:editAct,userEmail:U.email,row:editRow,lead})
     : await api('POST',{action:addAct,userEmail:U.email,lead});
+  console.log('Resposta save:', JSON.stringify(r));
+  if (r.error) { toast('Erro: ' + r.error, 'err'); return; }
   if (r.ok) {
     // Se transfer pendente, enviar solicitação
     if (pendingTransfer && editRow) {
@@ -956,7 +1001,6 @@ async function _doSaveLead() {
     }
     closeForm(); await reload();
   }
-  else toast(r.error||'Erro ao salvar.','err');
 }
 
 async function delLead() {
