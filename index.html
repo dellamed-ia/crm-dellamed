@@ -145,6 +145,14 @@ input:focus,select:focus,textarea:focus{border-color:var(--teal)}
 .bell-badge{position:absolute;top:-2px;right:0;background:var(--red);color:#fff;font-size:.6rem;font-weight:700;min-width:16px;height:16px;border-radius:8px;display:flex;align-items:center;justify-content:center;padding:0 4px}
 .admin-badge{background:var(--red);color:#fff;font-size:.65rem;font-weight:700;min-width:18px;height:18px;border-radius:9px;display:inline-flex;align-items:center;justify-content:center;padding:0 5px;margin-left:4px;vertical-align:middle;animation:badgePulse 2s ease-in-out infinite}
 @keyframes badgePulse{0%,100%{transform:scale(1)}50%{transform:scale(1.15)}}
+
+/* GAUGE */
+.gauge-container{display:flex;flex-direction:column;align-items:center;padding:10px 0}
+.gauge-svg{max-width:280px;width:100%}
+.gauge-legend{display:flex;gap:20px;margin-top:12px;justify-content:center}
+.gauge-leg{display:flex;align-items:center;gap:6px;font-size:.82rem}
+.gauge-leg .gd{width:12px;height:12px;border-radius:3px}
+.gauge-leg b{font-size:1.1rem}
 .btn-loading{opacity:.7;pointer-events:none;position:relative}
 .btn-loading::after{content:'';display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .5s linear infinite;margin-left:8px;vertical-align:middle}
 .bell-dd{position:absolute;top:100%;right:0;width:320px;background:#fff;border-radius:8px;box-shadow:0 8px 32px rgba(0,0,0,.18);z-index:20;max-height:300px;overflow-y:auto;display:none}
@@ -1196,9 +1204,14 @@ function renderDash() {
     kpiCard(frio,'🔵 Frios','Frio','var(--frio)')+
     kpiCard(morno,'🟡 Mornos','Morno','var(--morno)')+
     kpiCard(quente,'🔴 Quentes','Quente','var(--quente)');
-  $('dGrid').innerHTML='<div class="dcard"><h4>Leads por Status</h4><canvas id="c1"></canvas></div><div class="dcard"><h4>Temperatura</h4><canvas id="c2"></canvas></div><div class="dcard"><h4>Por Canal</h4><canvas id="c3"></canvas></div><div class="dcard"><h4>Por Time</h4><canvas id="c4"></canvas></div><div class="dcard"><h4>Por UF</h4><canvas id="c5"></canvas></div><div class="dcard"><h4>Por Linha</h4><canvas id="c6"></canvas></div><div class="dcard"><h4>Motivos de Perda</h4><canvas id="c7"></canvas></div><div class="dcard"><h4>Evolução Mensal</h4><canvas id="c8"></canvas></div>';
+  $('dGrid').innerHTML='<div class="dcard"><h4>Leads por Status</h4><canvas id="c1"></canvas></div><div class="dcard"><h4>Temperatura dos Leads</h4><div id="gaugeWrap"></div></div><div class="dcard"><h4>Por Canal</h4><canvas id="c3"></canvas></div><div class="dcard"><h4>Por Time</h4><canvas id="c4"></canvas></div><div class="dcard"><h4>Por UF</h4><canvas id="c5"></canvas></div><div class="dcard"><h4>Por Linha</h4><canvas id="c6"></canvas></div><div class="dcard"><h4>Motivos de Perda</h4><canvas id="c7"></canvas></div><div class="dcard"><h4>Evolução Mensal</h4><canvas id="c8"></canvas></div>';
   dCharts.push(mkC('c1','bar',ST,ST.map(s=>d.filter(l=>l['Status']===s).length),ST.map(s=>ST_C[s])));
-  const ts=['Frio','Morno','Quente']; dCharts.push(mkC('c2','doughnut',ts,ts.map(t=>d.filter(l=>temp(l['Status'])===t).length),['#42A5F5','#FFA726','#EF5350']));
+  const ts=['Frio','Morno','Quente'];
+  const tc=[d.filter(l=>temp(l['Status'])==='Frio').length, d.filter(l=>temp(l['Status'])==='Morno').length, d.filter(l=>temp(l['Status'])==='Quente').length];
+  const tTotal=tc[0]+tc[1]+tc[2]||1;
+  // Weighted score: Frio=0, Morno=50, Quente=100
+  const score=tTotal>0?Math.round((tc[0]*0+tc[1]*50+tc[2]*100)/tTotal):0;
+  renderGauge('gaugeWrap',score,tc,tTotal);
   const ca=cntBy(d,'Canal Principal'); dCharts.push(mkC('c3','bar',ca.l,ca.v,pal(ca.l.length)));
   const tm=cntBy(d,'Time Comercial'); dCharts.push(mkC('c4','bar',tm.l,tm.v,pal(tm.l.length)));
   const uf=cntBy(d,'UF'); dCharts.push(mkC('c5','bar',uf.l,uf.v,pal(uf.l.length)));
@@ -1206,6 +1219,55 @@ function renderDash() {
   const mp=cntByM(d.filter(l=>l['Status']==='Perdido'),'Motivo da Perda'); dCharts.push(mkC('c7','bar',mp.l,mp.v,pal(mp.l.length)));
   const mo={}; d.forEach(l=>{const p=(l['Data']||'').split('/');if(p.length>=3){const k=p[1]+'/'+p[2];mo[k]=(mo[k]||0)+1;}});
   const mk=Object.keys(mo).sort(); dCharts.push(mkC('c8','line',mk,mk.map(k=>mo[k]),['#00897B']));
+}
+
+function renderGauge(containerId, score, counts, total) {
+  const el = $(containerId);
+  if (!el) return;
+  // score: 0-100, counts: [frio, morno, quente]
+  const cx=140, cy=130, r=100, sw=24;
+  const needleAngle = Math.PI + (score/100)*Math.PI; // 180° to 360°
+  const nx = cx + (r-10)*Math.cos(needleAngle);
+  const ny = cy + (r-10)*Math.sin(needleAngle);
+
+  // Arc segments
+  function arc(startPct, endPct, color) {
+    const s = Math.PI + startPct*Math.PI;
+    const e = Math.PI + endPct*Math.PI;
+    const x1=cx+r*Math.cos(s), y1=cy+r*Math.sin(s);
+    const x2=cx+r*Math.cos(e), y2=cy+r*Math.sin(e);
+    const lg = (endPct-startPct)>0.5?1:0;
+    return '<path d="M'+x1+','+y1+' A'+r+','+r+' 0 '+lg+',1 '+x2+','+y2+'" fill="none" stroke="'+color+'" stroke-width="'+sw+'" stroke-linecap="round"/>';
+  }
+
+  const pFrio=counts[0]/total, pMorno=counts[1]/total, pQuente=counts[2]/total;
+  const label = score<33?'FRIO':score<66?'MORNO':'QUENTE';
+  const labelColor = score<33?'#42A5F5':score<66?'#FFA726':'#EF5350';
+
+  el.innerHTML = '<div class="gauge-container">' +
+    '<svg class="gauge-svg" viewBox="0 0 280 170">' +
+    // Background track
+    '<path d="M'+( cx-r)+','+cy+' A'+r+','+r+' 0 0,1 '+(cx+r)+','+cy+'" fill="none" stroke="#e8e8e8" stroke-width="'+sw+'" stroke-linecap="round"/>' +
+    // Colored segments
+    arc(0, pFrio, '#42A5F5') +
+    arc(pFrio, pFrio+pMorno, '#FFA726') +
+    arc(pFrio+pMorno, 1, '#EF5350') +
+    // Needle
+    '<line x1="'+cx+'" y1="'+cy+'" x2="'+nx+'" y2="'+ny+'" stroke="'+labelColor+'" stroke-width="3" stroke-linecap="round"/>' +
+    '<circle cx="'+cx+'" cy="'+cy+'" r="6" fill="'+labelColor+'"/>' +
+    '<circle cx="'+cx+'" cy="'+cy+'" r="3" fill="#fff"/>' +
+    // Score text
+    '<text x="'+cx+'" y="'+(cy-20)+'" text-anchor="middle" font-size="28" font-weight="800" fill="'+labelColor+'" font-family="Arial">'+score+'</text>' +
+    '<text x="'+cx+'" y="'+(cy-2)+'" text-anchor="middle" font-size="11" font-weight="600" fill="'+labelColor+'" font-family="Arial">'+label+'</text>' +
+    // Min/Max labels
+    '<text x="'+(cx-r-5)+'" y="'+(cy+18)+'" text-anchor="middle" font-size="9" fill="#42A5F5" font-family="Arial">Frio</text>' +
+    '<text x="'+(cx+r+5)+'" y="'+(cy+18)+'" text-anchor="middle" font-size="9" fill="#EF5350" font-family="Arial">Quente</text>' +
+    '</svg>' +
+    '<div class="gauge-legend">' +
+    '<div class="gauge-leg"><div class="gd" style="background:#42A5F5"></div>Frio <b>'+counts[0]+'</b></div>' +
+    '<div class="gauge-leg"><div class="gd" style="background:#FFA726"></div>Morno <b>'+counts[1]+'</b></div>' +
+    '<div class="gauge-leg"><div class="gd" style="background:#EF5350"></div>Quente <b>'+counts[2]+'</b></div>' +
+    '</div></div>';
 }
 
 function mkC(id,type,labels,vals,colors){
