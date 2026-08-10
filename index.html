@@ -836,6 +836,10 @@ function openForm(row) {
             ? ' <button type="button" class="btn btn-sm btn-teal" id="btnTransferReq" style="margin-top:4px;font-size:.72rem" onclick="markTransfer()">🔄 Alterar para meu usuário</button>'
             : '')
       ),rq)+
+    fld('Atribuir ao Prospect',
+      '<div style="display:flex;gap:6px;align-items:center"><input id="f_assign" placeholder="e-mail do vendedor (opcional)" style="flex:1;font-size:.8rem">' +
+      '<button type="button" class="btn btn-sm" style="background:var(--navy);color:#fff;font-size:.7rem;white-space:nowrap" onclick="lookupAssign()">Buscar</button></div>' +
+      '<div id="assignResult" style="font-size:.75rem;margin-top:4px;color:var(--muted)"></div>')+
     fld('Time Comercial','<select id="f_tm" '+dis+'><option value="">Selecione...</option>'+((CFG.timeComercial||[]).map(t=>'<option'+(L&&L['Time Comercial']===t?' selected':'')+'>'+t+'</option>')).join('')+'</select>',rq)+
     fld('Razão Social','<input id="f_rs" value="'+esc(L?L['Razão Social']:'')+'" '+dis+'>',rq)+
     fld('CNPJ','<input id="f_cnpj" value="'+esc(L?L['CNPJ']:'')+'" '+dis+' placeholder="00.000.000/0000-00" maxlength="18" oninput="mCNPJ(this)">',rq)+
@@ -864,13 +868,13 @@ function openForm(row) {
 
 function fld(lbl,html,extra){return '<div class="fld'+(extra||'')+'"><label>'+lbl+'</label>'+html+'</div>';}
 function fldF(lbl,html){return '<div class="fld full"><label>'+lbl+'</label>'+html+'</div>';}
-function closeForm(){$('modForm').classList.add('hidden');editRow=null;pendingTransfer=false;}
+function closeForm(){$('modForm').classList.add('hidden');editRow=null;pendingTransfer=false;assignedProspect='';}
 
 async function saveLead() {
   const d1=$('f_d1').value.replace(/\D/g,''),n1=$('f_n1').value,d2=$('f_d2').value.replace(/\D/g,''),n2=$('f_n2').value;
   const t1=d1&&n1?'('+d1+') '+n1:n1||'', t2=d2&&n2?'('+d2+') '+n2:n2||'';
   const lead = {
-    'Status':gv('f_st'),'Prospect':gv('f_pr'),'Time Comercial':gv('f_tm'),
+    'Status':gv('f_st'),'Prospect':assignedProspect||gv('f_pr'),'Time Comercial':gv('f_tm'),
     'Razão Social':gv('f_rs'),'CNPJ':gv('f_cnpj'),'Contato Principal':gv('f_cp'),
     'Telefone':[t1,t2].filter(Boolean).join(' | '),'E-mail':gv('f_em'),
     'Cidade':gv('f_ci'),'UF':gv('f_uf'),'Canal Principal':gv('f_ca'),
@@ -913,6 +917,13 @@ async function saveLead() {
       pendingTransfer = false;
       if (tr.ok) { toast('Lead salvo. SOLICITAÇÃO ENVIADA!','ok'); }
       else { toast('Lead salvo, mas erro na solicitação: '+(tr.error||''),'err'); }
+    } else if (assignedProspect && gv('f_assign')) {
+      // Notificar o prospect atribuído
+      await api('POST', {
+        action:'notifyAssign', assignEmail:gv('f_assign'),
+        razaoSocial:lead['Razão Social']||'', fromUser:U.nome
+      });
+      toast('Lead salvo e atribuído a '+assignedProspect+'!','ok');
     } else {
       toast(editRow?'Lead atualizado!':'Lead cadastrado!','ok');
     }
@@ -1191,6 +1202,22 @@ async function admDel(em,nome){if(!confirm('Excluir o usuário '+nome+' ('+em+')
 
 // ═══════ TRANSFERS ═══════
 let pendingTransfer = false;
+let assignedProspect = ''; // nome do prospect atribuído via email
+
+async function lookupAssign() {
+  const email = gv('f_assign');
+  if (!email) { $('assignResult').innerHTML = '<span style="color:var(--red)">Digite um e-mail.</span>'; return; }
+  $('assignResult').innerHTML = '<span>Buscando...</span>';
+  const r = await api('GET', { action: 'lookupUser', email: email });
+  if (r.ok && r.nome) {
+    assignedProspect = r.nome;
+    $('assignResult').innerHTML = '<span style="color:var(--teal)">✅ Será atribuído a: <b>' + esc(r.nome) + '</b></span>';
+    if (U.admin) { $('f_pr').value = r.nome; }
+  } else {
+    assignedProspect = '';
+    $('assignResult').innerHTML = '<span style="color:var(--red)">❌ ' + (r.error || 'Usuário não encontrado ou não aprovado.') + '</span>';
+  }
+}
 
 function markTransfer() {
   pendingTransfer = true;
@@ -1239,7 +1266,12 @@ async function checkNotifications() {
     badge.classList.add('hidden');
   }
   $('bellDD').innerHTML = notifs.length
-    ? notifs.map(n => '<div class="bell-item"><b>'+esc(n.razaoSocial)+'</b><br>Transferência <b style="color:'+(n.status==='aprovado'?'var(--teal)':'var(--red)')+'">'+n.status+'</b><br><small>'+esc(n.resolvidoEm)+'</small></div>').join('') +
+    ? notifs.map(n => {
+        if (n.tipo==='atribuicao') {
+          return '<div class="bell-item"><b>'+esc(n.razaoSocial)+'</b><br>Lead atribuído a você por <b>'+esc(n.fromUser||'')+'</b><br><small>'+esc(n.resolvidoEm)+'</small></div>';
+        }
+        return '<div class="bell-item"><b>'+esc(n.razaoSocial)+'</b><br>Transferência <b style="color:'+(n.status==='aprovado'?'var(--teal)':'var(--red)')+'">'+n.status+'</b><br><small>'+esc(n.resolvidoEm)+'</small></div>';
+      }).join('') +
       '<div style="padding:10px;text-align:center;border-top:1px solid var(--border)"><button class="btn btn-sm" style="background:var(--bg);color:var(--text);width:100%" onclick="clearNotifications()">Limpar notificações</button></div>'
     : '<div class="bell-empty">Sem notificações</div>';
 }
