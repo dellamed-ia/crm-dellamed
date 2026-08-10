@@ -48,6 +48,11 @@ input:focus,select:focus,textarea:focus{border-color:var(--teal)}
 .login-msg{margin-top:16px;padding:12px;border-radius:8px;font-size:.85rem;display:none}
 .login-msg.pending{display:block;background:#FFF8E1;color:#F57F17;border:1px solid #FFE082}
 .login-msg.error{display:block;background:#FFEBEE;color:#C62828;border:1px solid #EF9A9A}
+.login-progress{display:none;margin-top:16px}
+.login-progress.show{display:block}
+.login-progress .lp-bar{width:100%;height:6px;background:#e0e3eb;border-radius:3px;overflow:hidden}
+.login-progress .lp-fill{height:100%;width:0%;background:linear-gradient(90deg,var(--teal),var(--navy));border-radius:3px;transition:width .4s ease}
+.login-progress .lp-text{font-size:.78rem;color:var(--muted);margin-top:6px}
 
 /* PIPELINE */
 .pipe-header{padding:16px 24px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
@@ -254,6 +259,10 @@ input:focus,select:focus,textarea:focus{border-color:var(--teal)}
     <input type="text" id="inNome" placeholder="Seu nome completo">
     <input type="email" id="inEmail" placeholder="seu.email@empresa.com.br">
     <button class="btn btn-teal" id="btnLogin">LOGIN</button>
+    <div class="login-progress" id="loginProgress">
+      <div class="lp-bar"><div class="lp-fill" id="lpFill"></div></div>
+      <div class="lp-text" id="lpText">Conectando...</div>
+    </div>
     <div id="loginMsg" class="login-msg"></div>
   </div>
 </div>
@@ -446,10 +455,23 @@ async function doLogin() {
   const nome = $('inNome').value.trim();
   if (!nome) return loginMsg('Preencha seu nome.','error');
   if (!email) return loginMsg('Preencha o e-mail.','error');
+  // Show progress
+  $('loginMsg').style.display='none';
+  const prog = $('loginProgress'); prog.classList.add('show');
+  const fill = $('lpFill'); const txt = $('lpText');
+  fill.style.width='20%'; txt.textContent='Conectando ao servidor...';
   const r = await api('POST',{action:'login',email,nome});
-  if (r.ok) { U={email:r.email,nome:r.nome,admin:r.admin}; localStorage.setItem('crm_user',JSON.stringify(U)); initApp(); }
-  else if (r.pending) loginMsg('SOLICITAÇÃO ENVIADA! Aguarde a aprovação da administradora.','pending');
-  else loginMsg(r.message||r.error||'Erro.','error');
+  fill.style.width='60%'; txt.textContent='Verificando credenciais...';
+  if (r.ok) {
+    fill.style.width='80%'; txt.textContent='Carregando dados...';
+    U={email:r.email,nome:r.nome,admin:r.admin}; localStorage.setItem('crm_user',JSON.stringify(U));
+    fill.style.width='100%'; txt.textContent='Pronto!';
+    setTimeout(()=>initApp(), 400);
+  } else {
+    prog.classList.remove('show');
+    if (r.pending) loginMsg('SOLICITAÇÃO ENVIADA! Aguarde a aprovação da administradora.','pending');
+    else loginMsg(r.message||r.error||'Erro.','error');
+  }
 }
 
 function doLogout() { U=null; localStorage.removeItem('crm_user'); $('scApp').classList.add('hidden'); $('scLogin').classList.remove('hidden'); }
@@ -811,7 +833,7 @@ function openForm(row) {
         ? '<input id="f_pr" value="'+esc(isE?L['Prospect']:U.nome)+'" '+dis+'>'
         : '<input id="f_pr" value="'+esc(isE?L['Prospect']:U.nome)+'" readonly style="background:#f0f0f0;cursor:not-allowed">' +
           (isE && (L['Prospect']||'').toLowerCase()!==U.nome.toLowerCase()
-            ? ' <button type="button" class="btn btn-sm btn-teal" style="margin-top:4px;font-size:.72rem" onclick="requestTransfer()">🔄 Alterar para meu usuário</button>'
+            ? ' <button type="button" class="btn btn-sm btn-teal" id="btnTransferReq" style="margin-top:4px;font-size:.72rem" onclick="markTransfer()">🔄 Alterar para meu usuário</button>'
             : '')
       ),rq)+
     fld('Time Comercial','<select id="f_tm" '+dis+'><option value="">Selecione...</option>'+((CFG.timeComercial||[]).map(t=>'<option'+(L&&L['Time Comercial']===t?' selected':'')+'>'+t+'</option>')).join('')+'</select>',rq)+
@@ -842,7 +864,7 @@ function openForm(row) {
 
 function fld(lbl,html,extra){return '<div class="fld'+(extra||'')+'"><label>'+lbl+'</label>'+html+'</div>';}
 function fldF(lbl,html){return '<div class="fld full"><label>'+lbl+'</label>'+html+'</div>';}
-function closeForm(){$('modForm').classList.add('hidden');editRow=null;}
+function closeForm(){$('modForm').classList.add('hidden');editRow=null;pendingTransfer=false;}
 
 async function saveLead() {
   const d1=$('f_d1').value.replace(/\D/g,''),n1=$('f_n1').value,d2=$('f_d2').value.replace(/\D/g,''),n2=$('f_n2').value;
@@ -879,7 +901,23 @@ async function saveLead() {
   const r = editRow
     ? await api('POST',{action:editAct,userEmail:U.email,row:editRow,lead})
     : await api('POST',{action:addAct,userEmail:U.email,lead});
-  if (r.ok){toast(editRow?'Lead atualizado!':'Lead cadastrado!','ok');closeForm();await reload();}
+  if (r.ok) {
+    // Se transfer pendente, enviar solicitação
+    if (pendingTransfer && editRow) {
+      const L = curData().find(l=>l._row===editRow);
+      const tr = await api('POST', {
+        action:'requestTransfer', userEmail:U.email,
+        sheetName:curTab==='wa'?'WHATSAPP':'LEADS', row:editRow,
+        razaoSocial:lead['Razão Social']||'', prospectAtual:L?L['Prospect']:''
+      });
+      pendingTransfer = false;
+      if (tr.ok) { toast('Lead salvo. SOLICITAÇÃO ENVIADA!','ok'); }
+      else { toast('Lead salvo, mas erro na solicitação: '+(tr.error||''),'err'); }
+    } else {
+      toast(editRow?'Lead atualizado!':'Lead cadastrado!','ok');
+    }
+    closeForm(); await reload();
+  }
   else toast(r.error||'Erro ao salvar.','err');
 }
 
@@ -1152,41 +1190,17 @@ async function admAct(a,em){const r=await api('POST',{action:a==='approve'?'appr
 async function admDel(em,nome){if(!confirm('Excluir o usuário '+nome+' ('+em+') permanentemente?'))return;const r=await api('POST',{action:'deleteUser',requesterEmail:U.email,email:em});if(r.ok){toast('Usuário excluído.','ok');openAdmin();}else toast(r.error||'Erro ao excluir.','err');}
 
 // ═══════ TRANSFERS ═══════
-async function requestTransfer() {
-  if (!editRow) return;
-  const L = curData().find(l=>l._row===editRow);
-  if (!L) return;
+let pendingTransfer = false;
 
-  // Primeiro salva o lead com os dados atuais do form
-  const d1=$('f_d1').value.replace(/\D/g,''),n1=$('f_n1').value,d2=$('f_d2').value.replace(/\D/g,''),n2=$('f_n2').value;
-  const t1=d1&&n1?'('+d1+') '+n1:n1||'', t2=d2&&n2?'('+d2+') '+n2:n2||'';
-  const lead = {
-    'Status':gv('f_st'),'Prospect':L['Prospect'],'Time Comercial':gv('f_tm'),
-    'Razão Social':gv('f_rs'),'CNPJ':gv('f_cnpj'),'Contato Principal':gv('f_cp'),
-    'Telefone':[t1,t2].filter(Boolean).join(' | '),'E-mail':gv('f_em'),
-    'Cidade':gv('f_ci'),'UF':gv('f_uf'),'Canal Principal':gv('f_ca'),
-    'Linha de Interesse':msVal('ms_li'),'Produto(s) de Interesse':gv('f_pd'),
-    'Data Primeiro Contato':gv('f_dp'),'Data Último Contato':gv('f_du'),
-    'Próxima Ação':gv('f_pa'),'Data Próxima Ação':gv('f_da'),
-    'Valor do Pedido':gv('f_vl'),'Nº do Pedido':gv('f_np'),
-    'Motivo da Perda':msVal('ms_mp'),'Observações':gv('f_ob'),
-  };
-
-  const editAct = curTab==='wa'?'editWA':'editLead';
-  const saveR = await api('POST',{action:editAct,userEmail:U.email,row:editRow,lead});
-  if (!saveR.ok) { toast(saveR.error||'Erro ao salvar.','err'); return; }
-
-  // Depois envia solicitação de transferência
-  const r = await api('POST', {
-    action: 'requestTransfer',
-    userEmail: U.email,
-    sheetName: curTab==='wa'?'WHATSAPP':'LEADS',
-    row: editRow,
-    razaoSocial: lead['Razão Social']||'',
-    prospectAtual: L['Prospect']||''
-  });
-  if (r.ok) { toast('AGUARDANDO AUTORIZAÇÃO','ok'); closeForm(); await reload(); }
-  else toast(r.error||'Erro','err');
+function markTransfer() {
+  pendingTransfer = true;
+  const btn = $('btnTransferReq');
+  if (btn) {
+    btn.textContent = '\u2705 Transfer\u00eancia marcada \u2014 clique Salvar';
+    btn.disabled = true;
+    btn.style.background = 'var(--navy)';
+  }
+  toast('Clique em Salvar para confirmar.', 'ok');
 }
 
 async function openTransfers() {
@@ -1225,17 +1239,22 @@ async function checkNotifications() {
     badge.classList.add('hidden');
   }
   $('bellDD').innerHTML = notifs.length
-    ? notifs.map(n => '<div class="bell-item"><b>'+esc(n.razaoSocial)+'</b><br>Transferência <b style="color:'+(n.status==='aprovado'?'var(--teal)':'var(--red)')+'">'+n.status+'</b><br><small>'+esc(n.resolvidoEm)+'</small></div>').join('')
+    ? notifs.map(n => '<div class="bell-item"><b>'+esc(n.razaoSocial)+'</b><br>Transferência <b style="color:'+(n.status==='aprovado'?'var(--teal)':'var(--red)')+'">'+n.status+'</b><br><small>'+esc(n.resolvidoEm)+'</small></div>').join('') +
+      '<div style="padding:10px;text-align:center;border-top:1px solid var(--border)"><button class="btn btn-sm" style="background:var(--bg);color:var(--text);width:100%" onclick="clearNotifications()">Limpar notificações</button></div>'
     : '<div class="bell-empty">Sem notificações</div>';
 }
 
 function toggleBell() {
   const dd = $('bellDD');
   dd.classList.toggle('open');
-  // Mark as seen
-  if (dd.classList.contains('open')) {
-    $('bellBadge').classList.add('hidden');
-  }
+}
+
+async function clearNotifications() {
+  await api('POST', { action: 'clearNotifications', userEmail: U.email });
+  $('bellDD').innerHTML = '<div class="bell-empty">Sem notificações</div>';
+  $('bellDD').classList.remove('open');
+  $('bellBadge').classList.add('hidden');
+  toast('Notificações limpas.', 'ok');
 }
 
 // ═══════ UTILS ═══════
