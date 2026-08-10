@@ -86,6 +86,8 @@ input:focus,select:focus,textarea:focus{border-color:var(--teal)}
 .fld textarea{min-height:80px;resize:vertical}
 .mft{padding:16px 24px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:10px}
 .fld-req label::after{content:' *';color:var(--red);font-weight:700}
+.fld-err{font-size:.7rem;color:var(--red);margin-top:2px;display:none}
+.fld-err.show{display:block}
 .phone-row{display:flex;gap:6px}.phone-row .ph-ddd{width:72px;flex-shrink:0}.phone-row .ph-num{flex:1}
 
 /* MULTI-SELECT */
@@ -169,16 +171,19 @@ input:focus,select:focus,textarea:focus{border-color:var(--teal)}
 .main-flt .fg label{font-size:.7rem;font-weight:600;color:var(--muted);text-transform:uppercase}
 .main-flt select,.main-flt input{font-size:.82rem;padding:6px 8px;min-width:120px}
 /* Searchable filter dropdown */
-.sf-wrap{position:relative;min-width:150px}
-.sf-input{width:100%;padding:7px 10px;font-size:.82rem;border:1px solid var(--border);border-radius:6px;outline:none;background:#fff}
+.sf-wrap{position:relative;min-width:160px;width:100%}
+.sf-input{width:100%;padding:7px 28px 7px 10px;font-size:.82rem;border:1px solid var(--border);border-radius:6px;outline:none;background:#fff}
 .sf-input:focus{border-color:var(--teal)}
 .sf-dd{position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid var(--border);border-radius:0 0 6px 6px;box-shadow:0 8px 20px rgba(0,0,0,.12);max-height:220px;overflow-y:auto;z-index:20;display:none}
 .sf-dd.open{display:block}
-.sf-opt{padding:7px 12px;cursor:pointer;font-size:.82rem;transition:background .1s}
+.sf-opt{padding:7px 12px;cursor:pointer;font-size:.82rem;display:flex;align-items:center;gap:8px;transition:background .1s}
 .sf-opt:hover,.sf-opt.hl{background:#E8F5E9}
 .sf-opt.sel{background:var(--teal);color:#fff}
-.sf-clear{position:absolute;right:6px;top:50%;transform:translateY(-50%);background:none;color:var(--muted);font-size:1rem;padding:0 4px;cursor:pointer;display:none}
+.sf-opt input[type="checkbox"]{flex-shrink:0;width:15px;height:15px;accent-color:var(--teal);pointer-events:none;margin:0}
+.sf-clear{position:absolute;right:6px;top:8px;background:none;color:var(--muted);font-size:1rem;padding:0 4px;cursor:pointer;display:none}
 .sf-clear.show{display:block}
+.sf-chips{display:flex;flex-wrap:wrap;gap:3px;margin-bottom:4px}
+.sf-chips .ms-chip{font-size:.68rem;padding:1px 6px}
 .st-pills{display:flex;gap:10px;flex-wrap:wrap;align-items:stretch}
 .st-pill{min-width:100px;padding:10px 14px;border-radius:var(--radius);cursor:pointer;border:2px solid transparent;transition:all .2s;user-select:none;background:#fff;box-shadow:var(--shadow);display:flex;flex-direction:column;align-items:center;gap:2px}
 .st-pill .sp-val{font-size:1.5rem;font-weight:800;line-height:1}
@@ -189,7 +194,12 @@ input:focus,select:focus,textarea:focus{border-color:var(--teal)}
 /* LEADS TABLE */
 .leads-tbl-wrap{padding:0 24px 24px;overflow-x:auto;max-height:calc(100vh - 360px);overflow-y:auto}
 .leads-tbl{width:100%;border-collapse:separate;border-spacing:0;font-size:.82rem;background:#fff;border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow)}
-.leads-tbl th{background:var(--navy);color:#fff;padding:12px 14px;text-align:left;font-size:.72rem;text-transform:uppercase;white-space:nowrap;position:sticky;top:0;z-index:2}
+.leads-tbl th{background:var(--navy);color:#fff;padding:12px 14px;text-align:left;font-size:.72rem;text-transform:uppercase;white-space:nowrap;position:sticky;top:0;z-index:2;cursor:pointer;user-select:none;transition:background .15s}
+.leads-tbl th:hover{background:var(--navy-light)}
+.sort-arrow{display:inline-block;margin-left:4px;font-size:.6rem;opacity:.4;transition:opacity .15s}
+.sort-arrow.asc::after{content:'▲';opacity:1}
+.sort-arrow.desc::after{content:'▼';opacity:1}
+.sort-arrow:not(.asc):not(.desc)::after{content:'⇅';font-size:.7rem}
 .leads-tbl td{padding:10px 14px;border-bottom:1px solid var(--border);vertical-align:middle;white-space:nowrap;max-width:220px;overflow:hidden;text-overflow:ellipsis}
 .leads-tbl tbody tr{display:table-row;transition:background .1s;cursor:pointer}
 .leads-tbl tbody tr:nth-child(even) td{background:#FAFBFD}
@@ -260,19 +270,34 @@ input:focus,select:focus,textarea:focus{border-color:var(--teal)}
   <!-- STATUS KPIs -->
   <div style="padding:0 24px 8px;display:flex;gap:10px;flex-wrap:wrap" id="stPills"></div>
   <!-- MAIN FILTERS -->
-  <div class="main-flt" id="mainFlt">
+  <div class="main-flt" id="mainFlt" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;align-items:start">
     <div class="fg"><label>Prospect</label><div class="sf-wrap" id="sfProspect"></div></div>
     <div class="fg"><label>Time Comercial</label><div class="sf-wrap" id="sfTime"></div></div>
     <div class="fg"><label>UF</label><div class="sf-wrap" id="sfUF"></div></div>
     <div class="fg"><label>Canal</label><div class="sf-wrap" id="sfCanal"></div></div>
     <div class="fg"><label>Data de</label><input type="date" id="fltDe" onchange="renderAll()"></div>
     <div class="fg"><label>Data até</label><input type="date" id="fltAte" onchange="renderAll()"></div>
-    <div class="fg"><label>&nbsp;</label><button class="btn btn-sm btn-teal" onclick="clearMainFlt()">Limpar</button></div>
+    <div class="fg"><label>&nbsp;</label><button class="btn btn-sm btn-teal" style="width:100%" onclick="clearMainFlt()">Limpar filtros</button></div>
   </div>
   <!-- TABLE -->
   <div class="tbl-count" id="tblCount"></div>
-  <div class="leads-tbl-wrap"><table class="leads-tbl"><thead><tr>
-    <th>Nº</th><th>Data</th><th>Status</th><th>Temp.</th><th>Prospect</th><th>Time</th><th>Razão Social</th><th>Cidade</th><th>UF</th><th>Canal</th><th>Contato</th><th>Telefone</th><th>Valor</th><th>Nº Pedido</th><th>Próx. Ação</th><th>Data Próx.</th>
+  <div class="leads-tbl-wrap"><table class="leads-tbl"><thead><tr id="tblHead">
+    <th data-key="Nº" onclick="sortCol('Nº')">Nº <span class="sort-arrow"></span></th>
+    <th data-key="Data" onclick="sortCol('Data')">Data <span class="sort-arrow"></span></th>
+    <th data-key="Status" onclick="sortCol('Status')">Status <span class="sort-arrow"></span></th>
+    <th data-key="Temperatura Lead" onclick="sortCol('Temperatura Lead')">Temp. <span class="sort-arrow"></span></th>
+    <th data-key="Prospect" onclick="sortCol('Prospect')">Prospect <span class="sort-arrow"></span></th>
+    <th data-key="Time Comercial" onclick="sortCol('Time Comercial')">Time <span class="sort-arrow"></span></th>
+    <th data-key="Razão Social" onclick="sortCol('Razão Social')">Razão Social <span class="sort-arrow"></span></th>
+    <th data-key="Cidade" onclick="sortCol('Cidade')">Cidade <span class="sort-arrow"></span></th>
+    <th data-key="UF" onclick="sortCol('UF')">UF <span class="sort-arrow"></span></th>
+    <th data-key="Canal Principal" onclick="sortCol('Canal Principal')">Canal <span class="sort-arrow"></span></th>
+    <th data-key="Contato Principal" onclick="sortCol('Contato Principal')">Contato <span class="sort-arrow"></span></th>
+    <th data-key="Telefone" onclick="sortCol('Telefone')">Telefone <span class="sort-arrow"></span></th>
+    <th data-key="Valor do Pedido" onclick="sortCol('Valor do Pedido')">Valor <span class="sort-arrow"></span></th>
+    <th data-key="Nº do Pedido" onclick="sortCol('Nº do Pedido')">Nº Pedido <span class="sort-arrow"></span></th>
+    <th data-key="Próxima Ação" onclick="sortCol('Próxima Ação')">Próx. Ação <span class="sort-arrow"></span></th>
+    <th data-key="Data Próxima Ação" onclick="sortCol('Data Próxima Ação')">Data Próx. <span class="sort-arrow"></span></th>
   </tr></thead><tbody id="tblBody"></tbody></table></div>
   <div id="loadMain" class="loading"><div class="loader"></div><span>Carregando dados...</span></div>
 </div>
@@ -444,7 +469,13 @@ function switchTab(tab) {
   $('tabWA').classList.toggle('active', tab==='wa');
   $('secTitle').textContent = tab==='leads' ? 'Prospecção' : 'WhatsApp';
   $('inSearch').value = '';
-  ['sfProspect','sfTime','sfUF','sfCanal'].forEach(id => { const w=$(id); if(w){w.dataset.value=''; const inp=w.querySelector('.sf-input'); if(inp)inp.value=''; const cl=w.querySelector('.sf-clear'); if(cl)cl.classList.remove('show');} });
+  ['sfProspect','sfTime','sfUF','sfCanal'].forEach(id => {
+    const w=$(id); if(!w)return;
+    if(w._selected) w._selected.length=0;
+    const inp=w.querySelector('.sf-input'); if(inp)inp.value='';
+    const chips=w.querySelector('.sf-chips'); if(chips)chips.innerHTML='';
+    const cl=w.querySelector('.sf-clear'); if(cl)cl.classList.remove('show');
+  });
   $('fltDe').value = ''; $('fltAte').value = '';
   buildMainFilters();
   renderAll();
@@ -463,18 +494,37 @@ function curData() { return curTab==='leads' ? LEADS : WA_LEADS; }
 
 // ═══════ PIPELINE / TABLE ═══════
 let activeStatus = ''; // '' = all
+let sortKey = '', sortDir = ''; // '' | 'asc' | 'desc'
+
+function sortCol(key) {
+  if (sortKey === key) {
+    sortDir = sortDir === 'asc' ? 'desc' : sortDir === 'desc' ? '' : 'asc';
+  } else {
+    sortKey = key;
+    sortDir = 'asc';
+  }
+  if (!sortDir) sortKey = '';
+  // Update arrows
+  document.querySelectorAll('#tblHead .sort-arrow').forEach(a => { a.className = 'sort-arrow'; });
+  if (sortDir) {
+    const th = document.querySelector('#tblHead th[data-key="'+sortKey+'"] .sort-arrow');
+    if (th) th.className = 'sort-arrow ' + sortDir;
+  }
+  renderAll();
+}
 
 function buildMainFilters() {
   updateStatusKPIs();
   const data = curData();
-  const pros = [...new Set(data.map(l=>l['Prospect']).filter(Boolean))].sort();
-  const tms = [...new Set(data.map(l=>l['Time Comercial']).filter(Boolean))].sort();
-  const ufs = [...new Set(data.map(l=>l['UF']).filter(Boolean))].sort();
-  const cas = [...new Set(data.map(l=>l['Canal Principal']).filter(Boolean))].sort();
-  buildSF('sfProspect', pros);
-  buildSF('sfTime', tms);
-  buildSF('sfUF', ufs);
-  buildSF('sfCanal', cas);
+  function uniq(arr) {
+    const seen = new Map();
+    arr.filter(Boolean).forEach(v => { const k = v.trim().toLowerCase(); if (!seen.has(k)) seen.set(k, v.trim()); });
+    return [...seen.values()].sort((a,b) => a.toLowerCase().localeCompare(b.toLowerCase(),'pt-BR'));
+  }
+  buildSF('sfProspect', uniq(data.map(l=>l['Prospect'])));
+  buildSF('sfTime', uniq(data.map(l=>l['Time Comercial'])));
+  buildSF('sfUF', uniq(data.map(l=>l['UF'])));
+  buildSF('sfCanal', uniq(data.map(l=>l['Canal Principal'])));
 }
 
 // Searchable filter component
@@ -492,19 +542,32 @@ function buildSF(containerId, options) {
   const dd = document.createElement('div');
   dd.className = 'sf-dd';
 
+  let selected = [];
+
+  function renderChips() {
+    const chips = wrap.querySelector('.sf-chips') || document.createElement('div');
+    chips.className = 'sf-chips';
+    chips.innerHTML = selected.map(s => '<span class="ms-chip">'+esc(s)+'<button onclick="event.stopPropagation();sfRemove(\''+containerId+'\',\''+s.replace(/'/g,"\\'")+'\')">✕</button></span>').join('');
+    if (!wrap.querySelector('.sf-chips')) wrap.insertBefore(chips, inp);
+    clear.classList.toggle('show', selected.length > 0);
+  }
+
   function buildOpts(filter) {
     dd.innerHTML = '';
     const f = (filter||'').toLowerCase();
     const filtered = f ? options.filter(o => o.toLowerCase().includes(f)) : options;
     filtered.forEach(o => {
       const div = document.createElement('div');
-      div.className = 'sf-opt' + (wrap.dataset.value===o?' sel':'');
-      div.textContent = o;
-      div.onclick = () => {
-        wrap.dataset.value = o;
-        inp.value = o;
-        clear.classList.add('show');
-        dd.classList.remove('open');
+      const isSel = selected.includes(o);
+      div.className = 'sf-opt' + (isSel?' sel':'');
+      div.innerHTML = '<input type="checkbox" '+(isSel?'checked':'')+' style="accent-color:var(--teal);pointer-events:none"> '+esc(o);
+      div.onclick = (e) => {
+        e.stopPropagation();
+        if (selected.includes(o)) { selected = selected.filter(s=>s!==o); }
+        else { selected.push(o); }
+        inp.value = '';
+        renderChips();
+        buildOpts('');
         renderAll();
       };
       dd.appendChild(div);
@@ -512,6 +575,7 @@ function buildSF(containerId, options) {
     if (!filtered.length) { dd.innerHTML = '<div class="sf-opt" style="color:var(--muted)">Nenhum resultado</div>'; }
   }
 
+  clear.onclick = (e) => { e.stopPropagation(); selected=[]; inp.value=''; renderChips(); renderAll(); };
   inp.onfocus = () => { buildOpts(inp.value); dd.classList.add('open'); };
   inp.oninput = () => { buildOpts(inp.value); dd.classList.add('open'); };
   document.addEventListener('click', (e) => { if (!wrap.contains(e.target)) dd.classList.remove('open'); });
@@ -519,15 +583,28 @@ function buildSF(containerId, options) {
   wrap.appendChild(inp);
   wrap.appendChild(clear);
   wrap.appendChild(dd);
+  wrap._selected = selected;
+  wrap._getSelected = () => selected;
+  renderChips();
 }
 
-function sfVal(id) { const w = $(id); return w ? (w.dataset.value||'') : ''; }
+window.sfRemove = function(containerId, val) {
+  const w = $(containerId);
+  if (!w) return;
+  const idx = w._selected.indexOf(val);
+  if (idx > -1) w._selected.splice(idx, 1);
+  w.querySelector('.sf-chips').innerHTML = w._selected.map(s => '<span class="ms-chip">'+esc(s)+'<button onclick="event.stopPropagation();sfRemove(\''+containerId+'\',\''+s.replace(/'/g,"\\'")+'\')">✕</button></span>').join('');
+  w.querySelector('.sf-clear').classList.toggle('show', w._selected.length > 0);
+  renderAll();
+};
+
+function sfVal(id) { const w = $(id); return w && w._getSelected ? w._getSelected() : []; }
 
 function updateStatusKPIs() {
   const data = curData();
   const total = data.length;
   const counts = {}; ST.forEach(s => counts[s] = 0);
-  LEADS.forEach(l => { const s = l['Status']||'Novo'; if(counts[s]!==undefined) counts[s]++; });
+  data.forEach(l => { const s = l['Status']||'Novo'; if(counts[s]!==undefined) counts[s]++; });
   const pills = $('stPills');
   pills.innerHTML =
     '<div class="st-pill'+(activeStatus===''?' active':'')+'" onclick="filterSt(\'\')">'+
@@ -551,10 +628,10 @@ function getMainFiltered() {
   const q = ($('inSearch').value||'').toLowerCase();
   if (q) data = data.filter(l => [l['Razão Social'],l['Contato Principal'],l['Cidade'],l['Prospect'],l['Canal Principal'],l['Produto(s) de Interesse'],l['CNPJ'],l['E-mail']].join(' ').toLowerCase().includes(q));
   if (activeStatus) data = data.filter(l => (l['Status']||'Novo') === activeStatus);
-  const fp = sfVal('sfProspect'); if (fp) data = data.filter(l => l['Prospect']===fp);
-  const ft = sfVal('sfTime'); if (ft) data = data.filter(l => l['Time Comercial']===ft);
-  const fu = sfVal('sfUF'); if (fu) data = data.filter(l => l['UF']===fu);
-  const fc = sfVal('sfCanal'); if (fc) data = data.filter(l => l['Canal Principal']===fc);
+  const fp = sfVal('sfProspect'); if (fp.length) data = data.filter(l => fp.some(f=>f.toLowerCase()===(l['Prospect']||'').toLowerCase()));
+  const ft = sfVal('sfTime'); if (ft.length) data = data.filter(l => ft.some(f=>f.toLowerCase()===(l['Time Comercial']||'').toLowerCase()));
+  const fu = sfVal('sfUF'); if (fu.length) data = data.filter(l => fu.some(f=>f.toLowerCase()===(l['UF']||'').toLowerCase()));
+  const fc = sfVal('sfCanal'); if (fc.length) data = data.filter(l => fc.some(f=>f.toLowerCase()===(l['Canal Principal']||'').toLowerCase()));
   const de = $('fltDe').value, ate = $('fltAte').value;
   if (de || ate) {
     data = data.filter(l => {
@@ -570,7 +647,32 @@ function getMainFiltered() {
 }
 
 function renderAll() {
-  const data = getMainFiltered();
+  let data = getMainFiltered();
+
+  // Sort
+  if (sortKey && sortDir) {
+    data.sort((a, b) => {
+      let va = a[sortKey]||'', vb = b[sortKey]||'';
+      // Numeric sort for Nº
+      if (sortKey === 'Nº') { va = Number(va)||0; vb = Number(vb)||0; return sortDir==='asc' ? va-vb : vb-va; }
+      // Date sort (dd/mm/yyyy)
+      if (sortKey.startsWith('Data')) {
+        const pa = String(va).split('/'), pb = String(vb).split('/');
+        const da = pa.length===3 ? pa[2]+pa[1]+pa[0] : '', db = pb.length===3 ? pb[2]+pb[1]+pb[0] : '';
+        return sortDir==='asc' ? da.localeCompare(db) : db.localeCompare(da);
+      }
+      // Currency sort for Valor
+      if (sortKey === 'Valor do Pedido') {
+        const na = parseFloat(String(va).replace(/[^\d,]/g,'').replace(',','.'))||0;
+        const nb = parseFloat(String(vb).replace(/[^\d,]/g,'').replace(',','.'))||0;
+        return sortDir==='asc' ? na-nb : nb-na;
+      }
+      // String sort
+      va = String(va).toLowerCase(); vb = String(vb).toLowerCase();
+      return sortDir==='asc' ? va.localeCompare(vb,'pt-BR') : vb.localeCompare(va,'pt-BR');
+    });
+  }
+
   $('tblCount').textContent = data.length + ' lead' + (data.length !== 1 ? 's' : '') + ' encontrado' + (data.length !== 1 ? 's' : '');
   const tbody = $('tblBody');
   if (data.length === 0) {
@@ -604,7 +706,13 @@ function renderAll() {
 
 function clearMainFlt() {
   activeStatus = '';
-  ['sfProspect','sfTime','sfUF','sfCanal'].forEach(id => { const w=$(id); if(w){w.dataset.value=''; const inp=w.querySelector('.sf-input'); if(inp)inp.value=''; const cl=w.querySelector('.sf-clear'); if(cl)cl.classList.remove('show');} });
+  ['sfProspect','sfTime','sfUF','sfCanal'].forEach(id => {
+    const w=$(id); if(!w)return;
+    if(w._selected) w._selected.length=0;
+    const inp=w.querySelector('.sf-input'); if(inp)inp.value='';
+    const chips=w.querySelector('.sf-chips'); if(chips)chips.innerHTML='';
+    const cl=w.querySelector('.sf-clear'); if(cl)cl.classList.remove('show');
+  });
   $('fltDe').value = '';
   $('fltAte').value = '';
   $('inSearch').value = '';
@@ -645,10 +753,10 @@ function openForm(row) {
     fld('Canal Principal','<select id="f_ca" '+dis+'><option value="">Selecione...</option>'+((CFG.canalPrincipal||[]).map(c=>'<option'+(L&&L['Canal Principal']===c?' selected':'')+'>'+c+'</option>')).join('')+'</select>',rq)+
     fld('Linha de Interesse','<div id="ms_li" class="msel" data-sel="'+esc(L?L['Linha de Interesse']:'')+'"></div>')+
     fldF('Produto(s) de Interesse','<textarea id="f_pd" rows="2" '+dis+' placeholder="D30, D90, D12...">'+esc(L?L['Produto(s) de Interesse']:'')+'</textarea>')+
-    fld('Data Primeiro Contato','<input id="f_dp" value="'+esc(L?L['Data Primeiro Contato']:'')+'" '+dis+' placeholder="dd/mm/aaaa">',rq)+
-    fld('Data Último Contato','<input id="f_du" value="'+esc(L?L['Data Último Contato']:'')+'" '+dis+' placeholder="dd/mm/aaaa">')+
+    fld('Data Primeiro Contato','<input id="f_dp" value="'+esc(L?L['Data Primeiro Contato']:'')+'" '+dis+' placeholder="dd/mm/aaaa" maxlength="10" oninput="mDate(this)"><div class="fld-err" id="err_dp">Formato inválido. Use dd/mm/aaaa</div>',rq)+
+    fld('Data Último Contato','<input id="f_du" value="'+esc(L?L['Data Último Contato']:'')+'" '+dis+' placeholder="dd/mm/aaaa" maxlength="10" oninput="mDate(this)"><div class="fld-err" id="err_du">Formato inválido. Use dd/mm/aaaa</div>')+
     fldF('Próxima Ação','<textarea id="f_pa" rows="2" '+dis+'>'+esc(L?L['Próxima Ação']:'')+'</textarea>')+
-    fld('Data Próxima Ação','<input id="f_da" value="'+esc(L?L['Data Próxima Ação']:'')+'" '+dis+' placeholder="dd/mm/aaaa">')+
+    fld('Data Próxima Ação','<input id="f_da" value="'+esc(L?L['Data Próxima Ação']:'')+'" '+dis+' placeholder="dd/mm/aaaa" maxlength="10" oninput="mDate(this)"><div class="fld-err" id="err_da">Formato inválido. Use dd/mm/aaaa</div>')+
     fld('Valor do Pedido','<input id="f_vl" value="'+esc(L?L['Valor do Pedido']:'')+'" '+dis+' placeholder="R$ 0,00" oninput="mBRL(this)">',ganhoRq)+
     fld('Nº do Pedido','<input id="f_np" value="'+esc(L?L['Nº do Pedido']:'')+'" '+dis+'>',ganhoRq)+
     fld('Motivo da Perda','<div id="ms_mp" class="msel" data-sel="'+esc(L?L['Motivo da Perda']:'')+'"></div>')+
@@ -691,6 +799,7 @@ async function saveLead() {
     for (const [f,l] of req) if(!lead[f]){toast('Campo obrigatório: '+l,'err');return;}
     if (!t1){toast('Campo obrigatório: Telefone 1','err');return;}
   }
+  if (!validateDates()) return;
   const addAct = curTab==='wa'?'addWA':'addLead', editAct = curTab==='wa'?'editWA':'editLead';
   const r = editRow
     ? await api('POST',{action:editAct,userEmail:U.email,row:editRow,lead})
@@ -737,6 +846,48 @@ function msVal(id){const c=$(id);if(!c)return '';return Array.from(c.querySelect
 function mCNPJ(el){let v=el.value.replace(/\D/g,'').substring(0,14);if(v.length>12)v=v.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{1,2})/,'$1.$2.$3/$4-$5');else if(v.length>8)v=v.replace(/^(\d{2})(\d{3})(\d{3})(\d{1,4})/,'$1.$2.$3/$4');else if(v.length>5)v=v.replace(/^(\d{2})(\d{3})(\d{1,3})/,'$1.$2.$3');else if(v.length>2)v=v.replace(/^(\d{2})(\d{1,3})/,'$1.$2');el.value=v;}
 function mDDD(el){let v=el.value.replace(/\D/g,'').substring(0,2);if(v.length>0)v='('+v;if(v.length>2)v+=')';el.value=v;}
 function mPH(el){let v=el.value.replace(/\D/g,'').substring(0,9);if(v.length>4)v=v.replace(/^(\d{4,5})(\d{1,4})/,'$1-$2');el.value=v;}
+
+function mDate(el) {
+  let v = el.value.replace(/\D/g,'').substring(0,8);
+  if (v.length > 4) v = v.replace(/^(\d{2})(\d{2})(\d{1,4})/, '$1/$2/$3');
+  else if (v.length > 2) v = v.replace(/^(\d{2})(\d{1,2})/, '$1/$2');
+  el.value = v;
+  // Validate
+  const errId = 'err_' + el.id.split('_')[1];
+  const errEl = $(errId);
+  if (!errEl) return;
+  if (!v) { errEl.classList.remove('show'); return; }
+  const valid = /^\d{2}\/\d{2}\/\d{4}$/.test(v);
+  if (valid) {
+    const parts = v.split('/');
+    const d = parseInt(parts[0]), m = parseInt(parts[1]), y = parseInt(parts[2]);
+    const isReal = d>=1 && d<=31 && m>=1 && m<=12 && y>=2000 && y<=2099;
+    errEl.classList.toggle('show', !isReal);
+  } else {
+    errEl.classList.toggle('show', v.length >= 10);
+  }
+}
+
+function validateDates() {
+  const fields = [['f_dp','err_dp','Data Primeiro Contato'],['f_du','err_du','Data Último Contato'],['f_da','err_da','Data Próxima Ação']];
+  for (const [fid, eid, label] of fields) {
+    const val = gv(fid);
+    if (!val) continue;
+    if (!/^\d{2}\/\d{2}\/\d{4}$/.test(val)) {
+      toast(label + ': formato inválido. Use dd/mm/aaaa','err');
+      const errEl = $(eid); if(errEl) errEl.classList.add('show');
+      return false;
+    }
+    const p = val.split('/');
+    const d=parseInt(p[0]),m=parseInt(p[1]),y=parseInt(p[2]);
+    if (d<1||d>31||m<1||m>12||y<2000||y>2099) {
+      toast(label + ': data inválida','err');
+      const errEl = $(eid); if(errEl) errEl.classList.add('show');
+      return false;
+    }
+  }
+  return true;
+}
 
 function mBRL(el){
   let v=el.value.replace(/\D/g,'');
