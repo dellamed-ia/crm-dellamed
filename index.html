@@ -1085,11 +1085,9 @@ async function openAdmin(){
       act='<span style="color:var(--muted);font-size:.78rem">Admin</span>';
     } else if(u.status==='pendente'){
       act='<button class="btn btn-green btn-sm" onclick="admAct(\'approve\',\''+u.email+'\')">Aprovar</button> '+
-          '<button class="btn btn-danger btn-sm" onclick="admAct(\'reject\',\''+u.email+'\')">Rejeitar</button> '+
-          '<button class="btn btn-sm" style="background:#78909C;color:#fff" onclick="admDel(\''+u.email+'\',\''+esc(u.nome)+'\')">Excluir</button>';
+          '<button class="btn btn-danger btn-sm" onclick="admDel(\''+u.email+'\',\''+esc(u.nome)+'\')">Excluir</button>';
     } else {
-      act='<button class="btn btn-danger btn-sm" onclick="admAct(\'reject\',\''+u.email+'\')">Revogar</button> '+
-          '<button class="btn btn-sm" style="background:#78909C;color:#fff" onclick="admDel(\''+u.email+'\',\''+esc(u.nome)+'\')">Excluir</button>';
+      act='<button class="btn btn-danger btn-sm" onclick="admDel(\''+u.email+'\',\''+esc(u.nome)+'\')">Excluir</button>';
     }
     return '<tr><td>'+esc(u.email)+'</td><td>'+esc(u.nome)+'</td><td><span class="badge '+bc+'">'+u.status+'</span></td><td>'+(u.data||'')+'</td><td style="font-size:.78rem;color:var(--navy);white-space:nowrap">'+(u.ultimoAcesso||'—')+'</td><td>'+act+'</td></tr>';
   }).join('');
