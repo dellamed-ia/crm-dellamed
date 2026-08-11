@@ -1662,7 +1662,7 @@ async function openAdmin(){
     } else {
       act='<button class="btn btn-danger btn-sm" onclick="admDel(\''+u.email+'\',\''+esc(u.nome)+'\')">Excluir</button>';
     }
-    return '<tr><td>'+esc(u.email)+'</td><td>'+esc(u.nome)+'</td><td><span class="badge '+bc+'">'+u.status+'</span></td><td>'+(u.data||'')+'</td><td style="font-size:.78rem;color:#fff;white-space:nowrap">'+(u.ultimoAcesso && u.ultimoAcesso!=='—' ? u.ultimoAcesso.replace(' ','  às ') : '—')+'</td><td>'+act+'</td></tr>';
+    return '<tr><td>'+esc(u.email)+'</td><td>'+esc(u.nome)+'</td><td><span class="badge '+bc+'">'+u.status+'</span></td><td>'+(u.data||'')+'</td><td style="font-size:.78rem;color:#fff;white-space:nowrap">'+(u.ultimoAcesso && u.ultimoAcesso!=='—' ? u.ultimoAcesso.split(' ')[0] : '—')+'</td><td>'+act+'</td></tr>';
   }).join('');
   $('modAdmin').classList.remove('hidden');
 }
