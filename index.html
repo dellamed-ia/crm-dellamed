@@ -131,9 +131,13 @@ input:focus,select:focus,textarea:focus{border-color:var(--teal)}
 
 /* ADMIN */
 .atbl{width:100%;border-collapse:collapse;font-size:.85rem}
-.atbl th{background:var(--navy);color:#fff;padding:10px 14px;text-align:left;font-size:.75rem;text-transform:uppercase}
+.atbl th{background:var(--navy);color:#fff;padding:10px 14px;text-align:left;font-size:.75rem;text-transform:uppercase;position:sticky;top:0;z-index:1}
 .atbl td{padding:10px 14px;border-bottom:1px solid var(--border)}
 .atbl tr:hover td{background:#f8f9ff}
+.mbody[style*="max-height"]::-webkit-scrollbar{width:5px}
+.mbody[style*="max-height"]::-webkit-scrollbar-track{background:#0b192b}
+.mbody[style*="max-height"]::-webkit-scrollbar-thumb{background:rgba(255,255,255,.15);border-radius:3px}
+.mbody[style*="max-height"]::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,.3)}
 .badge{padding:3px 10px;border-radius:10px;font-size:.72rem;font-weight:600}
 .b-ok{background:#E0F2F1;color:#00695C}.b-pend{background:#FFF8E1;color:#F57F17}.b-rej{background:#FFEBEE;color:#C62828}
 
@@ -516,9 +520,9 @@ html,body{background:#142238!important}body{background:radial-gradient(1050px 56
 
 <!-- ADMIN MODAL -->
 <div id="modAdmin" class="overlay hidden">
-  <div class="modal" style="max-width:700px">
+  <div class="modal" style="max-width:750px">
     <div class="mhd"><h3>👥 Gerenciar Usuários</h3><button class="mx" id="aClose">✕</button></div>
-    <div class="mbody full" style="display:block;padding:0">
+    <div class="mbody full" style="display:block;padding:0;max-height:60vh;overflow-y:auto">
       <table class="atbl"><thead><tr><th>E-mail</th><th>Nome</th><th>Status</th><th>Cadastro</th><th>Último Acesso</th><th>Ações</th></tr></thead><tbody id="aBody"></tbody></table>
     </div>
   </div>
@@ -1658,7 +1662,7 @@ async function openAdmin(){
     } else {
       act='<button class="btn btn-danger btn-sm" onclick="admDel(\''+u.email+'\',\''+esc(u.nome)+'\')">Excluir</button>';
     }
-    return '<tr><td>'+esc(u.email)+'</td><td>'+esc(u.nome)+'</td><td><span class="badge '+bc+'">'+u.status+'</span></td><td>'+(u.data||'')+'</td><td style="font-size:.78rem;color:var(--navy);white-space:nowrap">'+(u.ultimoAcesso||'—')+'</td><td>'+act+'</td></tr>';
+    return '<tr><td>'+esc(u.email)+'</td><td>'+esc(u.nome)+'</td><td><span class="badge '+bc+'">'+u.status+'</span></td><td>'+(u.data||'')+'</td><td style="font-size:.78rem;color:#fff;white-space:nowrap">'+(u.ultimoAcesso && u.ultimoAcesso!=='—' ? u.ultimoAcesso.replace(' ','  às ') : '—')+'</td><td>'+act+'</td></tr>';
   }).join('');
   $('modAdmin').classList.remove('hidden');
 }
