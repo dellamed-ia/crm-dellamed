@@ -526,6 +526,10 @@ html,body{background:#142238!important}body{background:radial-gradient(1050px 56
 // ═══════════════════════════════════════════════════════════════
 const API_URL = 'https://script.google.com/macros/s/AKfycbwn43yGwRyB5TMq8G1q8WcQJj8dJx5R4eNOmEtmsKT2XDFVPyYqzdnGTGxApT0uAJCGPg/exec';
 const ADMIN_EMAIL = 'bianca.lima@dellamed.com.br';
+const DIRECT_ASSIGN_EMAILS = ['camily.soares@dellamed.com.br'];
+function canDirectAssign(){
+  return !!(U && (U.admin || DIRECT_ASSIGN_EMAILS.includes(String(U.email||'').trim().toLowerCase())));
+}
 
 // ═══════ STATE ═══════
 let U = null, LEADS = [], WA_LEADS = [], CFG = {}, editRow = null, curTab = 'leads', waError = '';
@@ -1000,7 +1004,7 @@ function openForm(row) {
     fld('Data Registro','<input id="f_data" value="'+esc(dataValue)+'" placeholder="dd/mm/aaaa" maxlength="10" oninput="mDate(this)" '+(isE?'readonly style="background:#f0f0f0;cursor:not-allowed"':'')+'><div class="fld-err" id="err_data">Formato inválido. Use dd/mm/aaaa</div>')+
     fld('Status','<select id="f_st" '+dis+' onchange="toggleGanhoReq()">'+((CFG.status||[]).map(s=>'<option'+(L&&L['Status']===s?' selected':'')+'>'+s+'</option>')).join('')+'</select>',rq)+
     fld('Prospect (Vendedor)',
-      (U.admin
+      (canDirectAssign()
         ? '<input id="f_pr" value="'+esc(isE?L['Prospect']:U.nome)+'" '+dis+'>'
         : '<input id="f_pr" value="'+esc(isE?L['Prospect']:U.nome)+'" readonly style="background:#f0f0f0;cursor:not-allowed">' +
           (isE && (L['Prospect']||'').toLowerCase()!==U.nome.toLowerCase()
@@ -1103,7 +1107,7 @@ async function _doSaveLead() {
   if (r.error) { toast('Erro: ' + r.error, 'err'); return; }
   if (r.ok) {
     // Se transfer pendente, enviar solicitação
-    if (pendingTransfer && editRow) {
+    if (pendingTransfer && editRow && !canDirectAssign()) {
       const L = curData().find(l=>l._row===editRow);
       const tr = await api('POST', {
         action:'requestTransfer', userEmail:U.email,
@@ -1113,6 +1117,9 @@ async function _doSaveLead() {
       pendingTransfer = false;
       if (tr.ok) { toast('Lead salvo. SOLICITAÇÃO ENVIADA!','ok'); }
       else { toast('Lead salvo, mas erro na solicitação: '+(tr.error||''),'err'); }
+    } else if (pendingTransfer && editRow && canDirectAssign()) {
+      pendingTransfer = false;
+      toast('Lead atualizado e atribuído diretamente!','ok');
     } else if (assignedProspect && assignEmail) {
       // Notificar o prospect atribuído
       await api('POST', {
@@ -1637,7 +1644,7 @@ async function lookupAssign() {
   if (r.ok && r.nome) {
     assignedProspect = r.nome;
     $('assignResult').innerHTML = '<span style="color:var(--teal)">✅ Será atribuído a: <b>' + esc(r.nome) + '</b></span>';
-    if (U.admin) { $('f_pr').value = r.nome; }
+    if (canDirectAssign()) { $('f_pr').value = r.nome; }
   } else {
     assignedProspect = '';
     $('assignResult').innerHTML = '<span style="color:var(--red)">❌ ' + (r.error || 'Usuário não encontrado ou não aprovado.') + '</span>';
