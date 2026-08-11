@@ -686,6 +686,7 @@ async function reload() {
 }
 
 async function doRefresh() {
+  if (isFormOpen()) { toast('Feche o formulário antes de atualizar.','err'); return; }
   const btn = $('btnRefresh');
   btn.classList.add('btn-loading');
   try {
@@ -771,7 +772,7 @@ function curData() { return curTab==='leads' ? LEADS : WA_LEADS; }
 
 // ═══════ PIPELINE / TABLE ═══════
 let activeStatus = ''; // '' = all
-let sortKey = '', sortDir = ''; // '' | 'asc' | 'desc'
+let sortKey = 'Nº', sortDir = 'desc';
 
 function sortCol(key) {
   if (sortKey === key) {
@@ -1081,6 +1082,7 @@ function openForm(row) {
 
 function fld(lbl,html,extra){return '<div class="fld'+(extra||'')+'"><label>'+lbl+'</label>'+html+'</div>';}
 function fldF(lbl,html){return '<div class="fld full"><label>'+lbl+'</label>'+html+'</div>';}
+function isFormOpen(){return !$('modForm').classList.contains('hidden');}
 function closeForm(){$('modForm').classList.add('hidden');editRow=null;pendingTransfer=false;assignedProspect='';}
 
 let saving = false;
@@ -1724,7 +1726,7 @@ async function actTransfer(action, row) {
 
 // ═══════ NOTIFICATIONS BELL ═══════
 async function checkNotifications() {
-  if (!U) return;
+  if (!U || isFormOpen()) return;
   const r = await api('GET',{action:'getNotifications',email:U.email});
   if (r.error) return;
   const notifs = r.notifications||[];
@@ -1761,7 +1763,7 @@ async function clearNotifications() {
 
 // ═══════ ADMIN PENDING BADGES ═══════
 async function checkAdminPending() {
-  if (!U || !U.admin) return;
+  if (!U || !U.admin || isFormOpen()) return;
   // Check pending users
   const u = await api('GET', { action: 'getUsers' });
   if (!u.error && u.users) {
