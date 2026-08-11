@@ -358,6 +358,40 @@ html,body{background:#142238!important}body{background:radial-gradient(1050px 56
 .leads-tbl{background:#e8edf3!important;border:1px solid #cbd4df!important;box-shadow:0 12px 30px rgba(3,10,20,.15)!important}.leads-tbl th{background:#53677f!important;color:#fff!important;border-bottom-color:#77899d!important}.leads-tbl th:hover{background:#60758d!important}.leads-tbl td{color:#263547!important;border-color:#cfd7e0!important}.leads-tbl tbody tr:nth-child(odd) td{background:#edf1f5!important}.leads-tbl tbody tr:nth-child(even) td{background:#e2e8ee!important}.leads-tbl tbody tr:hover td{background:#d3dde7!important}.leads-tbl td[style*="color:var(--navy)"]{color:#17324f!important}.leads-tbl td[style*="color:var(--teal)"]{color:#087f78!important}.leads-tbl td[style*="color:var(--muted)"]{color:#64748b!important}.leads-tbl-wrap::-webkit-scrollbar-track{background:#dfe5eb!important}.leads-tbl-wrap::-webkit-scrollbar-thumb{background:#8b9bad!important}
 @media(max-width:1180px){.dgrid{grid-template-columns:repeat(2,minmax(0,1fr))!important}.dcard,.dcard.dcard-map,.dcard.dcard-small{grid-column:span 1}.dcard.dcard-wide{grid-column:1/-1!important}}@media(max-width:760px){.dgrid{grid-template-columns:1fr!important}.dcard,.dcard.dcard-map,.dcard.dcard-small,.dcard.dcard-wide{grid-column:1!important}}
 </style>
+
+<style id="activeTabHighlightV6">
+/* Destaque forte da aba ativa: Multicanais x WhatsApp */
+.tabs{gap:10px!important;padding:10px 24px!important}
+.tab{
+  border:1px solid transparent!important;
+  border-radius:9px!important;
+  padding:11px 22px!important;
+  opacity:.72!important;
+  transition:background .18s ease,border-color .18s ease,box-shadow .18s ease,opacity .18s ease,transform .18s ease!important;
+}
+.tab:hover{opacity:1!important}
+.tab.active{
+  color:#fff!important;
+  opacity:1!important;
+  font-weight:800!important;
+  transform:translateY(-1px)!important;
+}
+#tabLeads.active{
+  background:linear-gradient(135deg,#1677ff,#20b8d8)!important;
+  border-color:#62d9f1!important;
+  box-shadow:0 0 0 2px rgba(32,184,216,.18),0 8px 20px rgba(22,119,255,.28)!important;
+}
+#tabWA.active{
+  background:linear-gradient(135deg,#159447,#22c76a)!important;
+  border-color:#63e69a!important;
+  box-shadow:0 0 0 2px rgba(34,199,106,.18),0 8px 20px rgba(21,148,71,.28)!important;
+}
+#tabLeads:not(.active),#tabWA:not(.active){
+  background:rgba(255,255,255,.035)!important;
+  border-color:rgba(255,255,255,.08)!important;
+  color:#9fb0c8!important;
+}
+</style>
 </head>
 <body>
 
