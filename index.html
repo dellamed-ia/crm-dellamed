@@ -225,11 +225,11 @@ input:focus,select:focus,textarea:focus{border-color:var(--teal)}
 .st-pill.active{border-color:var(--navy);box-shadow:0 0 0 3px rgba(10,42,78,.15)}
 
 /* LEADS TABLE */
-.leads-tbl-wrap{padding:0 24px 24px;overflow-x:auto;max-height:calc(100vh - 380px);overflow-y:auto}
-.leads-tbl-wrap::-webkit-scrollbar{width:6px}
-.leads-tbl-wrap::-webkit-scrollbar:horizontal{height:0;display:none}
-.leads-tbl-wrap::-webkit-scrollbar-track{background:transparent}
-.leads-tbl-wrap::-webkit-scrollbar-thumb{background:rgba(10,42,78,.2);border-radius:3px}
+.leads-tbl-wrap{padding:0 24px 24px;overflow:auto;max-height:calc(100vh - 380px)}
+.leads-tbl-wrap::-webkit-scrollbar{width:6px;height:6px}
+.leads-tbl-wrap::-webkit-scrollbar-track{background:#f0f0f0;border-radius:3px}
+.leads-tbl-wrap::-webkit-scrollbar-thumb{background:rgba(10,42,78,.25);border-radius:3px}
+.leads-tbl-wrap::-webkit-scrollbar-thumb:hover{background:rgba(10,42,78,.4)}
 .leads-tbl-wrap::-webkit-scrollbar-thumb:hover{background:rgba(10,42,78,.4)}
 .leads-tbl{width:100%;border-collapse:separate;border-spacing:0;font-size:.82rem;background:#fff;border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow)}
 .leads-tbl th{background:var(--navy);color:#fff;padding:12px 14px;text-align:left;font-size:.72rem;text-transform:uppercase;white-space:nowrap;position:sticky;top:0;z-index:2;cursor:pointer;user-select:none;transition:background .15s}
