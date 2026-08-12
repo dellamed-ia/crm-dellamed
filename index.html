@@ -146,7 +146,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--teal)}
 .mbody[style*="max-height"]::-webkit-scrollbar-thumb{background:rgba(255,255,255,.15);border-radius:3px}
 .mbody[style*="max-height"]::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,.3)}
 .badge{padding:3px 10px;border-radius:10px;font-size:.72rem;font-weight:600}
-.b-ok{background:#E0F2F1;color:#00695C}.b-pend{background:#FFF8E1;color:#F57F17}.b-rej{background:#FFEBEE;color:#C62828}
+.b-ok{background:#E0F2F1;color:#00695C}.b-pend{background:#FFF8E1;color:#F57F17}.b-rej{background:#FFEBEE;color:#C62828}.b-attr{background:#E3F2FD;color:#1565C0}
 
 /* TOAST */
 .toast{position:fixed;bottom:24px;right:24px;padding:14px 22px;border-radius:8px;color:#fff;font-size:.88rem;font-weight:500;z-index:300;animation:tIn .3s ease;box-shadow:0 8px 24px rgba(0,0,0,.2)}
@@ -1097,7 +1097,7 @@ function openForm(row) {
   const dataValue = isE ? (L['Data']||'') : todayStr;
 
   $('fBody').innerHTML =
-    fld('Data Registro','<input id="f_data" value="'+esc(dataValue)+'" placeholder="dd/mm/aaaa" maxlength="10" oninput="mDate(this)" '+(isE?'readonly style="background:#f0f0f0;cursor:not-allowed"':'')+'><div class="fld-err" id="err_data">Formato inválido. Use dd/mm/aaaa</div>')+
+    fld('Data Registro','<input id="f_data" value="'+esc(dataValue)+'" placeholder="dd/mm/aaaa" maxlength="10" '+(!U.admin?'readonly style="background:#f0f0f0;cursor:not-allowed"':'oninput="mDate(this)"')+'><div class="fld-err" id="err_data">Formato inválido. Use dd/mm/aaaa</div>')+
     fld('Status','<select id="f_st" '+dis+' onchange="toggleGanhoReq()">'+((CFG.status||[]).map(s=>'<option'+(L&&L['Status']===s?' selected':'')+'>'+s+'</option>')).join('')+'</select>',rq)+
     fld('Status inicial:',
       '<select id="f_si" '+(canE?'':'disabled')+'>'+
@@ -1861,11 +1861,31 @@ async function openTransfers() {
   if (r.error) { toast(r.error,'err'); return; }
   const items = r.transfers||[];
   $('tBody').innerHTML = items.length ? items.map(t => {
-    const bc = t.status==='pendente'?'b-pend':t.status==='aprovado'?'b-ok':'b-rej';
-    const act = t.status==='pendente'
+    // Atribuição direta (canDirectAssign) vs Solicitação de transferência
+    const isAtrib = (t.sheetName||'').toUpperCase() === 'ATRIBUICAO' || t.status === 'atribuido';
+    const bc = isAtrib ? 'b-attr'
+             : t.status==='pendente' ? 'b-pend'
+             : t.status==='aprovado' ? 'b-ok'
+             : 'b-rej';
+    const statusTxt = isAtrib ? 'Atribuição'
+                    : t.status==='aprovado' ? 'Aprovado'
+                    : t.status==='recusado' ? 'Recusado'
+                    : t.status;
+    const act = (!isAtrib && t.status==='pendente')
       ? '<button class="btn btn-green btn-sm" onclick="actTransfer(\'approve\','+t._row+')">Aprovar</button> <button class="btn btn-danger btn-sm" onclick="actTransfer(\'reject\','+t._row+')">Recusar</button>'
-      : '<span class="badge '+bc+'">'+t.status+'</span>';
-    return '<tr><td style="font-size:.78rem;white-space:nowrap">'+esc(t.data)+'</td><td>'+esc(t.nome)+'</td><td title="'+esc(t.razaoSocial)+'" style="max-width:160px;overflow:hidden;text-overflow:ellipsis">'+esc(t.razaoSocial)+'</td><td>'+esc(t.prospectAtual)+'</td><td>'+esc(t.novoProspect)+'</td><td><span class="badge '+bc+'">'+t.status+'</span></td><td>'+act+'</td></tr>';
+      : '<span style="font-size:.75rem;color:var(--muted)">Direta — sem aprovação</span>';
+    // Para atribuições antigas (antes do fix do Codigo.gs), nome pode estar em novoProspect
+    const solicitante = t.nome || (isAtrib ? t.novoProspect : '');
+    const para = isAtrib && !t.nome ? '(ver versão atualizada)' : esc(t.novoProspect);
+    return '<tr>'
+      +'<td style="font-size:.78rem;white-space:nowrap">'+esc(t.data)+'</td>'
+      +'<td>'+esc(solicitante)+'</td>'
+      +'<td title="'+esc(t.razaoSocial)+'" style="max-width:160px;overflow:hidden;text-overflow:ellipsis">'+esc(t.razaoSocial)+'</td>'
+      +'<td>'+esc(t.prospectAtual||'—')+'</td>'
+      +'<td>'+para+'</td>'
+      +'<td><span class="badge '+bc+'">'+statusTxt+'</span></td>'
+      +'<td>'+act+'</td>'
+      +'</tr>';
   }).join('') : '<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--muted)">Nenhuma solicitação.</td></tr>';
   $('modTransfers').classList.remove('hidden');
 }
