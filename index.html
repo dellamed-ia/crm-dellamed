@@ -642,9 +642,7 @@ function autoLogin() {
     if (lock && lock.nome && lock.email) {
       const fn = $('inNome'), fe = $('inEmail');
       fn.value = lock.nome;
-      fn.readOnly = true;
-      fn.style.cssText += ';background:#f0f0f4;cursor:not-allowed;color:#555';
-      fn.title = 'Nome bloqueado após autorização — use outro navegador/dispositivo somente se for novo colaborador';
+      fn.title = 'Nome pré-preenchido com o cadastro autorizado neste dispositivo';
       fe.value = lock.email;
     }
   } catch(_) {}
