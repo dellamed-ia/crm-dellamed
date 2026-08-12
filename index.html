@@ -43,7 +43,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--teal)}
 .login-card h2{color:var(--navy);font-size:1.6rem;margin-bottom:6px}
 .login-card p{color:var(--muted);margin-bottom:28px;font-size:.9rem}
 .login-card input{width:100%;margin-bottom:12px;padding:12px 14px;font-size:1rem}
-.login-card .btn{width:100%;padding:13px;font-size:1rem;margin-top:4px}
+.login-card .btn{width:100%;padding:13px;font-size:1rem;margin-top:4px}.login-notice{background:#FFF8E1;border:1px solid #FFD54F;border-radius:8px;padding:11px 14px;margin-top:14px;text-align:left;font-size:.78rem;color:#5a3e00;line-height:1.55}
 .logo-text{font-size:2.4rem;font-weight:800;color:var(--navy);letter-spacing:-1px;margin-bottom:4px}
 .login-msg{margin-top:16px;padding:12px;border-radius:8px;font-size:.85rem;display:none}
 .login-msg.pending{display:block;background:#FFF8E1;color:#F57F17;border:1px solid #FFE082}
@@ -127,7 +127,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--teal)}
 .dgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(380px,1fr));gap:20px;padding:24px}
 .dcard{background:#fff;border-radius:12px;padding:24px;box-shadow:0 2px 16px rgba(10,42,78,.06);border:1px solid rgba(0,0,0,.04)}
 .dcard h4{font-size:.82rem;font-weight:700;color:var(--navy);margin-bottom:16px;text-transform:uppercase;letter-spacing:.5px;padding-bottom:8px;border-bottom:2px solid var(--bg)}
-.dcard canvas{max-height:300px}
+.dcard canvas{max-height:300px}.dcard-sub{font-size:.71rem;color:var(--muted);margin:-8px 0 10px;line-height:1.4}
 .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;padding:20px 24px 8px}
 .leg-sec{padding:16px 24px 32px;display:grid;grid-template-columns:1fr 1fr;gap:20px}
 .leg-box{background:#fff;border-radius:12px;padding:20px 24px;box-shadow:0 2px 12px rgba(10,42,78,.06);border:1px solid rgba(0,0,0,.04)}
@@ -306,7 +306,7 @@ body{background:
 .login-wrap{background:radial-gradient(800px 500px at 50% 0%,rgba(34,211,238,.12),transparent 60%),linear-gradient(145deg,#06101e,#0b1c31)!important}
 .login-card{background:linear-gradient(180deg,#10223a,#0b192b)!important;border:1px solid #243a58!important;box-shadow:0 30px 80px rgba(0,0,0,.45)!important;color:var(--d-text)}
 .login-card h2,.logo-text{color:#fff!important}.login-card p{color:var(--d-muted)!important}
-.login-card input{background:#081626!important;color:var(--d-text)!important;border-color:#2a415f!important}.login-card input::placeholder{color:#647996}.login-card input:focus{border-color:var(--d-cyan)!important;box-shadow:0 0 0 3px rgba(34,211,238,.08)}
+.login-card input{background:#081626!important;color:var(--d-text)!important;border-color:#2a415f!important}.login-card input::placeholder{color:#647996}.login-card input:focus{border-color:var(--d-cyan)!important;box-shadow:0 0 0 3px rgba(34,211,238,.08)}.login-notice{background:rgba(255,213,79,.07)!important;border-color:rgba(255,213,79,.25)!important;color:#c9a84c!important}
 .login-progress .lp-bar{background:#182a42!important}.login-progress .lp-fill{background:linear-gradient(90deg,#0891b2,#22d3ee)!important}.login-progress .lp-text{color:var(--d-muted)!important}
 
 /* Main CRM */
@@ -345,7 +345,7 @@ body{background:
 .br-map-shell{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(180px,.6fr);gap:18px;align-items:stretch;min-height:360px}.br-map-canvas{position:relative;display:flex;align-items:center;justify-content:center;min-height:360px;background:radial-gradient(circle at 50% 45%,rgba(34,211,238,.06),transparent 60%);border:1px solid #1e334e;border-radius:13px;overflow:hidden}.br-map-canvas svg{width:100%;height:355px;max-width:590px;overflow:visible}.br-map-canvas path{transition:fill .2s ease,filter .2s ease;vector-effect:non-scaling-stroke}.br-map-canvas path:hover{filter:brightness(1.25);stroke:#d9f7ff!important;stroke-width:1.35!important}.br-map-panel{display:flex;flex-direction:column;gap:12px}.br-map-section{background:#0a1829;border:1px solid #213650;border-radius:12px;padding:12px}.br-map-section h5{font-size:.68rem;text-transform:uppercase;letter-spacing:.8px;color:#7f95b3;margin-bottom:8px}.br-region-row,.br-uf-row{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;padding:5px 0;color:#cbd8e8;font-size:.75rem}.br-region-row b,.br-uf-row b{color:#fff}.br-region-row+.br-region-row,.br-uf-row+.br-uf-row{border-top:1px solid rgba(255,255,255,.04)}.br-map-total{font-size:1.6rem;font-weight:800;color:#fff}.br-map-total small{font-size:.7rem;color:#8398b4;font-weight:500;margin-left:5px}.br-map-source{font-size:.62rem;color:#627895;margin-top:8px;text-align:right}.br-map-loading{color:#7890ae;font-size:.8rem;display:flex;align-items:center;gap:8px}.br-map-loading::before{content:'';width:18px;height:18px;border:2px solid #29425f;border-top-color:#22d3ee;border-radius:50%;animation:spin .7s linear infinite}.br-map-label{font-family:Inter,system-ui,sans-serif;fill:#f4fbff;font-weight:800;text-anchor:middle;pointer-events:none;paint-order:stroke;stroke:#07111f;stroke-width:2.2px;stroke-linejoin:round}.br-map-label-uf{font-size:9px}.br-map-label-v{font-size:11px}.br-map-empty{fill:#17283e!important}
 
 /* Evolution wide chart */
-#c8{min-height:310px!important;max-height:380px!important}.evo-sub{font-size:.7rem;color:#8398b4;margin-top:-8px;margin-bottom:8px}
+#c8{min-height:310px!important;max-height:380px!important}.evo-sub{font-size:.7rem;color:#8398b4;margin-top:-8px;margin-bottom:8px}.dcard-sub{font-size:.71rem;color:#8398b4;margin:-8px 0 10px;line-height:1.4}
 
 @media(max-width:980px){.dgrid{grid-template-columns:1fr!important}.dcard.dcard-wide{grid-column:auto!important}.br-map-shell{grid-template-columns:1fr}.br-map-canvas{min-height:320px}.br-map-canvas svg{height:315px}.thermo-modern{grid-template-columns:125px 1fr;gap:18px}}
 @media(max-width:640px){.thermo-modern{grid-template-columns:1fr}.tm-visual{height:245px}.br-map-panel{grid-template-columns:1fr 1fr;display:grid}.leg-sec{grid-template-columns:1fr!important}.dgrid{padding-left:12px!important;padding-right:12px!important}.kpis{padding-left:12px!important;padding-right:12px!important}.dash-flt{padding-left:12px!important;padding-right:12px!important}}
@@ -411,10 +411,13 @@ html,body{background:#142238!important}body{background:radial-gradient(1050px 56
   <div class="login-card">
     <div class="logo-text">DELLAMED</div>
     <h2>CRM</h2>
-    <p>Insira seu e-mail para acessar o sistema</p>
-    <input type="text" id="inNome" placeholder="Seu nome completo">
-    <input type="email" id="inEmail" placeholder="seu.email@empresa.com.br">
+    <p>Insira seu nome e e-mail para acessar</p>
+    <input type="text" id="inNome" placeholder="Nome e Sobrenome">
+    <input type="email" id="inEmail" placeholder="seu.email@dellamed.com.br">
     <button class="btn btn-teal" id="btnLogin">LOGIN</button>
+    <div class="login-notice">
+      ⚠️ No primeiro acesso, use o nome e sobrenome exatos do cadastro corporativo. Nos acessos seguintes, qualquer variação do nome é aceita.
+    </div>
     <div class="login-progress" id="loginProgress">
       <div class="lp-bar"><div class="lp-fill" id="lpFill"></div></div>
       <div class="lp-text" id="lpText">Conectando...</div>
@@ -529,8 +532,8 @@ html,body{background:#142238!important}body{background:radial-gradient(1050px 56
 <div id="modAdmin" class="overlay hidden">
   <div class="modal" style="max-width:750px">
     <div class="mhd"><h3>👥 Gerenciar Usuários</h3><button class="mx" id="aClose">✕</button></div>
-    <div class="mbody full" style="display:block;padding:0;max-height:60vh;overflow-y:auto">
-      <table class="atbl"><thead><tr><th>E-mail</th><th>Nome</th><th>Status</th><th>Cadastro</th><th>Último Acesso</th><th>Ações</th></tr></thead><tbody id="aBody"></tbody></table>
+    <div class="mbody full" style="display:block;padding:0;max-height:60vh;overflow:auto">
+      <table class="atbl" style="min-width:720px"><thead><tr><th>E-mail</th><th>Nome</th><th>Status</th><th>Cadastro</th><th>Último Acesso</th><th>Ações</th></tr></thead><tbody id="aBody"></tbody></table>
     </div>
   </div>
 </div>
@@ -539,8 +542,8 @@ html,body{background:#142238!important}body{background:radial-gradient(1050px 56
 <div id="modTransfers" class="overlay hidden">
   <div class="modal" style="max-width:780px">
     <div class="mhd"><h3>📝 Alterações de Leads</h3><button class="mx" id="tClose">✕</button></div>
-    <div class="mbody full" style="display:block;padding:0">
-      <table class="atbl"><thead><tr><th>Data</th><th>Solicitante</th><th>Lead</th><th>De</th><th>Para</th><th>Status</th><th>Ações</th></tr></thead><tbody id="tBody"></tbody></table>
+    <div class="mbody full" style="display:block;padding:0;max-height:65vh;overflow:auto">
+      <table class="atbl" style="min-width:760px"><thead><tr><th style="white-space:nowrap">Data</th><th>Solicitante</th><th>Lead</th><th>De</th><th>Para</th><th>Status</th><th>Ações</th></tr></thead><tbody id="tBody"></tbody></table>
     </div>
   </div>
 </div>
@@ -1264,10 +1267,13 @@ async function _doSaveLead() {
       pendingTransfer = false;
       toast('Lead atualizado e atribuído diretamente!','ok');
     } else if (assignedProspect && assignEmail) {
-      // Notificar o prospect atribuído
+      // Notificar o prospect atribuído — passa quem atribuiu, para quem e prospect anterior
+      const _origLead = editRow ? curData().find(function(l){return l._row===editRow;}) : null;
       await api('POST', {
         action:'notifyAssign', assignEmail: assignEmail,
-        razaoSocial:lead['Razão Social']||'', fromUser:U.nome
+        assignToName:  assignedProspect,
+        prospectAtual: _origLead ? (_origLead['Prospect']||'') : '',
+        razaoSocial:   lead['Razão Social']||'', fromUser: U.nome
       });
       toast('Lead salvo e atribuído a '+assignedProspect+'!','ok');
     } else {
@@ -1500,11 +1506,11 @@ function renderDash() {
   $('dGrid').innerHTML=
     '<div class="dcard dcard-status"><h4>Leads por Status</h4><div class="status-pie-wrap"><canvas id="c1"></canvas></div><div class="pie-note">Quantidade e participação exibidas fora da pizza.</div></div>'+
     '<div class="dcard"><h4>Temperatura dos Leads</h4><div id="gaugeWrap"></div></div>'+
-    '<div class="dcard"><h4>Por Canal</h4><canvas id="c3"></canvas></div>'+
-    '<div class="dcard"><h4>Por Time</h4><canvas id="c4"></canvas></div>'+
+    '<div class="dcard"><h4>Por Canal</h4><p class="dcard-sub">De onde vêm os leads — distribuição por canal de captação</p><canvas id="c3"></canvas></div>'+
+    '<div class="dcard"><h4>Por Time</h4><p class="dcard-sub">Carteira por equipe — volume de leads por time comercial</p><canvas id="c4"></canvas></div>'+
     '<div class="dcard dcard-map"><h4>Por UF</h4><div id="brMap"></div></div>'+
-    '<div class="dcard dcard-small"><h4>Por Linha</h4><canvas id="c6"></canvas></div>'+
-    '<div class="dcard dcard-small"><h4>Motivos de Perda</h4><canvas id="c7"></canvas></div>'+
+    '<div class="dcard dcard-small"><h4>Por Linha</h4><p class="dcard-sub">Interesse por categoria — linhas de produto mais buscadas pelos leads</p><canvas id="c6"></canvas></div>'+
+    '<div class="dcard dcard-small"><h4>Motivos de Perda</h4><p class="dcard-sub">Por que perdemos — razões dos leads com status Perdido</p><canvas id="c7"></canvas></div>'+
     '<div class="dcard dcard-wide dcard-weekday"><h4>Quantidade de Contatos por Dia da Semana</h4><div class="evo-sub">Baseado na coluna Data Primeiro Contato</div><canvas id="c10"></canvas></div>'+
     '<div class="dcard dcard-wide"><h4>💰 Ganhos por Mês (R$)</h4><canvas id="c9"></canvas></div>'+
     '<div class="dcard dcard-wide"><h4>Evolução Mensal</h4><div class="evo-sub">Baseado exclusivamente na coluna Data Primeiro Contato</div><canvas id="c8"></canvas></div>';
@@ -1627,9 +1633,11 @@ function mkEvolutionChart(id,labels,vals){const ctx=$(id);if(!ctx)return{destroy
 
 function mkHorizontalBar(id,labels,vals,colors){
   const ctx=$(id);if(!ctx)return{destroy:()=>{}};
-  return new Chart(ctx,{type:'bar',data:{labels,datasets:[{data:vals,backgroundColor:colors,borderColor:colors,borderWidth:0,borderRadius:7,borderSkipped:false}]},options:{responsive:true,maintainAspectRatio:true,indexAxis:'y',animation:{duration:700,easing:'easeOutQuart'},plugins:{legend:{display:false},tooltip:{backgroundColor:'rgba(5,15,28,.96)',titleColor:'#fff',bodyColor:'#d8e6f6',borderColor:'#2b4766',borderWidth:1,padding:10,cornerRadius:8}},scales:chartScales(true,Math.max(...vals,1))}});
+  return new Chart(ctx,{type:'bar',plugins:[barValuePlugin],data:{labels,datasets:[{data:vals,backgroundColor:colors,borderColor:colors,borderWidth:0,borderRadius:7,borderSkipped:false}]},options:{responsive:true,maintainAspectRatio:true,indexAxis:'y',layout:{padding:{top:4,right:48,bottom:4,left:0}},animation:{duration:700,easing:'easeOutQuart'},plugins:{legend:{display:false},tooltip:{backgroundColor:'rgba(5,15,28,.96)',titleColor:'#fff',bodyColor:'#d8e6f6',borderColor:'#2b4766',borderWidth:1,padding:10,cornerRadius:8}},scales:chartScales(true,Math.max(...vals,1))}});
 }
 
+// Plugin unificado: mostra valor sobre barra vertical ou ao lado da horizontal
+const barValuePlugin={id:'barValuePlugin',afterDatasetsDraw(chart){const ctx=chart.ctx;ctx.save();const hz=chart.options.indexAxis==='y';chart.data.datasets.forEach((ds,di)=>{const meta=chart.getDatasetMeta(di);if(meta.hidden)return;meta.data.forEach((bar,i)=>{const v=Number(ds.data[i])||0;if(!v)return;ctx.font='700 11px Inter, system-ui, sans-serif';ctx.fillStyle='#ffffff';ctx.shadowColor='rgba(0,0,0,.30)';ctx.shadowBlur=3;if(hz){ctx.textAlign='left';ctx.textBaseline='middle';ctx.fillText(String(v),bar.x+6,bar.y);}else{ctx.textAlign='center';ctx.textBaseline='bottom';ctx.fillText(String(v),bar.x,bar.y-7);}});});ctx.restore();}};
 const barTopValuePlugin={id:'barTopValuePlugin',afterDatasetsDraw(chart){const ctx=chart.ctx;ctx.save();chart.data.datasets.forEach((ds,di)=>{const meta=chart.getDatasetMeta(di);if(meta.hidden)return;meta.data.forEach((bar,i)=>{const v=Number(ds.data[i])||0;ctx.font='700 11px Inter, system-ui, sans-serif';ctx.textAlign='center';ctx.textBaseline='bottom';ctx.fillStyle='#ffffff';ctx.shadowColor='rgba(0,0,0,.30)';ctx.shadowBlur=3;ctx.fillText(String(v),bar.x,bar.y-7);});});ctx.restore();}};
 function mkWeekdayChart(id,labels,vals){
   const ctx=$(id);if(!ctx)return{destroy:()=>{}};
@@ -1649,7 +1657,10 @@ function mkC(id,type,labels,vals,colors){
   const hz=type==='bar'&&labels.length>8;
   const maxVal = Math.max(...vals, 1);
   const lineColor='#22d3ee';
+  const _topPad=type==='bar'&&!hz?26:type==='line'?24:8;
+  const _rightPad=hz?48:8;
   return new Chart(ctx,{type:type,
+    plugins:type==='bar'?[barValuePlugin]:[],
     data:{labels,datasets:[{
       data:vals,
       backgroundColor:type==='line'?'rgba(34,211,238,.10)':colors,
@@ -1669,6 +1680,7 @@ function mkC(id,type,labels,vals,colors){
       responsive:true,
       maintainAspectRatio:true,
       indexAxis:hz?'y':'x',
+      layout:{padding:{top:_topPad,right:_rightPad,left:4,bottom:0}},
       animation:{duration:700,easing:'easeOutQuart'},
       plugins:{
         legend:{display:false},
@@ -1791,7 +1803,7 @@ async function openAdmin(){
     } else {
       act='<button class="btn btn-danger btn-sm" onclick="admDel(\''+u.email+'\',\''+esc(u.nome)+'\')">Excluir</button>';
     }
-    return '<tr><td>'+esc(u.email)+'</td><td>'+esc(u.nome)+'</td><td><span class="badge '+bc+'">'+u.status+'</span></td><td>'+(u.data||'')+'</td><td style="font-size:.78rem;color:#fff;white-space:nowrap">'+(u.ultimoAcesso && u.ultimoAcesso!=='—' ? u.ultimoAcesso.split(' ')[0] : '—')+'</td><td>'+act+'</td></tr>';
+    return '<tr><td>'+esc(u.email)+'</td><td>'+esc(u.nome)+'</td><td><span class="badge '+bc+'">'+u.status+'</span></td><td>'+(u.data||'')+'</td><td style="font-size:.78rem;color:#fff;white-space:nowrap">'+(u.ultimoAcesso && u.ultimoAcesso!=='—' ? u.ultimoAcesso : '—')+'</td><td>'+act+'</td></tr>';
   }).join('');
   $('modAdmin').classList.remove('hidden');
 }
