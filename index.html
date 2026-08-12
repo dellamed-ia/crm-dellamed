@@ -1694,7 +1694,7 @@ function openForm(row) {
         'ondrop="handleFileDrop(event)">'+
         '<div class="upload-area-icon">📎</div>'+
         '<div class="upload-area-txt">Arraste arquivos aqui ou <b>clique para selecionar</b></div>'+
-        '<div class="upload-area-limit">Máx. 10 arquivos · 3 MB cada · imagens e documentos</div>'+
+        '<div class="upload-area-limit">Máx. 10 arquivos · imagens são comprimidas automaticamente · documentos até 3 MB</div>'+
       '</div>'+
       '<input type="file" id="fileInput" multiple accept="image/*,.pdf,.doc,.docx,.xls,.xlsx" style="display:none" onchange="handleFileSelect(this.files)">'
     : '';
@@ -2122,7 +2122,8 @@ document.addEventListener('click', function(e) {
 
 var _pendingUploads = [];
 var MAX_FILES = 10;
-var MAX_SIZE = 3 * 1024 * 1024; // 3MB (base64 = ~4MB, dentro do limite do Apps Script)
+var MAX_SIZE_RAW = 10 * 1024 * 1024; // 10MB antes da compressão
+var MAX_B64_SIZE = 3 * 1024 * 1024;  // 3MB em base64 após compressão (limite Apps Script)
 
 function _getAttachmentList() {
   var items = document.querySelectorAll('#uploadList .upload-item[data-fid]');
@@ -2162,6 +2163,45 @@ function _fileIcon(mime, name) {
   return '📎';
 }
 
+// Comprime imagem via Canvas antes de enviar
+function _compressImage(file) {
+  return new Promise(function(resolve, reject) {
+    var img = new Image();
+    img.onload = function() {
+      var maxDim = 1600;
+      var w = img.width, h = img.height;
+      if (w > maxDim || h > maxDim) {
+        if (w > h) { h = Math.round(h * maxDim / w); w = maxDim; }
+        else { w = Math.round(w * maxDim / h); h = maxDim; }
+      }
+      var canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      var ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, w, h);
+
+      // Tentar JPEG com qualidade decrescente até ficar abaixo do limite
+      var quality = 0.8;
+      var dataUrl;
+      for (var q = quality; q >= 0.3; q -= 0.1) {
+        dataUrl = canvas.toDataURL('image/jpeg', q);
+        var b64 = dataUrl.split(',')[1];
+        if (b64.length < MAX_B64_SIZE) {
+          resolve({
+            base64: b64,
+            mimeType: 'image/jpeg',
+            fileName: file.name.replace(/\.[^.]+$/, '.jpg'),
+            sizeKB: Math.round(b64.length * 3 / 4 / 1024)
+          });
+          return;
+        }
+      }
+      reject(new Error('Imagem muito grande mesmo após compressão.'));
+    };
+    img.onerror = function() { reject(new Error('Erro ao ler imagem.')); };
+    img.src = URL.createObjectURL(file);
+  });
+}
+
 window.handleFileDrop = function(e) {
   e.preventDefault();
   e.currentTarget.classList.remove('dragover');
@@ -2188,15 +2228,15 @@ window.handleFileSelect = function(files) {
 };
 
 function _uploadSingleFile(file) {
-  if (file.size > MAX_SIZE) {
-    toast(file.name + ' excede 3 MB. Reduza o tamanho do arquivo.', 'err');
+  if (file.size > MAX_SIZE_RAW) {
+    toast(file.name + ' excede 10 MB.', 'err');
     return;
   }
 
   var icon = _fileIcon(file.type, file.name);
   var sizeKB = (file.size / 1024).toFixed(0) + ' KB';
 
-  // Criar item visual
+  // Criar item visual com status "Enviando..."
   var item = document.createElement('div');
   item.className = 'upload-item';
   item.setAttribute('data-fid', 'pending');
@@ -2204,57 +2244,88 @@ function _uploadSingleFile(file) {
     '<span class="upload-item-icon">' + icon + '</span>' +
     '<span class="upload-item-name">' + esc(file.name) + '</span>' +
     '<span class="upload-item-size">' + sizeKB + '</span>' +
-    '<span class="upload-item-status uploading">Enviando...</span>';
+    '<span class="upload-item-status uploading">Processando...</span>';
   var list = $('uploadList');
   if (list) list.appendChild(item);
   _updateUploadCount();
 
-  // Ler como base64
-  var reader = new FileReader();
-  reader.onload = function() {
-    var base64 = reader.result.split(',')[1]; // remove data:...;base64,
+  var isImage = /^image\//i.test(file.type);
 
-    // Pegar leadNum
-    var leadNumEl = document.querySelector('#fBody [data-leadnum]');
-    var leadNum = leadNumEl ? leadNumEl.getAttribute('data-leadnum') : (editRow || 0);
-    var rs = (document.getElementById('f_rs') || {}).value || '';
-
-    api('POST', {
-      action: 'uploadFile',
-      userEmail: U.email,
-      fileName: file.name,
-      mimeType: file.type || 'application/octet-stream',
-      base64: base64,
-      leadNum: leadNum || editRow || '0',
-      razaoSocial: rs
-    }, 0, 90000).then(function(r) {
-      if (r.ok && r.file) {
-        item.setAttribute('data-fid', r.file.id);
-        item.innerHTML =
-          '<span class="upload-item-icon">' + icon + '</span>' +
-          '<span class="upload-item-name">' + esc(r.file.name) + '</span>' +
-          '<span class="upload-item-size">' + sizeKB + '</span>' +
-          '<a href="' + esc(r.file.url) + '" target="_blank" rel="noopener">Abrir ↗</a>' +
-          '<button type="button" class="upload-item-rm" onclick="removeAttachment(this,\'' + esc(r.file.id) + '\')">✕</button>';
-        _updateUploadCount();
-      } else {
-        item.querySelector('.upload-item-status').textContent = '❌ Erro';
-        item.querySelector('.upload-item-status').className = 'upload-item-status err';
-        toast('Erro ao enviar ' + file.name + ': ' + (r.error || ''), 'err');
-      }
-    }).catch(function() {
-      item.querySelector('.upload-item-status').textContent = '❌ Falha';
+  // Se for imagem, comprimir antes; se não, ler direto como base64
+  if (isImage) {
+    item.querySelector('.upload-item-status').textContent = 'Comprimindo...';
+    _compressImage(file).then(function(result) {
+      item.querySelector('.upload-item-status').textContent = 'Enviando (' + result.sizeKB + ' KB)...';
+      _sendToServer(item, icon, result.base64, result.fileName, result.mimeType, result.sizeKB + ' KB');
+    }).catch(function(err) {
+      item.querySelector('.upload-item-status').textContent = '❌ ' + err.message;
       item.querySelector('.upload-item-status').className = 'upload-item-status err';
+      toast(file.name + ': ' + err.message, 'err');
     });
-  };
-  reader.readAsDataURL(file);
+  } else {
+    // Documento: ler como base64 direto
+    var reader = new FileReader();
+    reader.onload = function() {
+      var base64 = reader.result.split(',')[1];
+      if (base64.length > MAX_B64_SIZE) {
+        item.querySelector('.upload-item-status').textContent = '❌ Arquivo muito grande';
+        item.querySelector('.upload-item-status').className = 'upload-item-status err';
+        toast(file.name + ' excede o limite de 3 MB para documentos.', 'err');
+        return;
+      }
+      var finalSize = Math.round(base64.length * 3 / 4 / 1024) + ' KB';
+      item.querySelector('.upload-item-status').textContent = 'Enviando (' + finalSize + ')...';
+      _sendToServer(item, icon, base64, file.name, file.type || 'application/octet-stream', finalSize);
+    };
+    reader.onerror = function() {
+      item.querySelector('.upload-item-status').textContent = '❌ Erro ao ler';
+      item.querySelector('.upload-item-status').className = 'upload-item-status err';
+    };
+    reader.readAsDataURL(file);
+  }
+}
+
+function _sendToServer(item, icon, base64, fileName, mimeType, sizeLabel) {
+  var leadNumEl = document.querySelector('#fBody [data-leadnum]');
+  var leadNum = leadNumEl ? leadNumEl.getAttribute('data-leadnum') : (editRow || 0);
+  var rs = (document.getElementById('f_rs') || {}).value || '';
+
+  api('POST', {
+    action: 'uploadFile',
+    userEmail: U.email,
+    fileName: fileName,
+    mimeType: mimeType,
+    base64: base64,
+    leadNum: leadNum || editRow || '0',
+    razaoSocial: rs
+  }, 0, 120000).then(function(r) {
+    if (r.ok && r.file) {
+      item.setAttribute('data-fid', r.file.id);
+      item.innerHTML =
+        '<span class="upload-item-icon">' + icon + '</span>' +
+        '<span class="upload-item-name">' + esc(r.file.name) + '</span>' +
+        '<span class="upload-item-size">' + sizeLabel + '</span>' +
+        '<span class="upload-item-status ok">✓</span>' +
+        '<a href="' + esc(r.file.url) + '" target="_blank" rel="noopener">Abrir ↗</a>' +
+        '<button type="button" class="upload-item-rm" onclick="removeAttachment(this,\'' + esc(r.file.id) + '\')">✕</button>';
+      _updateUploadCount();
+      toast(fileName + ' enviado!', 'ok');
+    } else {
+      item.querySelector('.upload-item-status').textContent = '❌ ' + (r.error || 'Erro');
+      item.querySelector('.upload-item-status').className = 'upload-item-status err';
+      toast('Erro: ' + (r.error || 'Falha ao enviar ' + fileName), 'err');
+    }
+  }).catch(function(err) {
+    item.querySelector('.upload-item-status').textContent = '❌ Falha de conexão';
+    item.querySelector('.upload-item-status').className = 'upload-item-status err';
+    toast('Falha de conexão ao enviar ' + fileName, 'err');
+  });
 }
 
 window.removeAttachment = function(btn, fileId) {
   if (!confirm('Remover este arquivo?')) return;
   var item = btn.closest('.upload-item');
 
-  // Se já tem ID no Drive, deletar
   if (fileId && fileId !== 'pending') {
     api('POST', { action: 'deleteFile', userEmail: U.email, fileId: fileId }).then(function(r) {
       if (r.ok) {
