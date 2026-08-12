@@ -1522,6 +1522,16 @@ function renderAll() { setTimeout(applyFilterStyle,50);
     const t = temp(l['Status'],l);
     const tc = t ? '<span class="temp-badge tb-'+t.toLowerCase()+'">'+t+'</span>' : '';
     const sc = ST_C[l['Status']]||'#999';
+    // Ícone de anexo se o lead tiver arquivos
+    let hasAttach = false;
+    try {
+      const ax = l['Anexos'];
+      if (ax && ax !== '[]' && ax !== '') {
+        const parsed = JSON.parse(ax);
+        hasAttach = Array.isArray(parsed) && parsed.length > 0;
+      }
+    } catch(_) {}
+    const attachIcon = hasAttach ? ' <span title="Possui anexos" style="font-size:.9rem">📎</span>' : '';
     return '<tr onclick="openForm('+l._row+')">'+
       '<td style="text-align:center;color:var(--muted);font-size:.75rem">'+esc(l['Nº']||'')+'</td>'+
       '<td style="font-size:.78rem">'+esc(l['Data']||'')+'</td>'+
@@ -1529,7 +1539,7 @@ function renderAll() { setTimeout(applyFilterStyle,50);
       '<td style="font-size:.78rem">'+esc(l['Data Próxima Ação']||'')+'</td>'+
       '<td style="max-width:180px;overflow:hidden;text-overflow:ellipsis" title="'+esc(l['Próxima Ação']||'')+'">'+esc(l['Próxima Ação']||'')+'</td>'+
       '<td><span class="st-badge" style="background:'+sc+'">'+esc(l['Status']||'')+'</span></td>'+
-      '<td>'+tc+'</td>'+
+      '<td>'+tc+attachIcon+'</td>'+
       '<td style="font-weight:500" title="'+esc(l['Prospect']||'')+'">'+esc(l['Prospect']||'')+'</td>'+
       '<td title="'+esc(l['Time Comercial']||'')+'">'+esc(l['Time Comercial']||'')+'</td>'+
       '<td title="'+esc(l['Lead']||'')+'">'+esc(l['Lead']||'')+'</td>'+
