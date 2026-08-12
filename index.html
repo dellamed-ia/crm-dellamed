@@ -94,6 +94,13 @@ input:focus,select:focus,textarea:focus{border-color:var(--teal)}
 .fld-err{font-size:.7rem;color:var(--red);margin-top:2px;display:none}
 .fld-err.show{display:block}
 .phone-row{display:flex;gap:6px}.phone-row .ph-ddd{width:72px;flex-shrink:0}.phone-row .ph-num{flex:1}
+/* LINK ROWS */
+.link-row{display:flex;gap:6px;align-items:center;margin-bottom:4px}
+.link-row input{flex:1;font-size:.82rem}
+.btn-rm-link{background:none;border:1px solid var(--border);border-radius:4px;color:var(--muted);font-size:.72rem;width:26px;height:26px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;padding:0}
+.btn-rm-link:hover{background:var(--red);color:#fff;border-color:var(--red)}
+.btn-add-link{background:var(--bg);border:1.5px dashed var(--border);border-radius:6px;color:var(--navy);font-size:.78rem;font-weight:600;padding:5px 12px;cursor:pointer;margin-top:4px;transition:border-color .15s,color .15s}
+.btn-add-link:hover{border-color:var(--teal);color:var(--teal)}
 
 /* MULTI-SELECT */
 .msel{position:relative}
@@ -564,7 +571,22 @@ html,body{background:#142238!important}body{background:radial-gradient(1050px 56
 // ═══════════════════════════════════════════════════════════════
 const API_URL = 'https://script.google.com/macros/s/AKfycbwn43yGwRyB5TMq8G1q8WcQJj8dJx5R4eNOmEtmsKT2XDFVPyYqzdnGTGxApT0uAJCGPg/exec';
 const ADMIN_EMAIL = 'bianca.lima@dellamed.com.br';
-const DIRECT_ASSIGN_EMAILS = ['camily.soares@dellamed.com.br'];
+const DIRECT_ASSIGN_EMAILS = [
+  'camily.soares@dellamed.com.br',
+  'fabio.rodrigues@dellamed.com.br',
+  'jessica.porto@dellamed.com.br',
+  'leonardo.dalpubel@dellamed.com.br',
+  'luisa.abreu@dellamed.com.br',
+  'marco.ribeiro@dellamed.com.br',
+  'patricia.borges@dellamed.com.br',
+  'sandriane.maciel@dellamed.com.br',
+  'sandro.junior@dellamed.com.br',
+  'felipe.fasoli@dellamed.com.br',
+  'rodrigo.velho@dellamed.com.br',
+];
+// VENDEDORES — carregado dinamicamente da aba PROSPECTS no Google Sheets.
+// Não edite aqui; edite direto na planilha (aba PROSPECTS, col A=Nome col B=Email).
+let VENDEDORES = [];
 function canDirectAssign(){
   return !!(U && (U.admin || DIRECT_ASSIGN_EMAILS.includes(String(U.email||'').trim().toLowerCase())));
 }
@@ -611,6 +633,19 @@ async function api(method, body, attempt) {
 // ═══════ AUTH ═══════
 function autoLogin() {
   if (!API_URL || API_URL.includes('COLE_AQUI')) return;
+  // Pré-preenche e trava o nome se o usuário já foi autorizado neste dispositivo
+  try {
+    const lock = JSON.parse(localStorage.getItem('crm_nome_lock') || 'null');
+    if (lock && lock.nome && lock.email) {
+      const fn = $('inNome'), fe = $('inEmail');
+      fn.value = lock.nome;
+      fn.readOnly = true;
+      fn.style.cssText += ';background:#f0f0f4;cursor:not-allowed;color:#555';
+      fn.title = 'Nome bloqueado após autorização — use outro navegador/dispositivo somente se for novo colaborador';
+      fe.value = lock.email;
+    }
+  } catch(_) {}
+  // Auto-sessão
   try { U = JSON.parse(localStorage.getItem('crm_user')); if (U) initApp(); } catch(_){}
 }
 
@@ -629,6 +664,8 @@ async function doLogin() {
   if (r.ok) {
     fill.style.width='80%'; txt.textContent='Carregando dados...';
     U={email:r.email,nome:r.nome,admin:r.admin}; localStorage.setItem('crm_user',JSON.stringify(U));
+    // Grava lock de nome — impede edição após autorização neste dispositivo
+    localStorage.setItem('crm_nome_lock', JSON.stringify({nome:r.nome,email:r.email}));
     fill.style.width='100%'; txt.textContent='Pronto!';
     setTimeout(()=>initApp(), 400);
   } else {
@@ -663,6 +700,13 @@ async function initApp() {
   const c = await api('GET',{action:'getConfig'});
   if (c.error) { toast(c.error,'err'); return; }
   CFG = c;
+  // Carrega lista de vendedores da aba PROSPECTS
+  try {
+    const p = await api('GET',{action:'getProspects'});
+    if (!p.error && Array.isArray(p.prospects) && p.prospects.length) {
+      VENDEDORES = p.prospects;
+    }
+  } catch(_) { console.warn('Aba PROSPECTS não encontrada — vendedores não carregados.'); }
   const d = await api('GET',{action:'getData'});
   if (d.error) { toast(d.error,'err'); return; }
   LEADS = d.leads || [];
@@ -794,19 +838,26 @@ function sortCol(key) {
 function buildMainFilters() {
   updateStatusKPIs();
   const data = curData();
+  // Save current selections before rebuilding so filters survive reload/save
+  const savedSel = {
+    sfProspect: sfVal('sfProspect'),
+    sfTime:     sfVal('sfTime'),
+    sfUF:       sfVal('sfUF'),
+    sfCanal:    sfVal('sfCanal')
+  };
   function uniq(arr) {
     const seen = new Map();
     arr.filter(Boolean).forEach(v => { const k = v.trim().toLowerCase(); if (!seen.has(k)) seen.set(k, v.trim()); });
     return [...seen.values()].sort((a,b) => a.toLowerCase().localeCompare(b.toLowerCase(),'pt-BR'));
   }
-  buildSF('sfProspect', uniq(data.map(l=>l['Prospect'])));
-  buildSF('sfTime', uniq(data.map(l=>l['Time Comercial'])));
-  buildSF('sfUF', uniq(data.map(l=>l['UF'])));
-  buildSF('sfCanal', uniq(data.map(l=>l['Canal Principal'])));
+  buildSF('sfProspect', uniq(data.map(l=>l['Prospect'])),       undefined, savedSel.sfProspect);
+  buildSF('sfTime',     uniq(data.map(l=>l['Time Comercial'])), undefined, savedSel.sfTime);
+  buildSF('sfUF',       uniq(data.map(l=>l['UF'])),             undefined, savedSel.sfUF);
+  buildSF('sfCanal',    uniq(data.map(l=>l['Canal Principal'])), undefined, savedSel.sfCanal);
 }
 
 // Searchable filter component
-function buildSF(containerId, options, onChange) {
+function buildSF(containerId, options, onChange, initialSelected) {
   const wrap = $(containerId);
   const cb = onChange || renderAll;
   wrap.innerHTML = '';
@@ -820,7 +871,10 @@ function buildSF(containerId, options, onChange) {
   const dd = document.createElement('div');
   dd.className = 'sf-dd';
 
-  let selected = [];
+  // Restore previous selections that still exist in the new options list
+  let selected = initialSelected && initialSelected.length
+    ? initialSelected.filter(function(s){ return options.some(function(o){ return o.toLowerCase()===s.toLowerCase(); }); })
+    : [];
 
   function renderChips() {
     const chips = wrap.querySelector('.sf-chips') || document.createElement('div');
@@ -1042,18 +1096,43 @@ function openForm(row) {
   $('fBody').innerHTML =
     fld('Data Registro','<input id="f_data" value="'+esc(dataValue)+'" placeholder="dd/mm/aaaa" maxlength="10" oninput="mDate(this)" '+(isE?'readonly style="background:#f0f0f0;cursor:not-allowed"':'')+'><div class="fld-err" id="err_data">Formato inválido. Use dd/mm/aaaa</div>')+
     fld('Status','<select id="f_st" '+dis+' onchange="toggleGanhoReq()">'+((CFG.status||[]).map(s=>'<option'+(L&&L['Status']===s?' selected':'')+'>'+s+'</option>')).join('')+'</select>',rq)+
-    fld('Prospect (Vendedor)',
-      (canDirectAssign()
-        ? '<input id="f_pr" value="'+esc(isE?L['Prospect']:U.nome)+'" '+dis+'>'
-        : '<input id="f_pr" value="'+esc(isE?L['Prospect']:U.nome)+'" readonly style="background:#f0f0f0;cursor:not-allowed">' +
-          (isE && (L['Prospect']||'').toLowerCase()!==U.nome.toLowerCase()
-            ? ' <button type="button" class="btn btn-sm btn-teal" id="btnTransferReq" style="margin-top:4px;font-size:.72rem" onclick="markTransfer()">🔄 Alterar para meu usuário</button>'
-            : '')
-      ),rq)+
-    fld('Atribuir ao Prospect',
-      '<div style="display:flex;gap:6px;align-items:center"><input id="f_assign" placeholder="EMAIL DO VENDEDOR" style="flex:1;font-size:.8rem">' +
-      '<button type="button" class="btn btn-sm" style="background:var(--navy);color:#fff;font-size:.7rem;white-space:nowrap" onclick="lookupAssign()">Buscar</button></div>' +
-      '<div id="assignResult" style="font-size:.75rem;margin-top:4px;color:var(--muted)"></div>')+
+    fld('Status inicial:',
+      '<select id="f_si" '+(canE?'':'disabled')+'>'+
+        '<option value="">Selecione...</option>'+
+        ['Cliente Novo','Inativo','Sem compras'].map(function(o){return '<option'+(L&&L['Status Inicial']===o?' selected':'')+'>'+o+'</option>';}).join('')+
+      '</select>',
+      ' fld-req')+
+    (function(){
+      const curProspect = isE ? (L['Prospect']||'') : U.nome;
+      const storedEmail = isE ? (L['E-mail Prospect']||'') : '';
+      const resolvedEmail = storedEmail ||
+        (VENDEDORES.find(function(v){return v.nome===curProspect;})||{email:''}).email;
+      const prOpts = '<option value="">Selecione o vendedor...</option>' +
+        VENDEDORES.map(function(v){
+          return '<option value="'+esc(v.nome)+'"'+(v.nome===curProspect?' selected':'')+'>'+esc(v.nome)+'</option>';
+        }).join('');
+      if (canDirectAssign()) {
+        // Admin / Camily: dropdown livre
+        return fld('Prospect (Vendedor)',
+          '<select id="f_pr_sel" onchange="onProspectChange()">'+prOpts+'</select>'+
+          '<input type="hidden" id="f_pr" value="'+esc(curProspect)+'">',
+          rq)+
+          fld('E-mail do Vendedor',
+          '<input id="f_pr_email" value="'+esc(resolvedEmail)+'" readonly '+
+          'style="background:#f0f0f0;cursor:not-allowed" placeholder="Auto-preenchido">');
+      } else {
+        // Vendedor comum: nome fixo; transferência apenas via aprovação
+        return fld('Prospect (Vendedor)',
+          '<input id="f_pr" value="'+esc(curProspect)+'" readonly style="background:#f0f0f0;cursor:not-allowed">'+
+          (isE && curProspect.toLowerCase()!==U.nome.toLowerCase()
+            ? '<button type="button" class="btn btn-sm btn-teal" id="btnTransferReq" '+
+              'style="margin-top:4px;font-size:.72rem" onclick="markTransfer()">🔄 Alterar para meu usuário</button>'
+            : ''),
+          rq)+
+          fld('E-mail do Vendedor',
+          '<input id="f_pr_email" value="'+esc(resolvedEmail)+'" readonly style="background:#f0f0f0;cursor:not-allowed">');
+      }
+    })()+
     fld('Time Comercial','<select id="f_tm" '+dis+'><option value="">Selecione...</option>'+((CFG.timeComercial||[]).map(t=>'<option'+(L&&L['Time Comercial']===t?' selected':'')+'>'+t+'</option>')).join('')+'</select>',rq)+
     fld('Razão Social','<input id="f_rs" value="'+esc(L?L['Razão Social']:'')+'" '+dis+'>',rq)+
     fld('CNPJ','<input id="f_cnpj" value="'+esc(L?L['CNPJ']:'')+'" '+dis+' placeholder="00.000.000/0000-00" maxlength="18" oninput="mCNPJ(this)">',rq)+
@@ -1073,7 +1152,21 @@ function openForm(row) {
     fld('Valor do Pedido','<input id="f_vl" value="'+esc(L?L['Valor do Pedido']:'')+'" '+dis+' placeholder="R$ 0,00" oninput="mBRL(this)">',ganhoRq)+
     fld('Nº do Pedido','<input id="f_np" value="'+esc(L?L['Nº do Pedido']:'')+'" '+dis+'>',ganhoRq)+
     fld('Motivo da Perda','<div id="ms_mp" class="msel" data-sel="'+esc(L?L['Motivo da Perda']:'')+'"></div>')+
-    fldF('Observações','<textarea id="f_ob" '+dis+'>'+esc(L?L['Observações']:'')+'</textarea>');
+    fldF('Observações','<textarea id="f_ob" '+dis+'>'+esc(L?L['Observações']:'')+'</textarea>')+
+    (function(){
+      const lks=(L&&L['Links']?L['Links']:'').split('|').map(function(s){return s.trim();}).filter(Boolean);
+      if(!lks.length)lks.push('');
+      const rows=lks.map(function(u){
+        return '<div class="link-row">'+
+          '<input type="url" class="link-row-input" placeholder="https://..." value="'+esc(u)+'" '+(canE?'':'disabled')+'>'+
+          (canE?'<button type="button" class="btn-rm-link" onclick="removeLinkRow(this)" title="Remover link">✕</button>':'')+
+        '</div>';
+      }).join('');
+      return fldF('Links / Referências',
+        '<div id="linksContainer">'+rows+'</div>'+
+        (canE?'<button type="button" class="btn-add-link" onclick="addLinkRow()">+ Adicionar link</button>':'')
+      );
+    })();
 
   initMS('ms_li', CFG.linhaInteresse||[], !canE);
   initMS('ms_mp', CFG.motivoPerda||[], !canE);
@@ -1105,12 +1198,19 @@ async function saveLead() {
 }
 
 async function _doSaveLead() {
-  const assignEmail = gv('f_assign') || '';
+  // Derivar email do prospect selecionado via VENDEDORES
+  const assignEmail = (function(){
+    if (assignedProspect) {
+      var v = VENDEDORES.find(function(vd){return vd.nome===assignedProspect;});
+      return v ? v.email : '';
+    }
+    return '';
+  })();
   const d1=$('f_d1').value.replace(/\D/g,''),n1=$('f_n1').value,d2=$('f_d2').value.replace(/\D/g,''),n2=$('f_n2').value;
   const t1=d1&&n1?'('+d1+') '+n1:n1||'', t2=d2&&n2?'('+d2+') '+n2:n2||'';
   const lead = {
     'Data':gv('f_data'),
-    'Status':gv('f_st'),'Prospect':assignedProspect||gv('f_pr'),'Time Comercial':gv('f_tm'),
+    'Status':gv('f_st'),'Status Inicial':gv('f_si'),'Prospect':assignedProspect||gv('f_pr'),'E-mail Prospect':($('f_pr_email')||{value:''}).value.trim(),'Time Comercial':gv('f_tm'),
     'Razão Social':gv('f_rs'),'CNPJ':gv('f_cnpj'),'Contato Principal':gv('f_cp'),
     'Telefone':[t1,t2].filter(Boolean).join(' | '),'E-mail':gv('f_em'),
     'Cidade':gv('f_ci'),'UF':gv('f_uf'),'Canal Principal':gv('f_ca'),
@@ -1119,7 +1219,10 @@ async function _doSaveLead() {
     'Próxima Ação':gv('f_pa'),'Data Próxima Ação':gv('f_da'),
     'Valor do Pedido':gv('f_vl'),'Nº do Pedido':gv('f_np'),
     'Motivo da Perda':msVal('ms_mp'),'Observações':gv('f_ob'),
+    'Links':[...document.querySelectorAll('#linksContainer .link-row-input')].map(function(i){return i.value.trim();}).filter(Boolean).join(' | '),
   };
+  // Status Inicial obrigatório para todos
+  if (!lead['Status Inicial']) { toast('Campo obrigatório: Status inicial','err'); return; }
   // Ganho: Valor + Nº Pedido required for ALL users in BOTH tabs
   if (lead['Status']==='Ganho') {
     if (!lead['Valor do Pedido']){toast('Status Ganho exige: Valor do Pedido','err');return;}
@@ -1180,6 +1283,30 @@ async function delLead() {
   if(r.ok){toast('Excluído.','ok');closeForm();await reload();}
   else toast(r.error||'Erro.','err');
 }
+
+// ═══════ LINKS ═══════
+window.addLinkRow = function() {
+  const c = $('linksContainer');
+  if (!c) return;
+  const row = document.createElement('div');
+  row.className = 'link-row';
+  row.innerHTML = '<input type="url" class="link-row-input" placeholder="https://..." style="flex:1">' +
+    '<button type="button" class="btn-rm-link" onclick="removeLinkRow(this)" title="Remover link">✕</button>';
+  c.appendChild(row);
+  row.querySelector('.link-row-input').focus();
+};
+window.removeLinkRow = function(btn) {
+  const c = $('linksContainer');
+  if (!c) return;
+  const rows = c.querySelectorAll('.link-row');
+  if (rows.length <= 1) {
+    // Keep at least one row; just clear it
+    const inp = btn.closest('.link-row').querySelector('input');
+    if (inp) inp.value = '';
+  } else {
+    btn.closest('.link-row').remove();
+  }
+};
 
 // ═══════ MULTI-SELECT ═══════
 function initMS(id, opts, dis) {
@@ -1690,6 +1817,20 @@ async function lookupAssign() {
     $('assignResult').innerHTML = '<span style="color:var(--red)">❌ ' + (r.error || 'Usuário não encontrado ou não aprovado.') + '</span>';
   }
 }
+
+window.onProspectChange = function() {
+  var sel = $('f_pr_sel');
+  if (!sel) return;
+  var name = sel.value;
+  var v = VENDEDORES.find(function(vd){ return vd.nome === name; });
+  var email = v ? v.email : '';
+  var hid = $('f_pr');
+  if (hid) hid.value = name;
+  var emailInp = $('f_pr_email');
+  if (emailInp) emailInp.value = email;
+  // Marcar atribuição para notificação ao salvar
+  assignedProspect = (name && U && name !== U.nome) ? name : '';
+};
 
 function markTransfer() {
   pendingTransfer = true;
