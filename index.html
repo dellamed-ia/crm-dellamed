@@ -1060,11 +1060,12 @@ const ST_C = {'Novo':'#1A6BB5','Contato feito':'#002f63','Proposta enviada':'#0D
 const ST_S = {'Novo':'s-novo','Contato feito':'s-contato','Proposta enviada':'s-proposta','Negociando':'s-negociando','Ganho':'s-ganho','Perdido':'s-perdido','Inativo':'s-inativo'};
 
 // ═══════ API ═══════
-async function api(method, body, attempt) {
+async function api(method, body, attempt, customTimeout) {
   if (!API_URL || API_URL.includes('COLE_AQUI'))
     return { error: 'Configure a variável API_URL no código com a URL do Apps Script.' };
+  var timeoutMs = customTimeout || 45000;
   const ac = new AbortController();
-  const tm = setTimeout(() => ac.abort(), 45000);
+  const tm = setTimeout(() => ac.abort(), timeoutMs);
   try {
     const opts = method === 'GET'
       ? { method:'GET', signal:ac.signal }
@@ -1694,7 +1695,7 @@ function openForm(row) {
         'ondrop="handleFileDrop(event)">'+
         '<div class="upload-area-icon">📎</div>'+
         '<div class="upload-area-txt">Arraste arquivos aqui ou <b>clique para selecionar</b></div>'+
-        '<div class="upload-area-limit">Máx. 10 arquivos · 5 MB cada · imagens e documentos</div>'+
+        '<div class="upload-area-limit">Máx. 10 arquivos · 3 MB cada · imagens e documentos</div>'+
       '</div>'+
       '<input type="file" id="fileInput" multiple accept="image/*,.pdf,.doc,.docx,.xls,.xlsx" style="display:none" onchange="handleFileSelect(this.files)">'
     : '';
@@ -2122,7 +2123,7 @@ document.addEventListener('click', function(e) {
 
 var _pendingUploads = [];
 var MAX_FILES = 10;
-var MAX_SIZE = 5 * 1024 * 1024; // 5MB
+var MAX_SIZE = 3 * 1024 * 1024; // 3MB (base64 = ~4MB, dentro do limite do Apps Script)
 
 function _getAttachmentList() {
   var items = document.querySelectorAll('#uploadList .upload-item[data-fid]');
@@ -2189,7 +2190,7 @@ window.handleFileSelect = function(files) {
 
 function _uploadSingleFile(file) {
   if (file.size > MAX_SIZE) {
-    toast(file.name + ' excede 5 MB.', 'err');
+    toast(file.name + ' excede 3 MB. Reduza o tamanho do arquivo.', 'err');
     return;
   }
 
@@ -2227,7 +2228,7 @@ function _uploadSingleFile(file) {
       base64: base64,
       leadNum: leadNum || editRow || '0',
       razaoSocial: rs
-    }).then(function(r) {
+    }, 0, 90000).then(function(r) {
       if (r.ok && r.file) {
         item.setAttribute('data-fid', r.file.id);
         item.innerHTML =
