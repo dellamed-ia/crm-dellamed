@@ -1046,6 +1046,15 @@ let DIRECT_ASSIGN_EMAILS = [];
 // VENDEDORES — carregado dinamicamente da aba PROSPECTS no Google Sheets.
 // Não edite aqui; edite direto na planilha (aba PROSPECTS, col A=Nome col B=Email).
 let VENDEDORES = [];
+
+// Países da América (Norte, Central, Sul e Caribe) para o time Exportação
+const PAISES_AMERICA = [
+  'Antígua e Barbuda','Argentina','Bahamas','Barbados','Belize','Bolívia','Brasil',
+  'Canadá','Chile','Colômbia','Costa Rica','Cuba','Dominica','El Salvador','Equador',
+  'Estados Unidos','Granada','Guatemala','Guiana','Haiti','Honduras','Jamaica','México',
+  'Nicarágua','Panamá','Paraguai','Peru','República Dominicana','São Cristóvão e Névis',
+  'Santa Lúcia','São Vicente e Granadinas','Suriname','Trinidad e Tobago','Uruguai','Venezuela'
+];
 function canDirectAssign(){
   return !!(U && (U.admin || DIRECT_ASSIGN_EMAILS.includes(String(U.email||'').trim().toLowerCase())));
 }
@@ -1649,10 +1658,24 @@ function openForm(row) {
           '<input id="f_pr_email" value="'+esc(resolvedEmail)+'" readonly style="background:#f0f0f0;cursor:not-allowed">');
       }
     })()+
-    fld('Time Comercial','<select id="f_tm" '+dis+'><option value="">Selecione...</option>'+((CFG.timeComercial||[]).map(t=>'<option'+(L&&L['Time Comercial']===t?' selected':'')+'>'+t+'</option>')).join('')+'</select>',rq)+
+    fld('Time Comercial','<select id="f_tm" '+dis+' onchange="toggleExportacao()"><option value="">Selecione...</option>'+((CFG.timeComercial||[]).map(t=>'<option'+(L&&L['Time Comercial']===t?' selected':'')+'>'+t+'</option>')).join('')+'</select>',rq)+
     fld('Razão Social','<input id="f_rs" value="'+esc(L?L['Razão Social']:'')+'" '+dis+'>',rq)+
     fld('Lead','<input id="f_lead" value="'+esc(L?L['Lead']:'')+'" '+dis+'>')+
-    fld('CNPJ','<input id="f_cnpj" value="'+esc(L?L['CNPJ']:'')+'" '+dis+' placeholder="00.000.000/0000-00" maxlength="18" oninput="mCNPJ(this)">',rq)+
+    (function(){
+      var isExp = L && String(L['Time Comercial']||'').trim().toLowerCase() === 'exportação';
+      // CNPJ (oculto se exportação)
+      var cnpjField = '<div id="wrap_cnpj"'+(isExp?' style="display:none"':'')+'>'+
+        fld('CNPJ','<input id="f_cnpj" value="'+esc(L?L['CNPJ']:'')+'" '+dis+' placeholder="00.000.000/0000-00" maxlength="18" oninput="mCNPJ(this)">')+
+      '</div>';
+      // Registro + País (visível só se exportação)
+      var expFields = '<div id="wrap_exp"'+(isExp?'':' style="display:none"')+'>'+
+        fld('Registro','<input id="f_registro" value="'+esc(L?(L['Registro']||''):'')+'" '+dis+' placeholder="Número de registro / documento">')+
+        fld('País','<select id="f_pais" '+dis+'><option value="">Selecione o país...</option>'+
+          PAISES_AMERICA.map(function(p){return '<option'+(L&&L['País']===p?' selected':'')+'>'+p+'</option>';}).join('')+
+        '</select>')+
+      '</div>';
+      return cnpjField + expFields;
+    })()+
     fld('Contato Principal','<input id="f_cp" value="'+esc(L?L['Contato Principal']:'')+'" '+dis+'>',rq)+
     fld('Telefone 1','<div class="phone-row"><input class="ph-ddd" id="f_d1" value="'+esc(p1.d?'('+p1.d+')':'')+'" '+dis+' placeholder="(00)" maxlength="4" oninput="mDDD(this)"><input class="ph-num" id="f_n1" value="'+esc(p1.n)+'" '+dis+' placeholder="00000-0000" maxlength="10" oninput="mPH(this)"></div>',rq)+
     fld('Telefone 2','<div class="phone-row"><input class="ph-ddd" id="f_d2" value="'+esc(p2.d?'('+p2.d+')':'')+'" '+dis+' placeholder="(00)" maxlength="4" oninput="mDDD(this)"><input class="ph-num" id="f_n2" value="'+esc(p2.n)+'" '+dis+' placeholder="00000-0000" maxlength="10" oninput="mPH(this)"></div>')+
@@ -1770,7 +1793,7 @@ async function _doSaveLead() {
   const lead = {
     'Data':gv('f_data'),
     'Status':gv('f_st'),'Status Inicial':gv('f_si'),'Prospect':assignedProspect||gv('f_pr'),'E-mail Prospect':($('f_pr_email')||{value:''}).value.trim(),'Time Comercial':gv('f_tm'),
-    'Razão Social':gv('f_rs'),'Lead':gv('f_lead'),'CNPJ':gv('f_cnpj'),'Contato Principal':gv('f_cp'),
+    'Razão Social':gv('f_rs'),'Lead':gv('f_lead'),'CNPJ':gv('f_cnpj'),'Registro':gv('f_registro'),'País':gv('f_pais'),'Contato Principal':gv('f_cp'),
     'Telefone':[t1,t2].filter(Boolean).join(' | '),'E-mail':gv('f_em'),
     'Cidade':gv('f_ci'),'UF':gv('f_uf'),'Canal Principal':gv('f_ca'),
     'Linha de Interesse':msVal('ms_li'),'Produto(s) de Interesse':gv('f_pd'),
@@ -2479,6 +2502,19 @@ function toggleGanhoReq(){
   if(vlP){vlP.classList.toggle('fld-req',isG);}
   if(npP){npP.classList.toggle('fld-req',isG);}
 }
+
+// Alterna entre CNPJ (nacional) e Registro+País (exportação)
+window.toggleExportacao = function(){
+  var tm = $('f_tm');
+  if (!tm) return;
+  var isExp = String(tm.value||'').trim().toLowerCase() === 'exportação';
+  var wrapCnpj = $('wrap_cnpj');
+  var wrapExp = $('wrap_exp');
+  if (wrapCnpj) wrapCnpj.style.display = isExp ? 'none' : '';
+  if (wrapExp)  wrapExp.style.display  = isExp ? '' : 'none';
+  // Limpar CNPJ ao entrar em exportação
+  if (isExp) { var c = $('f_cnpj'); if (c) c.value = ''; }
+};
 
 // ═══════ DASHBOARD ═══════
 let dCharts = [], dashSrc = 'leads', dashKpiFilter = '';
