@@ -1047,14 +1047,45 @@ let DIRECT_ASSIGN_EMAILS = [];
 // Não edite aqui; edite direto na planilha (aba PROSPECTS, col A=Nome col B=Email).
 let VENDEDORES = [];
 
-// Países da América (Norte, Central, Sul e Caribe) para o time Exportação
-const PAISES_AMERICA = [
-  'Antígua e Barbuda','Argentina','Bahamas','Barbados','Belize','Bolívia','Brasil',
-  'Canadá','Chile','Colômbia','Costa Rica','Cuba','Dominica','El Salvador','Equador',
-  'Estados Unidos','Granada','Guatemala','Guiana','Haiti','Honduras','Jamaica','México',
-  'Nicarágua','Panamá','Paraguai','Peru','República Dominicana','São Cristóvão e Névis',
-  'Santa Lúcia','São Vicente e Granadinas','Suriname','Trinidad e Tobago','Uruguai','Venezuela'
-];
+// Países da América com DDI e regra de telefone (formato local)
+const PAISES_INFO = {
+  'Antígua e Barbuda':      { ddi:'+1',   mask:'000-0000',      len:7 },
+  'Argentina':              { ddi:'+54',  mask:'00 0000-0000',  len:10 },
+  'Bahamas':                { ddi:'+1',   mask:'000-0000',      len:7 },
+  'Barbados':               { ddi:'+1',   mask:'000-0000',      len:7 },
+  'Belize':                 { ddi:'+501', mask:'000-0000',      len:7 },
+  'Bolívia':                { ddi:'+591', mask:'0 000-0000',    len:8 },
+  'Brasil':                 { ddi:'+55',  mask:'00 00000-0000', len:11 },
+  'Canadá':                 { ddi:'+1',   mask:'000-000-0000',  len:10 },
+  'Chile':                  { ddi:'+56',  mask:'0 0000 0000',   len:9 },
+  'Colômbia':               { ddi:'+57',  mask:'000 000 0000',  len:10 },
+  'Costa Rica':             { ddi:'+506', mask:'0000-0000',     len:8 },
+  'Cuba':                   { ddi:'+53',  mask:'0 000-0000',    len:8 },
+  'Dominica':               { ddi:'+1',   mask:'000-0000',      len:7 },
+  'El Salvador':            { ddi:'+503', mask:'0000-0000',     len:8 },
+  'Equador':                { ddi:'+593', mask:'00 000 0000',   len:9 },
+  'Estados Unidos':         { ddi:'+1',   mask:'000-000-0000',  len:10 },
+  'Granada':                { ddi:'+1',   mask:'000-0000',      len:7 },
+  'Guatemala':              { ddi:'+502', mask:'0000-0000',     len:8 },
+  'Guiana':                 { ddi:'+592', mask:'000-0000',      len:7 },
+  'Haiti':                  { ddi:'+509', mask:'0000-0000',     len:8 },
+  'Honduras':               { ddi:'+504', mask:'0000-0000',     len:8 },
+  'Jamaica':                { ddi:'+1',   mask:'000-0000',      len:7 },
+  'México':                 { ddi:'+52',  mask:'00 0000 0000',  len:10 },
+  'Nicarágua':              { ddi:'+505', mask:'0000-0000',     len:8 },
+  'Panamá':                 { ddi:'+507', mask:'0000-0000',     len:8 },
+  'Paraguai':               { ddi:'+595', mask:'000 000000',    len:9 },
+  'Peru':                   { ddi:'+51',  mask:'000 000 000',   len:9 },
+  'República Dominicana':   { ddi:'+1',   mask:'000-000-0000',  len:10 },
+  'São Cristóvão e Névis':  { ddi:'+1',   mask:'000-0000',      len:7 },
+  'Santa Lúcia':            { ddi:'+1',   mask:'000-0000',      len:7 },
+  'São Vicente e Granadinas':{ ddi:'+1',  mask:'000-0000',      len:7 },
+  'Suriname':               { ddi:'+597', mask:'000-0000',      len:7 },
+  'Trinidad e Tobago':      { ddi:'+1',   mask:'000-0000',      len:7 },
+  'Uruguai':                { ddi:'+598', mask:'0 000 00 00',   len:8 },
+  'Venezuela':              { ddi:'+58',  mask:'000-0000000',   len:10 }
+};
+const PAISES_AMERICA = Object.keys(PAISES_INFO);
 function canDirectAssign(){
   return !!(U && (U.admin || DIRECT_ASSIGN_EMAILS.includes(String(U.email||'').trim().toLowerCase())));
 }
@@ -1662,22 +1693,36 @@ function openForm(row) {
     fld('Razão Social','<input id="f_rs" value="'+esc(L?L['Razão Social']:'')+'" '+dis+'>',rq)+
     fld('Lead','<input id="f_lead" value="'+esc(L?L['Lead']:'')+'" '+dis+'>')+
     (function(){
-      var isExp = L && String(L['Time Comercial']||'').trim().toLowerCase() === 'exportação';
+      var isExp = L && String(L['Time Comercial']||'').toLowerCase().includes('exporta');
       // CNPJ (oculto se exportação)
       var cnpjField = '<div id="wrap_cnpj"'+(isExp?' style="display:none"':'')+'>'+
         fld('CNPJ','<input id="f_cnpj" value="'+esc(L?L['CNPJ']:'')+'" '+dis+' placeholder="00.000.000/0000-00" maxlength="18" oninput="mCNPJ(this)">')+
       '</div>';
-      // Registro + País (visível só se exportação)
+      // Registro + País + Telefone Internacional (visível só se exportação)
+      var telInt = L ? _parseTelInt(L['Telefone Internacional']||'') : {ddi:'',dd:'',num:''};
       var expFields = '<div id="wrap_exp"'+(isExp?'':' style="display:none"')+'>'+
         fld('Registro','<input id="f_registro" value="'+esc(L?(L['Registro']||''):'')+'" '+dis+' placeholder="Número de registro / documento">')+
-        fld('País','<select id="f_pais" '+dis+'><option value="">Selecione o país...</option>'+
+        fld('País','<select id="f_pais" '+dis+' onchange="onPaisChange()"><option value="">Selecione o país...</option>'+
           PAISES_AMERICA.map(function(p){return '<option'+(L&&L['País']===p?' selected':'')+'>'+p+'</option>';}).join('')+
         '</select>')+
+        fld('Telefone Internacional',
+          '<div class="phone-row" style="gap:6px">'+
+            '<input id="f_ddi" value="'+esc(telInt.ddi)+'" '+dis+' placeholder="DDI" style="width:70px;flex-shrink:0" readonly>'+
+            '<input id="f_intdd" value="'+esc(telInt.dd)+'" '+dis+' placeholder="DDD" style="width:70px;flex-shrink:0" maxlength="4" oninput="this.value=this.value.replace(/\\D/g,\'\')">'+
+            '<input id="f_intnum" value="'+esc(telInt.num)+'" '+dis+' placeholder="Número" style="flex:1" oninput="mIntPhone(this)">'+
+          '</div>'+
+          '<div class="fld-err" id="err_int" style="display:none">Número fora do padrão do país</div>')+
       '</div>';
       return cnpjField + expFields;
     })()+
     fld('Contato Principal','<input id="f_cp" value="'+esc(L?L['Contato Principal']:'')+'" '+dis+'>',rq)+
-    fld('Telefone 1','<div class="phone-row"><input class="ph-ddd" id="f_d1" value="'+esc(p1.d?'('+p1.d+')':'')+'" '+dis+' placeholder="(00)" maxlength="4" oninput="mDDD(this)"><input class="ph-num" id="f_n1" value="'+esc(p1.n)+'" '+dis+' placeholder="00000-0000" maxlength="10" oninput="mPH(this)"></div>',rq)+
+    (function(){
+      var isExp = L && String(L['Time Comercial']||'').toLowerCase().includes('exporta');
+      var telReq = isExp ? '' : rq; // Telefone 1 não obrigatório em exportação
+      return '<div id="wrap_tel1"'+(isExp?' style="display:none"':'')+'>'+
+        fld('Telefone 1','<div class="phone-row"><input class="ph-ddd" id="f_d1" value="'+esc(p1.d?'('+p1.d+')':'')+'" '+dis+' placeholder="(00)" maxlength="4" oninput="mDDD(this)"><input class="ph-num" id="f_n1" value="'+esc(p1.n)+'" '+dis+' placeholder="00000-0000" maxlength="10" oninput="mPH(this)"></div>',telReq)+
+      '</div>';
+    })()+
     fld('Telefone 2','<div class="phone-row"><input class="ph-ddd" id="f_d2" value="'+esc(p2.d?'('+p2.d+')':'')+'" '+dis+' placeholder="(00)" maxlength="4" oninput="mDDD(this)"><input class="ph-num" id="f_n2" value="'+esc(p2.n)+'" '+dis+' placeholder="00000-0000" maxlength="10" oninput="mPH(this)"></div>')+
     fld('E-mail','<input id="f_em" value="'+esc(L?L['E-mail']:'')+'" '+dis+'>',rq)+
     fld('Cidade','<input id="f_ci" value="'+esc(L?L['Cidade']:'')+'" '+dis+'>')+
@@ -1794,7 +1839,7 @@ async function _doSaveLead() {
     'Data':gv('f_data'),
     'Status':gv('f_st'),'Status Inicial':gv('f_si'),'Prospect':assignedProspect||gv('f_pr'),'E-mail Prospect':($('f_pr_email')||{value:''}).value.trim(),'Time Comercial':gv('f_tm'),
     'Razão Social':gv('f_rs'),'Lead':gv('f_lead'),'CNPJ':gv('f_cnpj'),'Registro':gv('f_registro'),'País':gv('f_pais'),'Contato Principal':gv('f_cp'),
-    'Telefone':[t1,t2].filter(Boolean).join(' | '),'E-mail':gv('f_em'),
+    'Telefone':[t1,t2].filter(Boolean).join(' | '),'Telefone Internacional':[($('f_ddi')||{value:''}).value,($('f_intdd')||{value:''}).value,($('f_intnum')||{value:''}).value].filter(Boolean).join(' '),'E-mail':gv('f_em'),
     'Cidade':gv('f_ci'),'UF':gv('f_uf'),'Canal Principal':gv('f_ca'),
     'Linha de Interesse':msVal('ms_li'),'Produto(s) de Interesse':gv('f_pd'),
     'Data Primeiro Contato':gv('f_dp'),'Data Último Contato':gv('f_du'),
@@ -2496,25 +2541,79 @@ function mBRL(el){
   el.value='R$ '+fmt+','+dec;
 }
 
+// Alterna entre CNPJ (nacional) e Registro+País+TelInternacional (exportação)
+window.toggleExportacao = function(){
+  var tm = $('f_tm');
+  if (!tm) return;
+  var isExp = String(tm.value||'').toLowerCase().includes('exporta');
+  var wrapCnpj = $('wrap_cnpj');
+  var wrapExp = $('wrap_exp');
+  var wrapTel1 = $('wrap_tel1');
+  if (wrapCnpj) wrapCnpj.style.display = isExp ? 'none' : '';
+  if (wrapExp)  wrapExp.style.display  = isExp ? '' : 'none';
+  if (wrapTel1) wrapTel1.style.display = isExp ? 'none' : '';
+  // Ao entrar em exportação: limpar CNPJ e tirar obrigatoriedade do Tel1
+  if (isExp) {
+    var c = $('f_cnpj'); if (c) c.value = '';
+    var t1 = $('f_n1'); if (t1) { var fld1 = t1.closest('.fld'); if (fld1) fld1.classList.remove('fld-req'); }
+  }
+};
+
+// Ao escolher país: preenche DDI e ajusta placeholder do número
+window.onPaisChange = function(){
+  var sel = $('f_pais');
+  if (!sel) return;
+  var info = PAISES_INFO[sel.value];
+  var ddi = $('f_ddi');
+  var num = $('f_intnum');
+  if (info) {
+    if (ddi) ddi.value = info.ddi;
+    if (num) { num.placeholder = info.mask; num.value = ''; }
+  } else {
+    if (ddi) ddi.value = '';
+    if (num) { num.placeholder = 'Número'; }
+  }
+};
+
+// Máscara do número internacional conforme o país selecionado
+window.mIntPhone = function(el){
+  var sel = $('f_pais');
+  var info = sel ? PAISES_INFO[sel.value] : null;
+  var digits = el.value.replace(/\D/g,'');
+  if (info) {
+    digits = digits.substring(0, info.len);
+    // Aplicar máscara (0 = dígito, outros chars = separador)
+    var out = '', di = 0;
+    for (var i = 0; i < info.mask.length && di < digits.length; i++) {
+      if (info.mask[i] === '0') { out += digits[di]; di++; }
+      else out += info.mask[i];
+    }
+    el.value = out;
+    // Validação de comprimento
+    var err = $('err_int');
+    if (err) err.style.display = (digits.length > 0 && digits.length < info.len) ? 'block' : 'none';
+  } else {
+    el.value = digits;
+  }
+};
+
+// Reconstrói telefone internacional a partir do valor salvo (DDI DD NÚMERO)
+function _parseTelInt(str){
+  if (!str) return {ddi:'',dd:'',num:''};
+  var parts = String(str).trim().split(/\s+/);
+  var ddi = '', dd = '', num = '';
+  if (parts.length >= 3) { ddi = parts[0]; dd = parts[1]; num = parts.slice(2).join(' '); }
+  else if (parts.length === 2) { ddi = parts[0]; num = parts[1]; }
+  else if (parts.length === 1) { num = parts[0]; }
+  return { ddi:ddi, dd:dd, num:num };
+}
+
 function toggleGanhoReq(){
   const isG=$('f_st').value==='Ganho';
   const vlP=$('f_vl').closest('.fld'), npP=$('f_np').closest('.fld');
   if(vlP){vlP.classList.toggle('fld-req',isG);}
   if(npP){npP.classList.toggle('fld-req',isG);}
 }
-
-// Alterna entre CNPJ (nacional) e Registro+País (exportação)
-window.toggleExportacao = function(){
-  var tm = $('f_tm');
-  if (!tm) return;
-  var isExp = String(tm.value||'').trim().toLowerCase() === 'exportação';
-  var wrapCnpj = $('wrap_cnpj');
-  var wrapExp = $('wrap_exp');
-  if (wrapCnpj) wrapCnpj.style.display = isExp ? 'none' : '';
-  if (wrapExp)  wrapExp.style.display  = isExp ? '' : 'none';
-  // Limpar CNPJ ao entrar em exportação
-  if (isExp) { var c = $('f_cnpj'); if (c) c.value = ''; }
-};
 
 // ═══════ DASHBOARD ═══════
 let dCharts = [], dashSrc = 'leads', dashKpiFilter = '';
