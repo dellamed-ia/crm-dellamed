@@ -1148,30 +1148,21 @@ async function initApp() {
     checkNotifications();
     setInterval(checkNotifications, 60000);
   }
-  const c = await api('GET',{action:'getConfig'});
+  // Carrega TUDO em paralelo — 5x mais rápido
+  const [c, p, au, d, w] = await Promise.all([
+    api('GET',{action:'getConfig'}),
+    api('GET',{action:'getProspects'}).catch(()=>({prospects:[]})),
+    api('GET',{action:'getAuthorized'}).catch(()=>({emails:[]})),
+    api('GET',{action:'getData'}),
+    api('GET',{action:'getWAData'}).catch(()=>({leads:[]}))
+  ]);
   if (c.error) { toast(c.error,'err'); return; }
   CFG = c;
-  // Carrega lista de vendedores da aba PROSPECTS
-  try {
-    const p = await api('GET',{action:'getProspects'});
-    if (!p.error && Array.isArray(p.prospects) && p.prospects.length) {
-      VENDEDORES = p.prospects;
-    }
-  } catch(_) { console.warn('Aba PROSPECTS não encontrada — vendedores não carregados.'); }
-
-  // Carrega lista de usuários autorizados da aba USUARIOS AUTORIZADOS
-  try {
-    const au = await api('GET',{action:'getAuthorized'});
-    if (!au.error && Array.isArray(au.emails) && au.emails.length) {
-      DIRECT_ASSIGN_EMAILS = au.emails;
-    }
-  } catch(_) { console.warn('Aba USUARIOS AUTORIZADOS não encontrada.'); }
-
-  const d = await api('GET',{action:'getData'});
+  if (!p.error && Array.isArray(p.prospects)) VENDEDORES = p.prospects;
+  if (!au.error && Array.isArray(au.emails)) DIRECT_ASSIGN_EMAILS = au.emails;
   if (d.error) { toast(d.error,'err'); return; }
   LEADS = d.leads || [];
-  const w = await api('GET',{action:'getWAData'});
-  if (w.error) { waError = w.error; toast('WhatsApp: ' + w.error, 'err'); WA_LEADS = []; }
+  if (w.error) { waError = w.error; WA_LEADS = []; }
   else { waError = ''; WA_LEADS = w.leads || []; }
   console.log('LEADS:', LEADS.length, '| WA_LEADS:', WA_LEADS.length, waError ? '| WA erro: '+waError : '');
   $('loadMain').classList.add('hidden');
@@ -1581,9 +1572,11 @@ function openForm(row) {
   editRow = row||null;
   const L = editRow ? curData().find(l=>l._row===editRow) : null;
   const isE = !!L;
-  const canE = true; // todos editam; só admin exclui
+  const canE = true; // todos editam
   $('fTitle').textContent = isE ? 'Editar Lead' : 'Novo Lead';
-  const canDel = isE && U.admin;
+  // Admin exclui qualquer lead; vendedor exclui só os dele (Prospect = nome do usuário)
+  const isOwnLead = isE && L && String(L['Prospect']||'').trim().toLowerCase() === String(U.nome||'').trim().toLowerCase();
+  const canDel = isE && (U.admin || isOwnLead);
   $('fDel').classList.toggle('hidden', !canDel);
   const dis = canE?'':'disabled';
   const rq = U.admin ? '' : ' fld-req';
@@ -1676,7 +1669,15 @@ function openForm(row) {
 
   // ── Anexos ──
   var existingFiles = [];
-  try { existingFiles = JSON.parse(L ? (L['Anexos']||'[]') : '[]'); } catch(_) {}
+  try {
+    var rawAnexos = L ? (L['Anexos']||'') : '';
+    console.log('Anexos raw:', rawAnexos);
+    if (rawAnexos && rawAnexos !== '[]' && rawAnexos !== '') {
+      existingFiles = JSON.parse(rawAnexos);
+      if (!Array.isArray(existingFiles)) existingFiles = [];
+    }
+  } catch(e) { console.warn('Erro ao parsear Anexos:', e); existingFiles = []; }
+  console.log('Anexos parsed:', existingFiles.length, 'arquivo(s)');
   var filesHTML = existingFiles.map(function(f) {
     var icon = /image/i.test(f.mimeType) ? '🖼️' : /pdf/i.test(f.mimeType) ? '📄' : '📎';
     return '<div class="upload-item" data-fid="'+esc(f.id)+'">'+
@@ -1699,11 +1700,14 @@ function openForm(row) {
       '<input type="file" id="fileInput" multiple accept="image/*,.pdf,.doc,.docx,.xls,.xlsx" style="display:none" onchange="handleFileSelect(this.files)">'
     : '';
 
-  $('fBody').innerHTML += fldF('Anexos (até 10 arquivos)',
+  // Anexos: inserir sem destruir o DOM existente
+  var anexosDiv = document.createElement('div');
+  anexosDiv.innerHTML = fldF('Anexos (até 10 arquivos)',
     uploadHTML +
     '<div class="upload-list" id="uploadList">'+filesHTML+'</div>'+
     '<div class="upload-count" id="uploadCount">'+(existingFiles.length > 0 ? existingFiles.length+' arquivo(s) anexado(s)' : '')+'</div>'
   );
+  $('fBody').appendChild(anexosDiv);
 
   initMS('ms_li', CFG.linhaInteresse||[], !canE);
   initMS('ms_mp', CFG.motivoPerda||[], !canE);
