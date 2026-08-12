@@ -1651,6 +1651,7 @@ function openForm(row) {
     })()+
     fld('Time Comercial','<select id="f_tm" '+dis+'><option value="">Selecione...</option>'+((CFG.timeComercial||[]).map(t=>'<option'+(L&&L['Time Comercial']===t?' selected':'')+'>'+t+'</option>')).join('')+'</select>',rq)+
     fld('Razão Social','<input id="f_rs" value="'+esc(L?L['Razão Social']:'')+'" '+dis+'>',rq)+
+    fld('Lead','<input id="f_lead" value="'+esc(L?L['Lead']:'')+'" '+dis+'>')+
     fld('CNPJ','<input id="f_cnpj" value="'+esc(L?L['CNPJ']:'')+'" '+dis+' placeholder="00.000.000/0000-00" maxlength="18" oninput="mCNPJ(this)">',rq)+
     fld('Contato Principal','<input id="f_cp" value="'+esc(L?L['Contato Principal']:'')+'" '+dis+'>',rq)+
     fld('Telefone 1','<div class="phone-row"><input class="ph-ddd" id="f_d1" value="'+esc(p1.d?'('+p1.d+')':'')+'" '+dis+' placeholder="(00)" maxlength="4" oninput="mDDD(this)"><input class="ph-num" id="f_n1" value="'+esc(p1.n)+'" '+dis+' placeholder="00000-0000" maxlength="10" oninput="mPH(this)"></div>',rq)+
@@ -1769,7 +1770,7 @@ async function _doSaveLead() {
   const lead = {
     'Data':gv('f_data'),
     'Status':gv('f_st'),'Status Inicial':gv('f_si'),'Prospect':assignedProspect||gv('f_pr'),'E-mail Prospect':($('f_pr_email')||{value:''}).value.trim(),'Time Comercial':gv('f_tm'),
-    'Razão Social':gv('f_rs'),'CNPJ':gv('f_cnpj'),'Contato Principal':gv('f_cp'),
+    'Razão Social':gv('f_rs'),'Lead':gv('f_lead'),'CNPJ':gv('f_cnpj'),'Contato Principal':gv('f_cp'),
     'Telefone':[t1,t2].filter(Boolean).join(' | '),'E-mail':gv('f_em'),
     'Cidade':gv('f_ci'),'UF':gv('f_uf'),'Canal Principal':gv('f_ca'),
     'Linha de Interesse':msVal('ms_li'),'Produto(s) de Interesse':gv('f_pd'),
