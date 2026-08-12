@@ -1033,19 +1033,9 @@ html body .login-brand, html body .login-brand-logo, html body .login-brand-name
 // ═══════════════════════════════════════════════════════════════
 const API_URL = 'https://script.google.com/macros/s/AKfycbwn43yGwRyB5TMq8G1q8WcQJj8dJx5R4eNOmEtmsKT2XDFVPyYqzdnGTGxApT0uAJCGPg/exec';
 const ADMIN_EMAIL = 'bianca.lima@dellamed.com.br';
-const DIRECT_ASSIGN_EMAILS = [
-  'camily.soares@dellamed.com.br',
-  'fabio.rodrigues@dellamed.com.br',
-  'jessica.porto@dellamed.com.br',
-  'leonardo.dalpubel@dellamed.com.br',
-  'luisa.abreu@dellamed.com.br',
-  'marco.ribeiro@dellamed.com.br',
-  'patricia.borges@dellamed.com.br',
-  'sandriane.maciel@dellamed.com.br',
-  'sandro.junior@dellamed.com.br',
-  'felipe.fasoli@dellamed.com.br',
-  'rodrigo.velho@dellamed.com.br',
-];
+// USUARIOS AUTORIZADOS — carregado da aba USUARIOS AUTORIZADOS no Google Sheets.
+// Não edite aqui; edite direto na planilha.
+let DIRECT_ASSIGN_EMAILS = [];
 // VENDEDORES — carregado dinamicamente da aba PROSPECTS no Google Sheets.
 // Não edite aqui; edite direto na planilha (aba PROSPECTS, col A=Nome col B=Email).
 let VENDEDORES = [];
@@ -1168,6 +1158,15 @@ async function initApp() {
       VENDEDORES = p.prospects;
     }
   } catch(_) { console.warn('Aba PROSPECTS não encontrada — vendedores não carregados.'); }
+
+  // Carrega lista de usuários autorizados da aba USUARIOS AUTORIZADOS
+  try {
+    const au = await api('GET',{action:'getAuthorized'});
+    if (!au.error && Array.isArray(au.emails) && au.emails.length) {
+      DIRECT_ASSIGN_EMAILS = au.emails;
+    }
+  } catch(_) { console.warn('Aba USUARIOS AUTORIZADOS não encontrada.'); }
+
   const d = await api('GET',{action:'getData'});
   if (d.error) { toast(d.error,'err'); return; }
   LEADS = d.leads || [];
