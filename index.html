@@ -3198,7 +3198,7 @@ $('fDel').onclick = delLead;
 $('dClose').onclick = closeDash;
 $('aClose').onclick = closeAdmin;
 $('inSearch').oninput = renderAll;
-$('modForm').onclick = e=>{if(e.target===$('modForm'))closeForm();};
+// Formulário só fecha pelo X ou Cancelar (não fecha ao clicar fora, evita perda de dados)
 $('modAdmin').onclick = e=>{if(e.target===$('modAdmin'))closeAdmin();};
 $('inEmail').onkeydown = e=>{if(e.key==='Enter')doLogin();};
 
