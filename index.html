@@ -1730,10 +1730,12 @@ function openForm(row) {
     fld('Razão Social','<input id="f_rs" value="'+esc(L?L['Razão Social']:'')+'" '+dis+'>',rq)+
     fld('Endereço Fiscal','<input id="f_endereco" value="'+esc(L?(L['Endereço Fiscal']||''):'')+'" '+dis+' placeholder="Rua, nº, bairro">')+
     fld('Cidade','<input id="f_ci" value="'+esc(L?L['Cidade']:'')+'" '+dis+'>')+
+    '<div id="wrap_br_fiscal"'+((L && String(L['Time Comercial']||'').toLowerCase().includes('exporta'))?' style="display:none"':'')+'>'+
     fld('UF','<select id="f_uf" '+dis+'><option value="">—</option>'+((CFG.ufs||[]).map(u=>'<option'+(L&&L['UF']===u?' selected':'')+'>'+u+'</option>')).join('')+'</select>',rq)+
     fld('SUFRAMA','<input id="f_suframa" value="'+esc(L?(L['SUFRAMA']||''):'')+'" '+dis+' placeholder="Preenchido pelo CNPJ">')+
     fld('Regime','<select id="f_regime" '+dis+'><option value="">Selecione o regime…</option>'+['Simples Nacional','MEI','Lucro Presumido','Lucro Real'].map(function(o){return '<option'+(L&&L['Regime']===o?' selected':'')+'>'+o+'</option>';}).join('')+'</select>')+
     fldF('CNAE','<details class="cnae-box"><summary class="cnae-sum" id="cnaeSum">CNAE</summary><ul class="cnae-list" id="cnaeList"></ul></details><textarea id="f_cnae" class="cnae-hidden" '+dis+'>'+esc(L?(L['CNAE']||''):'')+'</textarea>')+
+    '</div>'+
     fld('Lead','<input id="f_lead" value="'+esc(L?L['Lead']:'')+'" '+dis+'>')+
     fld('Contato Principal','<input id="f_cp" value="'+esc(L?L['Contato Principal']:'')+'" '+dis+'>',rq)+
     (function(){
@@ -1881,14 +1883,15 @@ async function _doSaveLead() {
     if (lead['Status']==='Perdido' && !lead['Motivo da Perda']) {
       toast('Status Perdido exige: Motivo da Perda','err'); return;
     }
+    var _isExp = String(lead['Time Comercial']||'').toLowerCase().includes('exporta');
     const req=[
       ['Status','Status'],['Prospect','Prospect'],['Time Comercial','Time Comercial'],
-      ['Razão Social','Razão Social'],['CNPJ','CNPJ'],['Contato Principal','Contato Principal'],
-      ['E-mail','E-mail'],['UF','UF'],['Canal Principal','Canal Principal'],
+      ['Razão Social','Razão Social'],['Contato Principal','Contato Principal'],
+      ['E-mail','E-mail'],['Canal Principal','Canal Principal'],
       ['Data Primeiro Contato','Data Primeiro Contato']
     ];
+    if (!_isExp) { req.push(['CNPJ','CNPJ']); req.push(['UF','UF']); }
     for (const [f,l] of req) if(!lead[f]){toast('Campo obrigatório: '+l,'err');return;}
-    var _isExp = String(lead['Time Comercial']||'').toLowerCase().includes('exporta');
     if (!_isExp && !t1){toast('Campo obrigatório: Telefone 1','err');return;}
   }
   if (!validateDates()) return;
@@ -2621,13 +2624,18 @@ window.toggleExportacao = function(){
   var wrapCnpj = $('wrap_cnpj');
   var wrapExp = $('wrap_exp');
   var wrapTel1 = $('wrap_tel1');
+  var wrapBr = $('wrap_br_fiscal');
   if (wrapCnpj) wrapCnpj.style.display = isExp ? 'none' : '';
   if (wrapExp)  wrapExp.style.display  = isExp ? '' : 'none';
   if (wrapTel1) wrapTel1.style.display = isExp ? 'none' : '';
-  // Ao entrar em exportação: limpar CNPJ e tirar obrigatoriedade do Tel1
+  if (wrapBr)   wrapBr.style.display   = isExp ? 'none' : '';
+  // Ao entrar em exportação: limpar CNPJ e campos fiscais BR e tirar obrigatoriedade
   if (isExp) {
     var c = $('f_cnpj'); if (c) c.value = '';
     var t1 = $('f_n1'); if (t1) { var fld1 = t1.closest('.fld'); if (fld1) fld1.classList.remove('fld-req'); }
+    ['f_uf','f_suframa','f_regime','f_cnae'].forEach(function(id){ var el=$(id); if(el) el.value=''; });
+    var ul=$('cnaeList'); if(ul) ul.innerHTML='';
+    var ufEl=$('f_uf'); if(ufEl){ var ufFld=ufEl.closest('.fld'); if(ufFld) ufFld.classList.remove('fld-req'); }
   }
 };
 
