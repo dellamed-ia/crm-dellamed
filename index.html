@@ -874,16 +874,18 @@ html body .login-crm-subtitle{display:block!important;margin:8px 0 10px!importan
   </div>
   <div class="pipe-header">
     <h2 id="secTitle">Leads Multicanais</h2>
-    <div class="search-box"><input type="text" id="inSearch" title="Pesquisa livre: Lead, Time Comercial, Prospect, Estado, Cidade, CNPJ, Temperatura Lead, UF e E-mail" placeholder="Buscar lead, time, prospect, estado, cidade, CNPJ, temperatura, UF ou e-mail..."></div>
+    <div class="search-box"><input type="text" id="inSearch" title="Busca única nas abas Leads e WhatsApp: Lead, Time Comercial, Prospect, Cidade, CNPJ, Temperatura, UF e E-mail" placeholder="Buscar em Leads e WhatsApp: lead, time, prospect, cidade, CNPJ, UF, e-mail..."></div>
   </div>
   <!-- TABS -->
   <div class="tabs">
-    <div class="tab active" id="tabLeads" onclick="switchTab('leads')">📋 Leads Multicanais</div>
+    <div class="tab active" id="tabFunil" onclick="switchTab('funil')">📊 Funil de Vendas</div>
+    <div class="tab" id="tabLeads" onclick="switchTab('leads')">📋 Leads Multicanais</div>
     <div class="tab" id="tabWA" onclick="switchTab('wa')">💬 WhatsApp</div>
-    <div class="tab" id="tabFunil" onclick="openFunil()">📊 Funil de Vendas</div>
   </div>
   <!-- STATUS KPIs -->
   <div style="padding:0 24px 8px;display:flex;gap:10px;flex-wrap:wrap" id="stPills"></div>
+  <!-- FILTROS RÁPIDOS -->
+  <div class="qf-bar" id="qfBar"><span class="qf-lbl">Atalhos:</span><div id="qfChips"></div></div>
   <!-- MAIN FILTERS -->
   <div class="main-flt" id="mainFlt">
     <div class="fg"><label>Prospect</label><div class="sf-wrap" id="sfProspect"></div></div>
@@ -896,18 +898,18 @@ html body .login-crm-subtitle{display:block!important;margin:8px 0 10px!importan
   </div>
   <!-- TABLE -->
   <div class="tbl-count" id="tblCount"></div>
-  <div class="leads-tbl-wrap"><table class="leads-tbl"><thead><tr id="tblHead">
+  <div class="leads-tbl-wrap" id="tblWrap"><table class="leads-tbl"><thead><tr id="tblHead">
     <th data-key="Nº" onclick="sortCol('Nº')">Nº <span class="sort-arrow"></span></th>
     <th data-key="Data" onclick="sortCol('Data')">Data <span class="sort-arrow"></span></th>
-    <th data-key="Data Último Contato" onclick="sortCol('Data Último Contato')">Data<br>Último Contato <span class="sort-arrow"></span></th>
+    <th data-key="Status" onclick="sortCol('Status')">Status <span class="sort-arrow"></span></th>
+    <th data-key="Razão Social" onclick="sortCol('Razão Social')">Razão<br>Social <span class="sort-arrow"></span></th>
+    <th data-key="Temperatura Lead" onclick="sortCol('Temperatura Lead')">Temperatura<br>Lead <span class="sort-arrow"></span></th>
     <th data-key="Data Próxima Ação" onclick="sortCol('Data Próxima Ação')">Data<br>Próxima Ação <span class="sort-arrow"></span></th>
     <th data-key="Próxima Ação" onclick="sortCol('Próxima Ação')">Próxima<br>Ação <span class="sort-arrow"></span></th>
-    <th data-key="Status" onclick="sortCol('Status')">Status <span class="sort-arrow"></span></th>
-    <th data-key="Temperatura Lead" onclick="sortCol('Temperatura Lead')">Temperatura<br>Lead <span class="sort-arrow"></span></th>
     <th data-key="Prospect" onclick="sortCol('Prospect')">Prospect <span class="sort-arrow"></span></th>
+    <th data-key="Data Último Contato" onclick="sortCol('Data Último Contato')">Data<br>Último Contato <span class="sort-arrow"></span></th>
     <th data-key="Time Comercial" onclick="sortCol('Time Comercial')">Time<br>Comercial <span class="sort-arrow"></span></th>
     <th data-key="Lead" onclick="sortCol('Lead')">Lead <span class="sort-arrow"></span></th>
-    <th data-key="Razão Social" onclick="sortCol('Razão Social')">Razão<br>Social <span class="sort-arrow"></span></th>
     <th data-key="CNPJ" onclick="sortCol('CNPJ')">CNPJ <span class="sort-arrow"></span></th>
     <th data-key="Cidade" onclick="sortCol('Cidade')">Cidade <span class="sort-arrow"></span></th>
     <th data-key="UF" onclick="sortCol('UF')">UF <span class="sort-arrow"></span></th>
@@ -923,6 +925,44 @@ html body .login-crm-subtitle{display:block!important;margin:8px 0 10px!importan
     <th data-key="Nº do Pedido" onclick="sortCol('Nº do Pedido')">Nº<br>do Pedido <span class="sort-arrow"></span></th>
   </tr></thead><tbody id="tblBody"></tbody></table></div>
   <div id="loadMain" class="loading"><div class="loader"></div><span>Carregando dados...</span></div>
+<!-- FUNIL DE VENDAS (aba fixa, inline) -->
+<div id="funilView" class="hidden">
+  <div class="funil-inline-head">📊 Funil de Vendas <span id="funilBadge" style="font-size:.7rem;font-weight:400;color:var(--muted)"></span></div>
+  <div class="funil-fbar" id="funilFbar">
+      <div class="ffbar-grp">
+        <span class="ffbar-lbl">Período</span>
+        <select class="ffbar-sel" id="ffl_periodo" onchange="onFunilPeriodo()">
+          <option value="all">Todos os períodos</option>
+          <option value="7">Últimos 7 dias</option>
+          <option value="30">Últimos 30 dias</option>
+          <option value="90">Últimos 90 dias</option>
+          <option value="365">Este ano</option>
+          <option value="custom">Personalizado</option>
+        </select>
+      </div>
+      <div class="ffbar-grp hidden" id="ffl_customWrap">
+        <span class="ffbar-lbl">Intervalo</span>
+        <div class="ffbar-row">
+          <input type="date" class="ffbar-dt" id="ffl_from" onchange="renderFunil()">
+          <span class="ffbar-sep">→</span>
+          <input type="date" class="ffbar-dt" id="ffl_to" onchange="renderFunil()">
+        </div>
+      </div>
+      <div class="ffbar-grp">
+        <span class="ffbar-lbl">Time</span>
+        <select class="ffbar-sel" id="ffl_time" onchange="renderFunil()"><option value="">Todos os times</option></select>
+      </div>
+      <div class="ffbar-grp">
+        <span class="ffbar-lbl">Prospect</span>
+        <select class="ffbar-sel" id="ffl_prospect" onchange="renderFunil()"><option value="">Todos os prospects</option></select>
+      </div>
+      <div class="ff-quick-grp"><span class="ffbar-lbl">Atalhos</span><div id="ffQuick"></div></div>
+      <button class="ffbar-rst" onclick="resetFunilFlt()">✕ Limpar</button>
+      <span class="ffbar-badge" id="funilFltBadge"></span>
+    </div>
+    <div class="funil-kbar" id="funilKbar"></div>
+    <div class="kb-board" id="funilBody"></div>
+</div>
 </div>
 
 <!-- FORM MODAL -->
@@ -986,47 +1026,133 @@ html body .login-crm-subtitle{display:block!important;margin:8px 0 10px!importan
 
 
 <!-- FUNIL DE VENDAS MODAL -->
-<div id="modFunil" class="overlay hidden">
-  <div class="modal" style="max-width:1480px;width:99vw;height:97vh;border-radius:12px;display:flex;flex-direction:column;overflow:hidden;padding:0">
-    <div class="mhd" style="flex-shrink:0">
-      <h3>📊 Funil de Vendas <span id="funilBadge" style="font-size:.7rem;font-weight:400;color:var(--muted)"></span></h3>
-      <button class="mx" id="funilClose">✕</button>
+
+
+<style id="crm-redesign-2026">
+/* ===== VISIBILIDADE DE COLUNAS (apenas Nº, Data, Data Próx. Ação, Próx. Ação, Status, Temperatura, Prospect) ===== */
+.leads-tbl th:nth-child(n+9),.leads-tbl td:nth-child(n+9){display:none!important}
+/* Data(2): aproximar do Status (reduz espaço lateral) */
+.leads-tbl th:nth-child(2),.leads-tbl td:nth-child(2){padding-right:3px}
+/* Status(3): encostado na Data */
+.leads-tbl th:nth-child(3),.leads-tbl td:nth-child(3){max-width:112px;width:112px;padding-left:5px}
+/* Temperatura(5) */
+.leads-tbl th:nth-child(5),.leads-tbl td:nth-child(5){max-width:104px;width:104px}
+/* Data Próxima Ação(6): cabeçalho SEMPRE em 2 linhas (Data / Próxima Ação), sem reflow no zoom */
+.leads-tbl th:nth-child(6),.leads-tbl td:nth-child(6){max-width:110px;width:110px;padding-left:8px;padding-right:8px;white-space:nowrap}
+/* Próxima Ação(7): maior */
+.leads-tbl th:nth-child(7),.leads-tbl td:nth-child(7){max-width:300px;width:300px}
+/* Prospect(8): menor */
+.leads-tbl th:nth-child(8),.leads-tbl td:nth-child(8){max-width:122px;width:122px}
+
+/* ===== FILTROS RÁPIDOS ===== */
+.qf-bar{padding:2px 24px 10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.qf-bar .qf-lbl{font-size:.66rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-right:2px}
+#qfChips,#ffQuick{display:flex;gap:8px;flex-wrap:wrap}
+.qf-chip{padding:6px 13px;border-radius:20px;border:1.5px solid var(--border);background:#fff;color:var(--navy);font-size:.75rem;font-weight:600;cursor:pointer;transition:all .15s;white-space:nowrap;font-family:inherit}
+.qf-chip:hover{border-color:var(--teal);color:var(--teal)}
+.qf-chip.active{background:var(--navy);border-color:var(--navy);color:#fff;box-shadow:0 3px 10px rgba(0,47,99,.25)}
+.ff-quick-grp{display:flex;align-items:center;gap:8px}
+.ff-quick-grp .ffbar-lbl{white-space:nowrap}
+
+/* ===== PAINEL LATERAL DO LEAD ===== */
+.lp-backdrop{position:fixed;inset:0;background:rgba(10,42,78,.42);z-index:180;opacity:0;visibility:hidden;transition:opacity .25s}
+.lp-backdrop.show{opacity:1;visibility:visible}
+.lead-panel{position:fixed;top:0;right:0;height:100vh;width:min(560px,94vw);background:#fff;z-index:190;box-shadow:-8px 0 40px rgba(10,42,78,.25);display:flex;flex-direction:column;transform:translateX(100%);transition:transform .28s cubic-bezier(.4,0,.2,1)}
+.lead-panel.open{transform:none}
+.lp-head{padding:18px 22px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;justify-content:space-between;gap:12px;background:linear-gradient(180deg,#f7f9fc,#fff)}
+.lp-title{font-size:1.15rem;font-weight:800;color:var(--navy);line-height:1.25}
+.lp-sub{font-size:.78rem;color:var(--muted);margin-top:3px}
+.lp-badges{margin-top:9px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.lp-temp{font-size:.75rem;color:var(--text);display:inline-flex;align-items:center;gap:5px;font-weight:600}
+.lp-x{width:34px;height:34px;flex-shrink:0;border-radius:50%;background:var(--bg);display:flex;align-items:center;justify-content:center;font-size:1.05rem;color:var(--muted);border:none;cursor:pointer}
+.lp-x:hover{background:#e7ebf3;color:var(--navy)}
+.pnl-tabs{display:flex;border-bottom:1px solid var(--border);padding:0 14px;background:#fff;flex-shrink:0;overflow-x:auto}
+.pnl-tab{padding:11px 15px;font-size:.82rem;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:3px solid transparent;white-space:nowrap;transition:all .15s;user-select:none}
+.pnl-tab:hover{color:var(--navy)}
+.pnl-tab.active{color:var(--teal);border-bottom-color:var(--teal)}
+.pnl-body{flex:1;overflow-y:auto}
+.lead-panel .panel-content{padding:20px 22px}
+.pnl-sec{margin-bottom:22px}
+.pnl-sec-t{font-size:.7rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:11px}
+.lead-panel .info-grid{display:grid;grid-template-columns:1fr 1fr;gap:13px}
+.lead-panel .info-item label{display:block;font-size:.68rem;color:var(--muted);margin-bottom:2px}
+.lead-panel .info-item span{font-size:.85rem;color:var(--text);font-weight:600;word-break:break-word}
+.lp-editrow{display:flex;justify-content:flex-end;margin-bottom:14px}
+.pnl-more{font-size:.7rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;cursor:pointer}
+.lp-empty{font-size:.82rem;color:var(--muted);padding:14px 0}
+.tl-actions{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px}
+.tl-btn{padding:7px 13px;border:1.5px solid var(--border);background:#fff;border-radius:7px;font-size:.76rem;font-weight:600;cursor:pointer;color:var(--navy);font-family:inherit;transition:all .15s}
+.tl-btn:hover{border-color:var(--teal);color:var(--teal)}
+.tl-wrap{position:relative;padding-left:24px}
+.tl-wrap::before{content:'';position:absolute;left:7px;top:6px;bottom:4px;width:2px;background:var(--border)}
+.tl-item{position:relative;margin-bottom:18px}
+.tl-dot{position:absolute;left:-24px;top:3px;width:15px;height:15px;border-radius:50%;border:2px solid #fff}
+.dot-call{background:var(--teal);box-shadow:0 0 0 2px var(--teal)}
+.dot-email{background:var(--green);box-shadow:0 0 0 2px var(--green)}
+.dot-note{background:var(--gold);box-shadow:0 0 0 2px var(--gold)}
+.dot-status{background:#8B6FA6;box-shadow:0 0 0 2px #8B6FA6}
+.dot-proposal{background:var(--navy-light);box-shadow:0 0 0 2px var(--navy-light)}
+.dot-task{background:var(--orange);box-shadow:0 0 0 2px var(--orange)}
+.dot-contact{background:#1A6BB5;box-shadow:0 0 0 2px #1A6BB5}
+.dot-created{background:var(--navy);box-shadow:0 0 0 2px var(--navy)}
+.tl-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px}
+.tl-type{font-size:.8rem;font-weight:700;color:var(--navy)}
+.tl-date{font-size:.7rem;color:var(--muted)}
+.tl-author{font-size:.7rem;color:var(--muted);margin-left:auto}
+.tl-body{font-size:.82rem;color:var(--text);line-height:1.5;background:var(--bg);padding:9px 12px;border-radius:7px;border:1px solid var(--border)}
+.lp-next{border-radius:8px;padding:12px 14px;border:1px solid var(--border)}
+.lp-next.lp-late{background:#FDECEA;border-color:var(--red)}
+.lp-next.lp-soon{background:#FFF7E6;border-color:var(--orange)}
+.lp-next.lp-ok{background:#EAF3FB;border-color:var(--teal)}
+.lp-next-lbl{font-weight:700;font-size:.82rem;color:var(--navy)}
+.lp-next-body{font-size:.82rem;color:var(--text);margin-top:4px}
+.lp-next-date{font-size:.72rem;color:var(--muted);margin-top:4px}
+.lp-next-mail{font-size:.72rem;color:var(--teal);margin-top:6px;font-weight:600}
+.lp-files{display:flex;flex-direction:column;gap:8px}
+.lp-file{display:flex;align-items:center;gap:10px;padding:9px 11px;background:var(--bg);border:1px solid var(--border);border-radius:8px;text-decoration:none;color:var(--text)}
+.lp-file:hover{border-color:var(--teal)}
+.lp-file-n{flex:1;font-size:.8rem;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lp-file-o{font-size:.72rem;color:var(--teal);font-weight:700}
+@media(max-width:560px){.lead-panel .info-grid{grid-template-columns:1fr}}
+/* ===== FUNIL INLINE (aba fixa) ===== */
+#funilView{display:flex;flex-direction:column;height:calc(100vh - 210px);min-height:520px;padding:0 24px 14px}
+.funil-inline-head{font-size:1.02rem;font-weight:800;color:var(--navy);padding:12px 2px 10px}
+/* ===== COMPOSER DE ATIVIDADES ===== */
+#lpComposer{background:#f7f9fc;border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:16px}
+.cmp-head{font-weight:800;color:var(--navy);font-size:.9rem;margin-bottom:10px}
+.cmp-row{display:flex;gap:10px}
+.cmp-fg{flex:1;margin-bottom:8px}
+.cmp-fg label,.cmp-l{display:block;font-size:.66rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin:0 0 4px}
+#lpComposer input,#lpComposer textarea,#lpComposer select{width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:7px;font-family:inherit;font-size:.85rem;box-sizing:border-box;background:#fff;color:var(--text)}
+#lpComposer textarea{resize:vertical}
+.cmp-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:12px}
+</style>
+
+<!-- PAINEL LATERAL DO LEAD (redesign 2026) -->
+<div class="lp-backdrop" id="leadPanelBackdrop" onclick="closeLeadPanel()"></div>
+<div class="lead-panel" id="leadPanel">
+  <div class="lp-head">
+    <div style="min-width:0">
+      <div class="lp-title" id="lpTitle">Lead</div>
+      <div class="lp-sub" id="lpSub"></div>
+      <div class="lp-badges" id="lpBadges"></div>
     </div>
-    <div class="funil-fbar" id="funilFbar">
-      <div class="ffbar-grp">
-        <span class="ffbar-lbl">Período</span>
-        <select class="ffbar-sel" id="ffl_periodo" onchange="onFunilPeriodo()">
-          <option value="all">Todos os períodos</option>
-          <option value="7">Últimos 7 dias</option>
-          <option value="30">Últimos 30 dias</option>
-          <option value="90">Últimos 90 dias</option>
-          <option value="365">Este ano</option>
-          <option value="custom">Personalizado</option>
-        </select>
-      </div>
-      <div class="ffbar-grp hidden" id="ffl_customWrap">
-        <span class="ffbar-lbl">Intervalo</span>
-        <div class="ffbar-row">
-          <input type="date" class="ffbar-dt" id="ffl_from" onchange="renderFunil()">
-          <span class="ffbar-sep">→</span>
-          <input type="date" class="ffbar-dt" id="ffl_to" onchange="renderFunil()">
-        </div>
-      </div>
-      <div class="ffbar-grp">
-        <span class="ffbar-lbl">Time</span>
-        <select class="ffbar-sel" id="ffl_time" onchange="renderFunil()"><option value="">Todos os times</option></select>
-      </div>
-      <div class="ffbar-grp">
-        <span class="ffbar-lbl">Prospect</span>
-        <select class="ffbar-sel" id="ffl_prospect" onchange="renderFunil()"><option value="">Todos os prospects</option></select>
-      </div>
-      <button class="ffbar-rst" onclick="resetFunilFlt()">✕ Limpar</button>
-      <span class="ffbar-badge" id="funilFltBadge"></span>
-    </div>
-    <div class="funil-kbar" id="funilKbar"></div>
-    <div class="kb-board" id="funilBody"></div>
+    <button class="lp-x" onclick="closeLeadPanel()" title="Fechar">✕</button>
+  </div>
+  <div class="pnl-tabs">
+    <div class="pnl-tab active" data-tab="timeline-tab" onclick="switchPanelTab(this,'timeline-tab')">Atividades</div>
+    <div class="pnl-tab" data-tab="details-tab" onclick="switchPanelTab(this,'details-tab')">Dados Cadastrais</div>
+    <div class="pnl-tab" data-tab="deal-tab" onclick="switchPanelTab(this,'deal-tab')">Negociação</div>
+    <div class="pnl-tab" data-tab="files-tab" onclick="switchPanelTab(this,'files-tab')">Anexos</div>
+  </div>
+  <div class="pnl-body">
+    <div class="panel-content" id="timeline-tab"></div>
+    <div class="panel-content" id="details-tab" style="display:none"></div>
+    <div class="panel-content" id="deal-tab" style="display:none"></div>
+    <div class="panel-content" id="files-tab" style="display:none"></div>
   </div>
 </div>
+
 
 <!-- CHART.JS (loaded async, never blocks page) -->
 <script>
@@ -1229,6 +1355,7 @@ async function initApp() {
   $('loadMain').classList.add('hidden');
   buildMainFilters();
   renderAll();
+  switchTab('funil');
 }
 
 async function reload() {
@@ -1302,13 +1429,20 @@ function thermoHTML(t){
 
 // ═══════ TABS ═══════
 function switchTab(tab) {
-  curTab = tab;
+  var isFunil = tab==='funil';
+  if(!isFunil) curTab = tab;
   activeStatus = '';
+  activeQuick = '';
   $('tabLeads').classList.toggle('active', tab==='leads');
   $('tabWA').classList.toggle('active', tab==='wa');
-  $('secTitle').textContent = tab==='leads' ? 'Leads Multicanais' : 'WhatsApp';
-  $('btnDashGeral').classList.toggle('hidden', tab!=='leads');
-  $('btnDashWA').classList.toggle('hidden', tab!=='wa');
+  $('tabFunil').classList.toggle('active', isFunil);
+  $('secTitle').textContent = isFunil ? 'Funil de Vendas' : (tab==='leads' ? 'Leads Multicanais' : 'WhatsApp');
+  $('btnDashGeral').classList.toggle('hidden', isFunil || tab!=='leads');
+  $('btnDashWA').classList.toggle('hidden', isFunil || tab!=='wa');
+  // alterna a visão: tabela (leads/wa) x funil, sem pop-up
+  ['stPills','qfBar','mainFlt','tblCount','tblWrap'].forEach(function(id){ var e=$(id); if(e) e.classList.toggle('hidden', isFunil); });
+  var fv=$('funilView'); if(fv) fv.classList.toggle('hidden', !isFunil);
+  if(isFunil){ openFunil(); return; }
   $('inSearch').value = '';
   ['sfProspect','sfTime','sfUF','sfCanal'].forEach(id => {
     const w=$(id); if(!w)return;
@@ -1518,8 +1652,9 @@ function leadFreeSearchText(l) {
 }
 
 function getMainFiltered() {
-  let data = [...curData()];
   const q = normFreeSearch($('inSearch').value || '');
+  // Busca ÚNICA: quando há termo, varre Leads + WhatsApp juntos
+  let data = q ? [...LEADS, ...WA_LEADS] : [...curData()];
   if (q) {
     const terms = q.split(/\s+/).filter(Boolean);
     data = data.filter(l => {
@@ -1543,10 +1678,13 @@ function getMainFiltered() {
       return true;
     });
   }
+  if (activeQuick) data = data.filter(function(l){return matchesQuick(l,activeQuick);});
   return data;
 }
 
 function renderAll() { setTimeout(applyFilterStyle,50);
+  LEADS.forEach(function(l){l._src='leads';}); WA_LEADS.forEach(function(l){l._src='wa';});
+  renderQuickChips();
   updateStatusKPIs();
   let data = getMainFiltered();
 
@@ -1574,6 +1712,9 @@ function renderAll() { setTimeout(applyFilterStyle,50);
     });
   }
 
+  if(DATE_QUICKS.indexOf(activeQuick)>=0){
+    data.sort(function(a,b){ return _dprKey(a['Data Próxima Ação']).localeCompare(_dprKey(b['Data Próxima Ação'])); });
+  }
   $('tblCount').textContent = data.length + ' lead' + (data.length !== 1 ? 's' : '') + ' encontrado' + (data.length !== 1 ? 's' : '');
   const tbody = $('tblBody');
   if (data.length === 0) {
@@ -1604,18 +1745,18 @@ function renderAll() { setTimeout(applyFilterStyle,50);
       }
     } catch(_) {}
     const attachIcon = hasAttach ? ' <span title="Possui anexos" style="font-size:.9rem">📎</span>' : '';
-    return '<tr onclick="openForm('+l._row+')">'+
+    return '<tr onclick="openLeadPanel('+l._row+',\''+(l._src||curTab)+'\')">'+
       '<td style="text-align:center;color:var(--muted);font-size:.75rem">'+esc(l['Nº']||'')+'</td>'+
       '<td style="font-size:.78rem">'+esc(l['Data']||'')+'</td>'+
-      '<td style="font-size:.78rem">'+esc(l['Data Último Contato']||'')+'</td>'+
-      '<td style="font-size:.78rem">'+esc(l['Data Próxima Ação']||'')+'</td>'+
-      '<td style="max-width:180px;overflow:hidden;text-overflow:ellipsis" title="'+esc(l['Próxima Ação']||'')+'">'+esc(l['Próxima Ação']||'')+'</td>'+
       '<td><span class="st-badge" style="background:'+sc+'">'+esc(l['Status']||'')+'</span></td>'+
+      '<td style="font-weight:600;color:#000;max-width:240px;overflow:hidden;text-overflow:ellipsis" title="'+esc(l['Razão Social']||'')+'">'+esc(l['Razão Social']||'')+'</td>'+
       '<td>'+tc+attachIcon+'</td>'+
+      '<td style="font-size:.78rem">'+esc(l['Data Próxima Ação']||'')+'</td>'+
+      '<td style="max-width:300px;overflow:hidden;text-overflow:ellipsis" title="'+esc(l['Próxima Ação']||'')+'">'+esc(l['Próxima Ação']||'')+'</td>'+
       '<td style="font-weight:500" title="'+esc(l['Prospect']||'')+'">'+esc(l['Prospect']||'')+'</td>'+
+      '<td style="font-size:.78rem">'+esc(l['Data Último Contato']||'')+'</td>'+
       '<td title="'+esc(l['Time Comercial']||'')+'">'+esc(l['Time Comercial']||'')+'</td>'+
       '<td title="'+esc(l['Lead']||'')+'">'+esc(l['Lead']||'')+'</td>'+
-      '<td style="font-weight:600;color:#000;max-width:240px;overflow:hidden;text-overflow:ellipsis" title="'+esc(l['Razão Social']||'')+'">'+esc(l['Razão Social']||'')+'</td>'+
       '<td style="font-size:.78rem" title="'+esc(l['CNPJ']||'')+'">'+esc(l['CNPJ']||'')+'</td>'+
       '<td title="'+esc(l['Cidade']||'')+'">'+esc(l['Cidade']||'')+'</td>'+
       '<td style="text-align:center">'+esc(l['UF']||'')+'</td>'+
@@ -1635,6 +1776,7 @@ function renderAll() { setTimeout(applyFilterStyle,50);
 
 function clearMainFlt() {
   activeStatus = '';
+  activeQuick = '';
   ['sfProspect','sfTime','sfUF','sfCanal'].forEach(id => {
     const w=$(id); if(!w)return;
     if(w._selected) w._selected.length=0;
@@ -1656,6 +1798,7 @@ function openForm(row) {
   const isE = !!L;
   const canE = true; // todos editam
   $('fTitle').textContent = isE ? 'Editar Lead' : 'Novo Lead';
+  $('fSave').textContent = isE ? 'Atualizar' : 'Salvar';
   // Admin e e-mails autorizados excluem qualquer lead; demais, só os próprios (Prospect = nome)
   const isOwnLead = isE && L && String(L['Prospect']||'').trim().toLowerCase() === String(U.nome||'').trim().toLowerCase();
   const canDel = isE && (canDirectAssign() || isOwnLead);
@@ -1838,7 +1981,7 @@ function openForm(row) {
 function fld(lbl,html,extra){return '<div class="fld'+(extra||'')+'"><label>'+lbl+'</label>'+html+'</div>';}
 function fldF(lbl,html){return '<div class="fld full"><label>'+lbl+'</label>'+html+'</div>';}
 function isFormOpen(){return !$('modForm').classList.contains('hidden');}
-function closeForm(){$('modForm').classList.add('hidden');editRow=null;pendingTransfer=false;assignedProspect='';}
+function closeForm(){$('modForm').classList.add('hidden');editRow=null;pendingTransfer=false;assignedProspect='';if(_returnToPanel){var rr=_returnPanelRow,rs=_returnPanelSrc;_returnToPanel=false;if(rr!=null)openLeadPanel(rr,rs);}}
 
 let saving = false;
 async function saveLead() {
@@ -1855,7 +1998,7 @@ async function saveLead() {
   } finally {
     saving = false;
     saveBtn.classList.remove('btn-loading');
-    saveBtn.textContent = 'Salvar';
+    saveBtn.textContent = editRow ? 'Atualizar' : 'Salvar';
   }
 }
 
@@ -1884,6 +2027,23 @@ async function _doSaveLead() {
     'Links':[...document.querySelectorAll('#linksContainer .link-row-input')].map(function(i){return i.value.trim();}).filter(Boolean).join(' | '),
     'Anexos':JSON.stringify(_getAttachmentList()),
   };
+  // Log automático de atividades (Lead criado / mudança de status)
+  (function(){
+    var acts=[];
+    if(editRow){
+      var _L=curData().find(function(l){return l._row===editRow;});
+      acts=_L?_getActs(_L):[];
+      var prev=_L?(_L['Status']||''):'';
+      if(prev && lead['Status'] && prev!==lead['Status']){
+        var n=nowBR();
+        acts.unshift({type:'status',date:n.date,time:n.time,author:(U&&U.nome)||'—',title:'🔄 Status alterado: '+prev+' → '+lead['Status']});
+      }
+    } else {
+      var n2=nowBR();
+      acts.unshift({type:'created',date:n2.date,time:n2.time,author:(U&&U.nome)||'—',title:'✨ Lead criado'});
+    }
+    lead['Atividades']=JSON.stringify(acts);
+  })();
   // Admin NÃO tem campos obrigatórios. Todas as validações valem só para os demais
   // usuários (inclui Camily e qualquer e-mail autorizado — eles não são admin).
   if (!U.admin) {
@@ -1946,6 +2106,8 @@ async function _doSaveLead() {
       toast(editRow?'Lead atualizado!':'Lead cadastrado!','ok');
     }
     closeForm(); await reload();
+    if($('leadPanel')&&$('leadPanel').classList.contains('open')) renderPanel();
+    { var _fv=$('funilView'); if(_fv&&!_fv.classList.contains('hidden')) renderFunil(); }
   }
 }
 
@@ -1972,7 +2134,6 @@ var KB_STAGES = [
 ];
 
 function openFunil() {
-  $('modFunil').classList.remove('hidden');
   // Popula filtros com dados de LEADS + WhatsApp
   var allLeads = LEADS.concat(WA_LEADS);
   function fillSel(id, vals) {
@@ -1992,10 +2153,11 @@ function openFunil() {
     return v.email.toLowerCase()===(U&&U.email||'').toLowerCase();
   });
   if (_up) { var _ps=$('ffl_prospect'); if(_ps)_ps.value=_up.nome; }
+  renderFunilChips();
   renderFunil();
 }
 
-function closeFunil() { $('modFunil').classList.add('hidden'); }
+function closeFunil() { switchTab('leads'); }
 
 function onFunilPeriodo() {
   var v = $('ffl_periodo').value;
@@ -2009,10 +2171,12 @@ function resetFunilFlt() {
   var w = $('ffl_customWrap'); if (w) w.classList.add('hidden');
   $('ffl_time').value = '';
   $('ffl_prospect').value = '';
+  funilQuick=''; renderFunilChips();
   renderFunil();
 }
 
 function _funilLeads() {
+  LEADS.forEach(function(l){l._src='leads';}); WA_LEADS.forEach(function(l){l._src='wa';});
   var leads = LEADS.concat(WA_LEADS);
   var periodo  = ($('ffl_periodo')||{}).value || 'all';
   var fltTime  = ($('ffl_time')||{}).value || '';
@@ -2033,6 +2197,7 @@ function _funilLeads() {
     if (fltTime && String(l['Time Comercial']||'').trim() !== fltTime) return false;
     // Filtro de prospect
     if (fltPros && String(l['Prospect']||'').trim() !== fltPros) return false;
+    if (funilQuick && !matchesQuick(l, funilQuick)) return false;
     // Filtro de data
     if (periodo !== 'all') {
       var ld = parseDt(l['Data']);
@@ -2112,6 +2277,9 @@ function renderFunil() { setTimeout(applyFilterStyle,80);
   // Render kanban columns
   $('funilBody').innerHTML = KB_STAGES.map(function(s) {
     var ls = byStage[s.key];
+    if(DATE_QUICKS.indexOf(funilQuick)>=0){
+      ls = ls.slice().sort(function(a,b){ return _dprKey(a['Data Próxima Ação']).localeCompare(_dprKey(b['Data Próxima Ação'])); });
+    }
     var stageVal = ls.reduce(function(a,l){return a+parseVal(l['Valor do Pedido']);},0);
 
     var cards = ls.length===0
@@ -2147,7 +2315,7 @@ function renderFunil() { setTimeout(applyFilterStyle,80);
 
           return '<div class="kb-card" style="border-left-color:'+s.color+'" draggable="true"'
             +' ondragstart="kbDragStart(event,'+l._row+',\''+s.key.replace(/'/g,"\\'")+'\',\''+esc(l._src||'leads')+'\')"'
-            +' onclick="kbCardClick(event,'+l._row+')">'
+            +' onclick="kbCardClick(event,'+l._row+',\''+esc(l._src||'leads')+'\')">'
             +'<div class="kb-card-rs">'+esc(l['Razão Social']||'—')+'</div>'
             +'<div class="kb-card-pr">'+esc(l['Prospect']||'')+(l['Canal Principal']?' · '+esc(l['Canal Principal']):'')+'</div>'
             +'<div class="kb-card-foot">'
@@ -2211,18 +2379,29 @@ window.kbDrop = function(e, col, newStatus) {
 window.kbMove = async function(row, newStatus, src) {
   document.querySelectorAll('.kb-move-dd').forEach(function(d){d.style.display='none';});
   var action = (src==='wa') ? 'editWA' : 'editLead';
-  var r = await api('POST', {action:action, userEmail:U.email, row:row, lead:{'Status':newStatus}});
+  var arr = (src==='wa') ? WA_LEADS : LEADS;
+  var lead = arr.find(function(l){return l._row===row;});
+  var prev = lead ? (lead['Status']||'') : '';
+  var payload = {'Status':newStatus};
+  if (lead && prev!==newStatus) {
+    var acts = _getActs(lead);
+    var nb = nowBR();
+    acts.unshift({type:'status',date:nb.date,time:nb.time,author:(U&&U.nome)||'—',title:'🔄 Status alterado: '+(prev||'—')+' → '+newStatus});
+    payload['Atividades'] = JSON.stringify(acts);
+  }
+  var r = await api('POST', {action:action, userEmail:U.email, row:row, lead:payload});
   if (r.ok || r.error) {
-    var arr = (src==='wa') ? WA_LEADS : LEADS;
-    var lead = arr.find(function(l){return l._row===row;});
     if (lead) {
       lead['Status'] = newStatus;
+      if (payload['Atividades']) lead['Atividades'] = payload['Atividades'];
       var s = newStatus.toLowerCase();
       lead['Temperatura Lead'] = ['negociando','ganho'].includes(s)?'Quente':['contato feito','proposta enviada'].includes(s)?'Morno':s==='perdido'?'Perdido':'Frio';
     }
     if (r.error) { toast(r.error,'err'); return; }
     toast('Lead movido para '+newStatus,'ok');
     renderFunil();
+    renderAll();                                  // reflete a mudança nas guias Leads/WhatsApp
+    if($('leadPanel')&&$('leadPanel').classList.contains('open')) renderPanel();
   }
 };
 
@@ -2239,7 +2418,7 @@ window.kbCardClick = function(e, row, src) {
   if (e.target.closest('.kb-mv')) return;
   document.querySelectorAll('.kb-move-dd').forEach(function(d){d.style.display='none';});
   if (src === 'wa') curTab = 'wa'; else curTab = 'leads';
-  openForm(row);
+  openLeadPanel(row, src||'leads');
 };
 
 // Fecha dropdowns ao clicar fora
@@ -3290,8 +3469,6 @@ $('btnAdmin').onclick = openAdmin;
 $('btnTransfers').onclick = openTransfers;
 $('tClose').onclick = closeTransfers;
 $('modTransfers').onclick = e=>{if(e.target===$('modTransfers'))closeTransfers();};
-$('funilClose').onclick = closeFunil;
-$('modFunil').onclick = e=>{if(e.target===$('modFunil'))closeFunil();};
 document.addEventListener('click',e=>{if(!$('bellWrap').contains(e.target))$('bellDD').classList.remove('open');});
 $('fClose').onclick = closeForm;
 $('fCancel').onclick = closeForm;
@@ -3406,6 +3583,368 @@ function applyFilterStyle() {
     obs.observe(document.body, {childList:true, subtree:true, attributes:false});
   });
 })();
+
+/* ═══════════════ REDESIGN 2026 — painel lateral, atividades, filtros rápidos, lembrete ═══════════════ */
+var activeQuick = '';   // filtro rápido da tabela (leads/wa)
+var funilQuick  = '';   // filtro rápido do funil
+var _panelRow = null, _panelSrc = 'leads', _panelTab = 'timeline-tab';
+var _returnToPanel = false, _returnPanelRow = null, _returnPanelSrc = 'leads';
+var _composerKind = '';
+
+// ── Data/hora de Brasília ──
+function nowBR(){
+  var p = {};
+  try{
+    new Intl.DateTimeFormat('pt-BR',{timeZone:'America/Sao_Paulo',day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',hour12:false})
+      .formatToParts(new Date()).forEach(function(x){p[x.type]=x.value;});
+  }catch(_){
+    var d=new Date(); p.day=String(d.getDate()).padStart(2,'0');p.month=String(d.getMonth()+1).padStart(2,'0');p.year=d.getFullYear();p.hour=String(d.getHours()).padStart(2,'0');p.minute=String(d.getMinutes()).padStart(2,'0');
+  }
+  return {date:p.day+'/'+p.month+'/'+p.year, time:p.hour+':'+p.minute};
+}
+function parseBR(d){
+  if(!d) return null;
+  if(d instanceof Date) return new Date(d.getFullYear(),d.getMonth(),d.getDate());
+  var m = String(d).trim().split(' ')[0].split('/');
+  return m.length===3 ? new Date(+m[2],+m[1]-1,+m[0]) : null;
+}
+function _actTs(a){
+  if(!a||!a.date) return 0;
+  var d=parseBR(a.date); if(!d) return 0;
+  var t=0; if(a.time){var hm=String(a.time).split(':'); t=(+hm[0]||0)*60+(+hm[1]||0);}
+  return d.getTime()+t*60000;
+}
+
+// ── Filtros rápidos (compartilhados tabela + funil) ──
+var PROPOSAL_DAYS = 7;                 // dias parado em "Proposta enviada" para contar como sem retorno
+var DATE_QUICKS = ['hoje','amanha','restsemana','proxsemana','futuro'];
+function _daysSinceContact(l){
+  var raw = l['Data Último Contato'] || l['Data Primeiro Contato'] || l['Data'] || '';
+  var d = parseBR(raw); if(!d) return null;
+  var today = new Date(); today.setHours(0,0,0,0);
+  return Math.floor((today-d)/86400000);
+}
+// chave ordenável yyyymmdd a partir de dd/mm/aaaa
+function _dprKey(v){ var p=String(v||'').split('/'); return p.length===3?(p[2]+p[1]+p[0]):''; }
+// Opção B: quando a proposta foi enviada (log de status na timeline); fallback p/ leads antigos
+function _proposalDate(l){
+  try{
+    var acts=JSON.parse(l['Atividades']||'[]');
+    if(Array.isArray(acts)){
+      for(var i=0;i<acts.length;i++){
+        var a=acts[i];
+        if(a && a.type==='status' && /→\s*Proposta enviada\s*$/i.test(a.title||'')) return a.date;
+      }
+    }
+  }catch(_){}
+  return l['Data Último Contato'] || l['Data'] || '';
+}
+function _daysSinceProposal(l){
+  var d=parseBR(_proposalDate(l)); if(!d) return null;
+  var today=new Date(); today.setHours(0,0,0,0);
+  return Math.floor((today-d)/86400000);
+}
+// limites de semana (ISO: segunda→domingo) a partir de hoje
+function _weekBounds(){
+  var t=new Date(); t.setHours(0,0,0,0);
+  var today=t.getTime(), oneDay=86400000;
+  var dow=(t.getDay()+6)%7;                 // 0=segunda ... 6=domingo
+  var endThisWeek=today+(6-dow)*oneDay;      // domingo desta semana
+  return {today:today, tomorrow:today+oneDay, endThisWeek:endThisWeek, endNextWeek:endThisWeek+7*oneDay, oneDay:oneDay};
+}
+function matchesQuick(l,q){
+  var st = String(l['Status']||'').toLowerCase();
+  if(q==='semcontato'){
+    if(['ganho','perdido','inativo'].indexOf(st)>=0) return false;
+    var dd=_daysSinceContact(l); return dd!==null && dd>=7;
+  }
+  if(q==='propostasr'){
+    if(st!=='proposta enviada') return false;
+    var ds=_daysSinceProposal(l); return ds!==null && ds>=PROPOSAL_DAYS;   // Opção B: proposta parada há X dias
+  }
+  if(q==='quentes'){
+    var tp=(l['Temperatura Lead']||temp(l['Status'],l)||'').toLowerCase();
+    return tp==='quente';
+  }
+  if(DATE_QUICKS.indexOf(q)>=0){
+    var due=parseBR(l['Data Próxima Ação']); if(!due) return false;
+    var w=_weekBounds(), dd2=due.getTime();
+    if(q==='hoje')       return dd2===w.today;
+    if(q==='amanha')     return dd2===w.tomorrow;
+    if(q==='restsemana') return dd2>w.tomorrow && dd2<=w.endThisWeek;
+    if(q==='proxsemana') return dd2>w.endThisWeek && dd2<=w.endNextWeek;
+    if(q==='futuro')     return dd2>w.endNextWeek;
+  }
+  return true;
+}
+var QUICK_DEFS = [
+  {key:'semcontato', label:'⏳ Sem contato 7d+'},
+  {key:'propostasr', label:'📄 Proposta s/ retorno'},
+  {key:'quentes',    label:'🔥 Leads quentes'},
+  {key:'hoje',       label:'📅 Hoje'},
+  {key:'amanha',     label:'📅 Amanhã'},
+  {key:'restsemana', label:'📆 Resto da semana'},
+  {key:'proxsemana', label:'📆 Próxima semana'},
+  {key:'futuro',     label:'🗓️ Futuro'}
+];
+// Atalhos exibidos na TABELA (Leads/WhatsApp) — os atalhos por data ficam só no Funil
+var TABLE_QUICK_DEFS = QUICK_DEFS.filter(function(d){ return DATE_QUICKS.indexOf(d.key)<0; });
+function renderQuickChips(){
+  var bar=$('qfChips'); if(!bar) return;
+  bar.innerHTML = TABLE_QUICK_DEFS.map(function(d){
+    return '<button class="qf-chip'+(activeQuick===d.key?' active':'')+'" onclick="toggleQuick(\''+d.key+'\')">'+d.label+'</button>';
+  }).join('');
+}
+function toggleQuick(k){ activeQuick=(activeQuick===k?'':k); renderQuickChips(); renderAll(); }
+function renderFunilChips(){
+  var bar=$('ffQuick'); if(!bar) return;
+  bar.innerHTML = QUICK_DEFS.map(function(d){
+    return '<button class="qf-chip'+(funilQuick===d.key?' active':'')+'" onclick="toggleFunilQuick(\''+d.key+'\')">'+d.label+'</button>';
+  }).join('');
+}
+function toggleFunilQuick(k){ funilQuick=(funilQuick===k?'':k); renderFunilChips(); renderFunil(); }
+
+// ── Painel lateral do lead ──
+function openLeadPanel(row, src){
+  src = src || 'leads';
+  var arr = src==='wa' ? WA_LEADS : LEADS;
+  var L = arr.find(function(l){return l._row===row;});
+  if(!L){
+    L = LEADS.find(function(l){return l._row===row;}); if(L){src='leads';}
+    else { L = WA_LEADS.find(function(l){return l._row===row;}); if(L){src='wa';} }
+  }
+  if(!L) return;
+  _panelRow=row; _panelSrc=src; curTab=src; _panelTab='timeline-tab';
+  renderPanel();
+  $('leadPanelBackdrop').classList.add('show');
+  $('leadPanel').classList.add('open');
+}
+function closeLeadPanel(){
+  $('leadPanel').classList.remove('open');
+  $('leadPanelBackdrop').classList.remove('show');
+  _panelRow=null;
+}
+function _panelLead(){
+  var arr=_panelSrc==='wa'?WA_LEADS:LEADS;
+  return arr.find(function(l){return l._row===_panelRow;});
+}
+function _getActs(L){
+  try{ var a=JSON.parse(L['Atividades']||'[]'); return Array.isArray(a)?a:[]; }catch(_){ return []; }
+}
+function switchPanelTab(el,id){
+  _panelTab=id;
+  document.querySelectorAll('#leadPanel .pnl-tab').forEach(function(t){t.classList.remove('active');});
+  if(el) el.classList.add('active');
+  ['timeline-tab','details-tab','deal-tab','files-tab'].forEach(function(t){
+    var e=$(t); if(e) e.style.display=(t===id?'block':'none');
+  });
+}
+function _buildTimeline(L){
+  var items=[];
+  _getActs(L).forEach(function(a){ items.push(a); });
+  if(L['Data']) items.push({type:'created',date:L['Data'],author:'Sistema',title:'✨ Lead criado'});
+  if(L['Data Primeiro Contato']) items.push({type:'contact',date:L['Data Primeiro Contato'],author:'Sistema',title:'📞 Primeiro contato registrado'});
+  if(L['Data Último Contato'] && L['Data Último Contato']!==L['Data Primeiro Contato']) items.push({type:'contact',date:L['Data Último Contato'],author:'Sistema',title:'🕑 Último contato'});
+  if(L['Data Próxima Ação']) items.push({type:'task',date:L['Data Próxima Ação'],author:'Agenda',title:'⏰ Próxima ação agendada',body:L['Próxima Ação']||''});
+  items.sort(function(a,b){return _actTs(b)-_actTs(a);});
+  return items;
+}
+function _row2(lbl,val){ return '<div class="info-item"><label>'+esc(lbl)+'</label><span>'+(val?esc(val):'—')+'</span></div>'; }
+function _panelDetails(L){
+  var isExp=String(L['Time Comercial']||'').toLowerCase().indexOf('exporta')>=0;
+  var tel=L['Telefone']||L['Telefone Internacional']||'';
+  var s='';
+  s+='<div class="lp-editrow"><button class="btn btn-teal btn-sm" onclick="editFromPanel()">✏️ Editar</button></div>';
+  s+='<div class="pnl-sec"><div class="pnl-sec-t">Contato</div><div class="info-grid">'+
+     _row2('Contato Principal',L['Contato Principal'])+_row2('Telefone',tel)+
+     _row2('E-mail',L['E-mail'])+_row2('Canal Principal',L['Canal Principal'])+'</div></div>';
+  s+='<div class="pnl-sec"><div class="pnl-sec-t">Empresa</div><div class="info-grid">'+
+     _row2('Razão Social',L['Razão Social'])+
+     _row2(isExp?'Registro':'CNPJ', isExp?L['Registro']:L['CNPJ'])+
+     _row2('Lead',L['Lead'])+
+     _row2('Cidade / UF',[L['Cidade'],L['UF']].filter(Boolean).join(' · '))+
+     (isExp?_row2('País',L['País']):'')+
+     _row2('Endereço Fiscal',L['Endereço Fiscal'])+'</div></div>';
+  s+='<div class="pnl-sec"><div class="pnl-sec-t">Comercial</div><div class="info-grid">'+
+     _row2('Prospect',L['Prospect'])+_row2('E-mail do Vendedor',L['E-mail Prospect'])+
+     _row2('Time Comercial',L['Time Comercial'])+_row2('Status',L['Status'])+
+     _row2('Status Inicial',L['Status Inicial'])+_row2('Data de Registro',L['Data'])+'</div></div>';
+  s+='<div class="pnl-sec"><details><summary class="pnl-more">Dados fiscais e interesse (expandir)</summary><div class="info-grid" style="margin-top:12px">'+
+     _row2('SUFRAMA',L['SUFRAMA'])+_row2('Regime',L['Regime'])+_row2('CNAE',L['CNAE'])+
+     _row2('Linha de Interesse',L['Linha de Interesse'])+_row2('Produto(s) de Interesse',L['Produto(s) de Interesse'])+
+     _row2('Observações',L['Observações'])+'</div></details></div>';
+  return s;
+}
+function _panelDeal(L){
+  var st=L['Status']||'';
+  var order=['Novo','Contato feito','Proposta enviada','Negociando','Ganho'];
+  var idx=order.indexOf(st);
+  var segs=order.map(function(o,i){
+    var col=i<idx&&idx>=0?'var(--green)':(i===idx?'var(--teal)':'#e0e3eb');
+    return '<div style="flex:1;height:6px;background:'+col+'" title="'+esc(o)+'"></div>';
+  }).join('');
+  var next='';
+  if(L['Data Próxima Ação']){
+    var d=parseBR(L['Data Próxima Ação']); var today=new Date();today.setHours(0,0,0,0);
+    var diff=d?Math.floor((d-today)/86400000):null;
+    var cls=diff===null?'lp-ok':diff<0?'lp-late':diff<=3?'lp-soon':'lp-ok';
+    var lbl=diff===null?'':diff<0?('⚠ Vencida há '+Math.abs(diff)+' dia(s)'):diff===0?'📅 Hoje':diff===1?'📅 Amanhã':'📅 em '+diff+' dias';
+    next='<div class="pnl-sec"><div class="pnl-sec-t">Próxima Ação</div><div class="lp-next '+cls+'">'+
+      '<div class="lp-next-lbl">'+lbl+'</div>'+
+      '<div class="lp-next-body">'+esc(L['Próxima Ação']||'—')+'</div>'+
+      '<div class="lp-next-date">Previsto: '+esc(L['Data Próxima Ação'])+'</div>'+
+      (L['E-mail Prospect']?'<div class="lp-next-mail">🔔 Lembrete por e-mail agendado para '+esc(L['E-mail Prospect'])+'</div>':'')+
+    '</div></div>';
+  }
+  return '<div class="pnl-sec"><div class="pnl-sec-t">Pipeline</div>'+
+      '<div style="display:flex;gap:3px;margin-bottom:8px">'+segs+'</div>'+
+      '<div style="font-size:.72rem;color:var(--muted)">Etapa atual: <b style="color:var(--navy)">'+esc(st||'—')+'</b></div></div>'+
+    '<div class="pnl-sec"><div class="pnl-sec-t">Interesse &amp; Valor</div><div class="info-grid">'+
+      _row2('Linha de Interesse',L['Linha de Interesse'])+_row2('Produtos',L['Produto(s) de Interesse'])+
+      _row2('Valor do Pedido',L['Valor do Pedido'])+_row2('Nº do Pedido',L['Nº do Pedido'])+
+      _row2('Motivo da Perda',L['Motivo da Perda'])+'</div></div>'+next;
+}
+function _panelFiles(L){
+  var files=[]; try{files=JSON.parse(L['Anexos']||'[]');if(!Array.isArray(files))files=[];}catch(_){files=[];}
+  var links=(L['Links']||'').split('|').map(function(s){return s.trim();}).filter(Boolean);
+  var fh=files.map(function(f){
+    var icon=/image/i.test(f.mimeType)?'🖼️':/pdf/i.test(f.mimeType)?'📄':'📎';
+    return '<a class="lp-file" href="'+esc(f.url)+'" target="_blank" rel="noopener"><span>'+icon+'</span><span class="lp-file-n">'+esc(f.name)+'</span><span class="lp-file-o">Abrir ↗</span></a>';
+  }).join('');
+  var lh=links.map(function(u){
+    return '<a class="lp-file" href="'+esc(u)+'" target="_blank" rel="noopener"><span>🔗</span><span class="lp-file-n">'+esc(u)+'</span><span class="lp-file-o">Abrir ↗</span></a>';
+  }).join('');
+  var body=(fh+lh)||'<div class="lp-empty">Nenhum anexo ou link.</div>';
+  return '<div class="pnl-sec"><div class="pnl-sec-t">Anexos e Links</div><div class="lp-files">'+body+'</div>'+
+    '<button class="btn btn-outline btn-sm" style="color:var(--navy);border-color:var(--border);margin-top:12px" onclick="editFromPanel()">+ Gerenciar anexos (Editar)</button></div>';
+}
+function renderPanel(){
+  var L=_panelLead(); if(!L) return;
+  var st=L['Status']||''; var sc=ST_C[st]||'#999';
+  var t=(L['Temperatura Lead']||temp(L['Status'],L)||'');
+  $('lpTitle').textContent=L['Razão Social']||L['Lead']||'Lead';
+  var sub=[L['Cidade'],L['UF'],L['CNPJ']?('CNPJ '+L['CNPJ']):''].filter(Boolean).join(' · ');
+  $('lpSub').textContent=sub||(L['E-mail']||'');
+  $('lpBadges').innerHTML='<span class="st-badge" style="background:'+sc+'">'+esc(st)+'</span>'+(t?(' <span class="lp-temp">'+thermoHTML(t)+' '+esc(t)+'</span>'):'');
+  var items=_buildTimeline(L);
+  var tl=items.map(function(a){
+    var dotc={call:'dot-call',email:'dot-email',note:'dot-note',status:'dot-status',proposal:'dot-proposal',task:'dot-task',contact:'dot-contact',created:'dot-created'}[a.type]||'dot-status';
+    var when=esc(a.date||'')+(a.time?(' · '+esc(a.time)):'');
+    var body=a.body?('<div class="tl-body">'+esc(a.body)+'</div>'):'';
+    return '<div class="tl-item"><div class="tl-dot '+dotc+'"></div><div class="tl-head"><span class="tl-type">'+esc(a.title||'')+'</span><span class="tl-date">'+when+'</span><span class="tl-author">'+esc(a.author||'')+'</span></div>'+body+'</div>';
+  }).join('');
+  $('timeline-tab').innerHTML=
+    '<div class="tl-actions">'+
+      '<button class="tl-btn" onclick="openComposer(\'call\')">📞 Registrar Ligação</button>'+
+      '<button class="tl-btn" onclick="openComposer(\'email\')">📧 Registrar E-mail</button>'+
+      '<button class="tl-btn" onclick="openComposer(\'note\')">📝 Adicionar Nota</button>'+
+      '<button class="tl-btn" onclick="openComposer(\'task\')">📋 Agendar Tarefa</button>'+
+      '<button class="tl-btn" onclick="openComposer(\'status\')">🔄 Alterar Status</button>'+
+    '</div><div id="lpComposer" style="display:none"></div><div class="tl-wrap">'+(tl||'<div class="lp-empty">Sem atividades registradas.</div>')+'</div>';
+  $('details-tab').innerHTML=_panelDetails(L);
+  $('deal-tab').innerHTML=_panelDeal(L);
+  $('files-tab').innerHTML=_panelFiles(L);
+  document.querySelectorAll('#leadPanel .pnl-tab').forEach(function(tb){ tb.classList.toggle('active', tb.getAttribute('data-tab')===_panelTab); });
+  ['timeline-tab','details-tab','deal-tab','files-tab'].forEach(function(id){ var e=$(id); if(e) e.style.display=(id===_panelTab?'block':'none'); });
+}
+function editFromPanel(){
+  var row=_panelRow, src=_panelSrc;
+  _returnToPanel=true; _returnPanelRow=row; _returnPanelSrc=src;
+  curTab=src; closeLeadPanel(); openForm(row);
+}
+function openComposer(kind){
+  _composerKind=kind;
+  var L=_panelLead(); if(!L) return;
+  var n=nowBR();
+  var box=$('lpComposer'); if(!box) return;
+  var statusList=(CFG.status&&CFG.status.length?CFG.status:ST);
+  var head={call:'📞 Registrar Ligação',email:'📧 Registrar E-mail',note:'📝 Adicionar Nota',task:'📋 Agendar Tarefa',status:'🔄 Alterar Status'}[kind]||'';
+  var h='<div class="cmp-head">'+head+'</div>';
+  if(kind==='call'){
+    h+='<div class="cmp-row"><div class="cmp-fg"><label>Data</label><input id="cmp_date" value="'+esc(n.date)+'" placeholder="dd/mm/aaaa" maxlength="10"></div>'+
+       '<div class="cmp-fg"><label>Horário</label><input id="cmp_time" value="'+esc(n.time)+'" placeholder="hh:mm" maxlength="5"></div></div>'+
+       '<label class="cmp-l">Descrição</label><textarea id="cmp_body" rows="3" placeholder="Resumo da ligação..."></textarea>';
+  } else if(kind==='email'){
+    h+='<div class="cmp-fg"><label>Para</label><input id="cmp_to" value="'+esc(L['E-mail']||'')+'" placeholder="e-mail do contato"></div>'+
+       '<label class="cmp-l">Mensagem / assunto</label><textarea id="cmp_body" rows="3" placeholder="Conteúdo do e-mail..."></textarea>';
+  } else if(kind==='note'){
+    h+='<label class="cmp-l">Observação</label><textarea id="cmp_body" rows="3" placeholder="Escreva a nota..."></textarea>';
+  } else if(kind==='task'){
+    h+='<div class="cmp-fg"><label>Data da próxima ação</label><input id="cmp_date" value="'+esc(L['Data Próxima Ação']||'')+'" placeholder="dd/mm/aaaa" maxlength="10"></div>'+
+       '<label class="cmp-l">Próxima ação</label><textarea id="cmp_body" rows="2" placeholder="O que precisa ser feito...">'+esc(L['Próxima Ação']||'')+'</textarea>';
+  } else if(kind==='status'){
+    h+='<label class="cmp-l">Novo status</label><select id="cmp_status" onchange="onComposerStatus()">'+
+       statusList.map(function(o){return '<option'+((L['Status']||'')===o?' selected':'')+'>'+esc(o)+'</option>';}).join('')+
+       '</select><div id="cmp_extra"></div>';
+  }
+  h+='<div class="cmp-actions"><button class="btn btn-outline btn-sm" style="color:var(--text);border-color:var(--border)" onclick="closeComposer()">Cancelar</button>'+
+     '<button class="btn btn-teal btn-sm" onclick="saveComposer()">Salvar</button></div>';
+  box.innerHTML=h; box.style.display='block';
+  if(kind==='status') onComposerStatus();
+  var fst=box.querySelector('textarea,input,select'); if(fst) try{fst.focus();}catch(_){}
+}
+function onComposerStatus(){
+  var sel=$('cmp_status'); if(!sel) return;
+  var L=_panelLead()||{}; var v=sel.value; var ex=$('cmp_extra'); if(!ex) return;
+  if(v==='Ganho'){
+    ex.innerHTML='<div class="cmp-row"><div class="cmp-fg"><label>Valor do Pedido</label><input id="cmp_valor" value="'+esc(L['Valor do Pedido']||'')+'" placeholder="R$ 0,00"></div>'+
+      '<div class="cmp-fg"><label>Nº do Pedido</label><input id="cmp_pedido" value="'+esc(L['Nº do Pedido']||'')+'" placeholder="nº do pedido"></div></div>';
+  } else if(v==='Perdido'){
+    ex.innerHTML='<label class="cmp-l">Motivo da Perda</label><textarea id="cmp_motivo" rows="2" placeholder="Descreva o motivo...">'+esc(L['Motivo da Perda']||'')+'</textarea>';
+  } else { ex.innerHTML=''; }
+}
+function closeComposer(){ var b=$('lpComposer'); if(b){b.style.display='none'; b.innerHTML='';} _composerKind=''; }
+async function saveComposer(){
+  var L=_panelLead(); if(!L) return;
+  var kind=_composerKind, n=nowBR(), patch={}, act=null;
+  var body=(($('cmp_body')||{}).value||'').trim();
+  if(kind==='call'){
+    var dt=(($('cmp_date')||{}).value||n.date).trim(), tm=(($('cmp_time')||{}).value||n.time).trim();
+    if(!body){toast('Escreva a descrição da ligação.','err');return;}
+    patch['Data Último Contato']=dt;
+    act={type:'call',date:dt,time:tm,author:(U&&U.nome)||'—',title:'📞 Ligação',body:body};
+  } else if(kind==='email'){
+    var to=(($('cmp_to')||{}).value||'').trim();
+    if(!body){toast('Escreva o conteúdo do e-mail.','err');return;}
+    patch['Data Último Contato']=n.date;
+    act={type:'email',date:n.date,time:n.time,author:(U&&U.nome)||'—',title:'📧 E-mail'+(to?(' — '+to):''),body:body};
+  } else if(kind==='note'){
+    if(!body){toast('Escreva a observação.','err');return;}
+    var prevOb=(L['Observações']||'').trim();
+    patch['Observações']=prevOb?(prevOb+'\n['+n.date+' '+n.time+'] '+body):('['+n.date+' '+n.time+'] '+body);
+    act={type:'note',date:n.date,time:n.time,author:(U&&U.nome)||'—',title:'📝 Nota',body:body};
+  } else if(kind==='task'){
+    var td=(($('cmp_date')||{}).value||'').trim();
+    if(!td){toast('Informe a data da próxima ação.','err');return;}
+    if(!body){toast('Descreva a próxima ação.','err');return;}
+    patch['Data Próxima Ação']=td; patch['Próxima Ação']=body;
+    act={type:'task',date:td,time:n.time,author:(U&&U.nome)||'—',title:'📋 Tarefa agendada',body:body};
+  } else if(kind==='status'){
+    var ns=(($('cmp_status')||{}).value||'').trim(), prev=(L['Status']||'').trim();
+    if(!ns){toast('Selecione um status.','err');return;}
+    if(ns==='Ganho'){
+      var vv=(($('cmp_valor')||{}).value||'').trim(), pp=(($('cmp_pedido')||{}).value||'').trim();
+      if(!vv){toast('Status Ganho exige Valor do Pedido.','err');return;}
+      if(!pp){toast('Status Ganho exige Nº do Pedido.','err');return;}
+      patch['Valor do Pedido']=vv; patch['Nº do Pedido']=pp;
+    } else if(ns==='Perdido'){
+      var mm=(($('cmp_motivo')||{}).value||'').trim();
+      if(!mm){toast('Status Perdido exige Motivo da Perda.','err');return;}
+      patch['Motivo da Perda']=mm;
+    }
+    patch['Status']=ns;
+    act={type:'status',date:n.date,time:n.time,author:(U&&U.nome)||'—',title:'🔄 Status alterado: '+(prev||'—')+' → '+ns};
+  } else { return; }
+  var acts=_getActs(L); if(act) acts.unshift(act);
+  patch['Atividades']=JSON.stringify(acts);
+  Object.keys(patch).forEach(function(k){ L[k]=patch[k]; });
+  closeComposer(); renderPanel();
+  var r=await api('POST',{action:(_panelSrc==='wa'?'editWA':'editLead'),userEmail:U.email,row:_panelRow,lead:patch});
+  if(r&&r.error){ toast('Salvo na tela, mas erro ao gravar na planilha: '+r.error,'err'); }
+  else { toast('Registrado.','ok'); }
+  renderAll();
+  var fv=$('funilView'); if(fv&&!fv.classList.contains('hidden')) renderFunil();
+}
 
 autoLogin();
 </script>
