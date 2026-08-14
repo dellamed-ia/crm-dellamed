@@ -460,6 +460,17 @@ body{background:
 .leads-tbl thead th{position:sticky!important;top:0!important;z-index:41!important;background:#53677f!important;box-shadow:0 2px 0 #77899d,0 6px 12px rgba(30,41,59,.18)!important}
 .dcard-weekday canvas{max-height:310px!important}
 
+/* === CNAE colapsável (lista com + para expandir) === */
+.cnae-hidden{display:none}
+.cnae-box{border:1px solid rgba(0,0,0,.15);border-radius:6px;padding:5px 9px;background:#fff}
+.cnae-box>summary.cnae-sum{cursor:pointer;list-style:none;font-size:.8rem;color:#0A2A4E;display:flex;align-items:center;gap:7px;user-select:none}
+.cnae-box>summary.cnae-sum::-webkit-details-marker{display:none}
+.cnae-box>summary.cnae-sum::before{content:'+';display:inline-block;width:16px;height:16px;line-height:15px;text-align:center;border:1px solid #00897B;border-radius:4px;color:#00897B;font-weight:700;flex-shrink:0}
+.cnae-box[open]>summary.cnae-sum::before{content:'\2212'}
+.cnae-list{margin:8px 0 2px;padding-left:22px}
+.cnae-list li{font-size:.78rem;color:#000;padding:2px 0;line-height:1.35}
+.cnae-list:empty::after{content:'Nenhum CNAE — clique na lupa do CNPJ';font-size:.75rem;color:#888;font-style:italic}
+
 </style>
 
 <!-- crmVisualTuningV2 removido -->
@@ -1631,14 +1642,16 @@ function openForm(row) {
   const isE = !!L;
   const canE = true; // todos editam
   $('fTitle').textContent = isE ? 'Editar Lead' : 'Novo Lead';
-  // Admin exclui qualquer lead; vendedor exclui só os dele (Prospect = nome do usuário)
+  // Admin e e-mails autorizados excluem qualquer lead; demais, só os próprios (Prospect = nome)
   const isOwnLead = isE && L && String(L['Prospect']||'').trim().toLowerCase() === String(U.nome||'').trim().toLowerCase();
-  const canDel = isE && (U.admin || isOwnLead);
+  const canDel = isE && (canDirectAssign() || isOwnLead);
   $('fDel').classList.toggle('hidden', !canDel);
   const dis = canE?'':'disabled';
   const rq = U.admin ? '' : ' fld-req';
   const isGanho = L ? (L['Status']||'').toLowerCase()==='ganho' : false;
-  const ganhoRq = isGanho ? ' fld-req' : '';
+  const ganhoRq = (!U.admin && isGanho) ? ' fld-req' : '';
+  const isPerdido = L ? (L['Status']||'').toLowerCase()==='perdido' : false;
+  const perdidoRq = (!U.admin && isPerdido) ? ' fld-req' : '';
   // Parse phones
   const phs = (L?L['Telefone']:'').split('|').map(s=>s.trim());
   function sp(p){const m=p.match(/^\(?(\d{2})\)?\s*(.*)$/);return m?{d:m[1],n:m[2]}:{d:'',n:p};}
@@ -1690,13 +1703,12 @@ function openForm(row) {
       }
     })()+
     fld('Time Comercial','<select id="f_tm" '+dis+' onchange="toggleExportacao()"><option value="">Selecione...</option>'+((CFG.timeComercial||[]).map(t=>'<option'+(L&&L['Time Comercial']===t?' selected':'')+'>'+t+'</option>')).join('')+'</select>',rq)+
-    fld('Razão Social','<input id="f_rs" value="'+esc(L?L['Razão Social']:'')+'" '+dis+'>',rq)+
-    fld('Lead','<input id="f_lead" value="'+esc(L?L['Lead']:'')+'" '+dis+'>')+
     (function(){
       var isExp = L && String(L['Time Comercial']||'').toLowerCase().includes('exporta');
-      // CNPJ (oculto se exportação)
+      // CNPJ (oculto se exportação) — com botão lupa que consulta a Receita e autopreenche
       var cnpjField = '<div id="wrap_cnpj"'+(isExp?' style="display:none"':'')+'>'+
-        fld('CNPJ','<input id="f_cnpj" value="'+esc(L?L['CNPJ']:'')+'" '+dis+' placeholder="00.000.000/0000-00" maxlength="18" oninput="mCNPJ(this)">')+
+        fld('CNPJ','<div style="display:flex;gap:6px;align-items:center"><input id="f_cnpj" value="'+esc(L?L['CNPJ']:'')+'" '+dis+' placeholder="00.000.000/0000-00" maxlength="18" oninput="mCNPJ(this)" style="flex:1">'+
+          '<button type="button" class="btn btn-sm btn-teal" title="Buscar dados na Receita e preencher automaticamente" onclick="buscarCNPJ(($(\'f_cnpj\')||{}).value)" style="flex-shrink:0;padding:6px 11px">🔍</button></div>')+
       '</div>';
       // Registro + País + Telefone Internacional (visível só se exportação)
       var telInt = L ? _parseTelInt(L['Telefone Internacional']||'') : {ddi:'',dd:'',num:''};
@@ -1715,6 +1727,14 @@ function openForm(row) {
       '</div>';
       return cnpjField + expFields;
     })()+
+    fld('Razão Social','<input id="f_rs" value="'+esc(L?L['Razão Social']:'')+'" '+dis+'>',rq)+
+    fld('Endereço Fiscal','<input id="f_endereco" value="'+esc(L?(L['Endereço Fiscal']||''):'')+'" '+dis+' placeholder="Rua, nº, bairro">')+
+    fld('Cidade','<input id="f_ci" value="'+esc(L?L['Cidade']:'')+'" '+dis+'>')+
+    fld('UF','<select id="f_uf" '+dis+'><option value="">—</option>'+((CFG.ufs||[]).map(u=>'<option'+(L&&L['UF']===u?' selected':'')+'>'+u+'</option>')).join('')+'</select>',rq)+
+    fld('SUFRAMA','<input id="f_suframa" value="'+esc(L?(L['SUFRAMA']||''):'')+'" '+dis+' placeholder="Preenchido pelo CNPJ">')+
+    fld('Regime','<select id="f_regime" '+dis+'><option value="">Selecione o regime…</option>'+['Simples Nacional','MEI','Lucro Presumido','Lucro Real'].map(function(o){return '<option'+(L&&L['Regime']===o?' selected':'')+'>'+o+'</option>';}).join('')+'</select>')+
+    fldF('CNAE','<details class="cnae-box"><summary class="cnae-sum" id="cnaeSum">CNAE</summary><ul class="cnae-list" id="cnaeList"></ul></details><textarea id="f_cnae" class="cnae-hidden" '+dis+'>'+esc(L?(L['CNAE']||''):'')+'</textarea>')+
+    fld('Lead','<input id="f_lead" value="'+esc(L?L['Lead']:'')+'" '+dis+'>')+
     fld('Contato Principal','<input id="f_cp" value="'+esc(L?L['Contato Principal']:'')+'" '+dis+'>',rq)+
     (function(){
       var isExp = L && String(L['Time Comercial']||'').toLowerCase().includes('exporta');
@@ -1725,8 +1745,6 @@ function openForm(row) {
     })()+
     fld('Telefone 2','<div class="phone-row"><input class="ph-ddd" id="f_d2" value="'+esc(p2.d?'('+p2.d+')':'')+'" '+dis+' placeholder="(00)" maxlength="4" oninput="mDDD(this)"><input class="ph-num" id="f_n2" value="'+esc(p2.n)+'" '+dis+' placeholder="00000-0000" maxlength="10" oninput="mPH(this)"></div>')+
     fld('E-mail','<input id="f_em" value="'+esc(L?L['E-mail']:'')+'" '+dis+'>',rq)+
-    fld('Cidade','<input id="f_ci" value="'+esc(L?L['Cidade']:'')+'" '+dis+'>')+
-    fld('UF','<select id="f_uf" '+dis+'><option value="">—</option>'+((CFG.ufs||[]).map(u=>'<option'+(L&&L['UF']===u?' selected':'')+'>'+u+'</option>')).join('')+'</select>',rq)+
     fld('Canal Principal','<select id="f_ca" '+dis+'><option value="">Selecione...</option>'+((CFG.canalPrincipal||[]).map(c=>'<option'+(L&&L['Canal Principal']===c?' selected':'')+'>'+c+'</option>')).join('')+'</select>',rq)+
     fld('Linha de Interesse','<div id="ms_li" class="msel" data-sel="'+esc(L?L['Linha de Interesse']:'')+'"></div>')+
     fldF('Produto(s) de Interesse','<textarea id="f_pd" rows="2" '+dis+' placeholder="D30, D90, D12...">'+esc(L?L['Produto(s) de Interesse']:'')+'</textarea>')+
@@ -1736,7 +1754,7 @@ function openForm(row) {
     fld('Data Próxima Ação','<input id="f_da" value="'+esc(L?L['Data Próxima Ação']:'')+'" '+dis+' placeholder="dd/mm/aaaa" maxlength="10" oninput="mDate(this)"><div class="fld-err" id="err_da">Formato inválido. Use dd/mm/aaaa</div>')+
     fld('Valor do Pedido','<input id="f_vl" value="'+esc(L?L['Valor do Pedido']:'')+'" '+dis+' placeholder="R$ 0,00" oninput="mBRL(this)">',ganhoRq)+
     fld('Nº do Pedido','<input id="f_np" value="'+esc(L?L['Nº do Pedido']:'')+'" '+dis+'>',ganhoRq)+
-    fld('Motivo da Perda','<div id="ms_mp" class="msel" data-sel="'+esc(L?L['Motivo da Perda']:'')+'"></div>')+
+    fld('Motivo da Perda','<div id="ms_mp" class="msel" data-sel="'+esc(L?L['Motivo da Perda']:'')+'"></div>',perdidoRq)+
     fldF('Observações','<textarea id="f_ob" '+dis+'>'+esc(L?L['Observações']:'')+'</textarea>')+
     (function(){
       const lks=(L&&L['Links']?L['Links']:'').split('|').map(function(s){return s.trim();}).filter(Boolean);
@@ -1797,6 +1815,7 @@ function openForm(row) {
 
   initMS('ms_li', CFG.linhaInteresse||[], !canE);
   initMS('ms_mp', CFG.motivoPerda||[], !canE);
+  renderCNAE($('f_cnae') ? $('f_cnae').value : '');
   $('modForm').classList.remove('hidden');
 }
 
@@ -1840,7 +1859,7 @@ async function _doSaveLead() {
     'Status':gv('f_st'),'Status Inicial':gv('f_si'),'Prospect':assignedProspect||gv('f_pr'),'E-mail Prospect':($('f_pr_email')||{value:''}).value.trim(),'Time Comercial':gv('f_tm'),
     'Razão Social':gv('f_rs'),'Lead':gv('f_lead'),'CNPJ':gv('f_cnpj'),'Registro':gv('f_registro'),'País':gv('f_pais'),'Contato Principal':gv('f_cp'),
     'Telefone':[t1,t2].filter(Boolean).join(' | '),'Telefone Internacional':[($('f_ddi')||{value:''}).value,($('f_intdd')||{value:''}).value,($('f_intnum')||{value:''}).value].filter(Boolean).join(' '),'E-mail':gv('f_em'),
-    'Cidade':gv('f_ci'),'UF':gv('f_uf'),'Canal Principal':gv('f_ca'),
+    'Cidade':gv('f_ci'),'UF':gv('f_uf'),'Endereço Fiscal':gv('f_endereco'),'SUFRAMA':gv('f_suframa'),'Regime':gv('f_regime'),'CNAE':gv('f_cnae'),'Canal Principal':gv('f_ca'),
     'Linha de Interesse':msVal('ms_li'),'Produto(s) de Interesse':gv('f_pd'),
     'Data Primeiro Contato':gv('f_dp'),'Data Último Contato':gv('f_du'),
     'Próxima Ação':gv('f_pa'),'Data Próxima Ação':gv('f_da'),
@@ -1849,15 +1868,19 @@ async function _doSaveLead() {
     'Links':[...document.querySelectorAll('#linksContainer .link-row-input')].map(function(i){return i.value.trim();}).filter(Boolean).join(' | '),
     'Anexos':JSON.stringify(_getAttachmentList()),
   };
-  // Status Inicial obrigatório para todos
-  if (!lead['Status Inicial']) { toast('Campo obrigatório: Status inicial','err'); return; }
-  // Ganho: Valor + Nº Pedido required for ALL users in BOTH tabs
-  if (lead['Status']==='Ganho') {
-    if (!lead['Valor do Pedido']){toast('Status Ganho exige: Valor do Pedido','err');return;}
-    if (!lead['Nº do Pedido']){toast('Status Ganho exige: Nº do Pedido','err');return;}
-  }
-  // Required fields for non-admin in BOTH tabs
+  // Admin NÃO tem campos obrigatórios. Todas as validações valem só para os demais
+  // usuários (inclui Camily e qualquer e-mail autorizado — eles não são admin).
   if (!U.admin) {
+    if (!lead['Status Inicial']) { toast('Campo obrigatório: Status inicial','err'); return; }
+    // Ganho: Valor + Nº Pedido
+    if (lead['Status']==='Ganho') {
+      if (!lead['Valor do Pedido']){toast('Status Ganho exige: Valor do Pedido','err');return;}
+      if (!lead['Nº do Pedido']){toast('Status Ganho exige: Nº do Pedido','err');return;}
+    }
+    // Perdido: Motivo da Perda
+    if (lead['Status']==='Perdido' && !lead['Motivo da Perda']) {
+      toast('Status Perdido exige: Motivo da Perda','err'); return;
+    }
     const req=[
       ['Status','Status'],['Prospect','Prospect'],['Time Comercial','Time Comercial'],
       ['Razão Social','Razão Social'],['CNPJ','CNPJ'],['Contato Principal','Contato Principal'],
@@ -1865,7 +1888,8 @@ async function _doSaveLead() {
       ['Data Primeiro Contato','Data Primeiro Contato']
     ];
     for (const [f,l] of req) if(!lead[f]){toast('Campo obrigatório: '+l,'err');return;}
-    if (!t1){toast('Campo obrigatório: Telefone 1','err');return;}
+    var _isExp = String(lead['Time Comercial']||'').toLowerCase().includes('exporta');
+    if (!_isExp && !t1){toast('Campo obrigatório: Telefone 1','err');return;}
   }
   if (!validateDates()) return;
   const addAct = curTab==='wa'?'addWA':'addLead', editAct = curTab==='wa'?'editWA':'editLead';
@@ -1909,7 +1933,8 @@ async function _doSaveLead() {
 }
 
 async function delLead() {
-  if (!editRow||!confirm('Excluir este lead?')) return;
+  if (!editRow) return;
+  if (!confirm('Tem certeza que deseja EXCLUIR este lead?\n\nEsta ação é permanente e não pode ser desfeita.')) return;
   const r=await api('POST',{action:curTab==='wa'?'deleteWA':'deleteLead',userEmail:U.email,row:editRow});
   if(r.ok){toast('Excluído.','ok');closeForm();await reload();}
   else toast(r.error||'Erro.','err');
@@ -2486,6 +2511,53 @@ function msVal(id){const c=$(id);if(!c)return '';return Array.from(c.querySelect
 
 // ═══════ MASKS ═══════
 function mCNPJ(el){let v=el.value.replace(/\D/g,'').substring(0,14);if(v.length>12)v=v.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{1,2})/,'$1.$2.$3/$4-$5');else if(v.length>8)v=v.replace(/^(\d{2})(\d{3})(\d{3})(\d{1,4})/,'$1.$2.$3/$4');else if(v.length>5)v=v.replace(/^(\d{2})(\d{3})(\d{1,3})/,'$1.$2.$3');else if(v.length>2)v=v.replace(/^(\d{2})(\d{1,3})/,'$1.$2');el.value=v;}
+// Monta a lista de CNAE (um por linha, colapsável) a partir do valor salvo.
+// Aceita separador " | " (formato salvo) ou quebra de linha.
+function renderCNAE(str){
+  var ul=$('cnaeList'), sum=$('cnaeSum'); if(!ul) return;
+  var items=String(str||'').split(/\s*\|\s*|\n/).map(function(s){return s.trim();}).filter(Boolean);
+  ul.innerHTML = items.map(function(it){return '<li>'+esc(it)+'</li>';}).join('');
+  if(sum) sum.textContent = items.length ? ('CNAE ('+items.length+' atividade'+(items.length>1?'s':'')+')') : 'CNAE';
+}
+// Consulta CNPJ (Receita via CNPJá open, grátis) e AUTOPREENCHE todos os dados disponíveis.
+async function buscarCNPJ(cnpj){
+  try{
+    var num=(cnpj||'').replace(/\D/g,'');
+    if(num.length!==14){ toast('Digite um CNPJ com 14 dígitos','err'); return; }
+    var r=await fetch('https://open.cnpja.com/office/'+num+'?suframa=true');
+    if(!r.ok){ toast('CNPJ não encontrado na Receita','err'); return; }
+    var d=await r.json();
+    var a=d.address||{};
+    var set=function(id,val){var el=$(id); if(el && val!==undefined && val!==null && val!=='') el.value=val;};
+    // Razão social, endereço fiscal, cidade e UF
+    set('f_rs', (d.company&&d.company.name) ? d.company.name : (d.alias||''));
+    set('f_endereco', [a.street,a.number,a.district].filter(Boolean).join(', '));
+    set('f_ci', a.city||'');
+    var ufEl=$('f_uf'); if(ufEl && a.state) ufEl.value=a.state;
+    // SUFRAMA — OK apenas se inscrição aprovada e ativa
+    var suf=(d.suframa||[]).find(function(s){return s.approved && s.status && s.status.text==='Ativa';});
+    set('f_suframa', suf ? ('OK — ativa (nº '+suf.number+')') : 'Sem SUFRAMA');
+    // Regime — API resolve só Simples/MEI; Lucro Real x Presumido é seleção manual
+    var rg=$('f_regime');
+    if(rg){
+      if(d.company&&d.company.simei&&d.company.simei.optant) rg.value='MEI';
+      else if(d.company&&d.company.simples&&d.company.simples.optant) rg.value='Simples Nacional';
+      // não-optante: não sobrescreve; usuário escolhe Presumido/Real
+      var precisa=!rg.value;
+      rg.style.borderColor = precisa ? '#FFB300' : '';
+      rg.style.background  = precisa ? '#FFF8E1' : '';
+    }
+    // CNAE — principal + secundárias
+    var cn=[];
+    if(d.mainActivity) cn.push(d.mainActivity.id+' — '+d.mainActivity.text+' (principal)');
+    (d.sideActivities||[]).forEach(function(c){ cn.push(c.id+' — '+c.text); });
+    var cnaeStr = cn.join(' | ');
+    var ce=$('f_cnae'); if(ce) ce.value=cnaeStr;
+    renderCNAE(cnaeStr);
+    var box=document.querySelector('.cnae-box'); if(box) box.open=true; // abre pra mostrar o que veio
+    toast('Dados do CNPJ preenchidos','ok');
+  }catch(e){ console.error('Falha na consulta CNPJ', e); toast('Falha ao consultar CNPJ','err'); }
+}
 function mDDD(el){let v=el.value.replace(/\D/g,'').substring(0,2);if(v.length>0)v='('+v;if(v.length>2)v+=')';el.value=v;}
 function mPH(el){let v=el.value.replace(/\D/g,'').substring(0,9);if(v.length>4)v=v.replace(/^(\d{4,5})(\d{1,4})/,'$1-$2');el.value=v;}
 
@@ -2609,10 +2681,14 @@ function _parseTelInt(str){
 }
 
 function toggleGanhoReq(){
+  if(U.admin) return; // admin não tem campos obrigatórios
   const isG=$('f_st').value==='Ganho';
   const vlP=$('f_vl').closest('.fld'), npP=$('f_np').closest('.fld');
   if(vlP){vlP.classList.toggle('fld-req',isG);}
   if(npP){npP.classList.toggle('fld-req',isG);}
+  const isP=$('f_st').value==='Perdido';
+  const mpEl=$('ms_mp'), mpP=mpEl?mpEl.closest('.fld'):null;
+  if(mpP){mpP.classList.toggle('fld-req',isP);}
 }
 
 // ═══════ DASHBOARD ═══════
@@ -3082,17 +3158,20 @@ async function openTransfers() {
   $('tBody').innerHTML = items.length ? items.map(t => {
     // Atribuição direta (canDirectAssign) vs Solicitação de transferência
     const isAtrib = (t.sheetName||'').toUpperCase() === 'ATRIBUICAO' || t.status === 'atribuido';
-    const bc = isAtrib ? 'b-attr'
+    const isExcl = (t.sheetName||'').toUpperCase() === 'EXCLUSAO' || t.status === 'excluido';
+    const bc = isExcl ? 'b-rej'
+             : isAtrib ? 'b-attr'
              : t.status==='pendente' ? 'b-pend'
              : t.status==='aprovado' ? 'b-ok'
              : 'b-rej';
-    const statusTxt = isAtrib ? 'Atribuição'
+    const statusTxt = isExcl ? 'Excluído'
+                    : isAtrib ? 'Atribuição'
                     : t.status==='aprovado' ? 'Aprovado'
                     : t.status==='recusado' ? 'Recusado'
                     : t.status;
-    const act = (!isAtrib && t.status==='pendente')
+    const act = (!isAtrib && !isExcl && t.status==='pendente')
       ? '<button class="btn btn-green btn-sm" onclick="actTransfer(\'approve\','+t._row+')">Aprovar</button> <button class="btn btn-danger btn-sm" onclick="actTransfer(\'reject\','+t._row+')">Recusar</button>'
-      : '<span style="font-size:.75rem;color:var(--muted)">Direta — sem aprovação</span>';
+      : '<span style="font-size:.75rem;color:var(--muted)">'+(isExcl?'Exclusão — registro':'Direta — sem aprovação')+'</span>';
     // Para atribuições antigas (antes do fix do Codigo.gs), nome pode estar em novoProspect
     const solicitante = t.nome || (isAtrib ? t.novoProspect : '');
     const para = isAtrib && !t.nome ? '(ver versão atualizada)' : esc(t.novoProspect);
