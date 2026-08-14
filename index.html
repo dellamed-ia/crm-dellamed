@@ -326,7 +326,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--teal)}
 .leads-tbl-wrap::-webkit-scrollbar-thumb:hover{background:rgba(10,42,78,.4)}
 .leads-tbl-wrap::-webkit-scrollbar-thumb:hover{background:rgba(10,42,78,.4)}
 .leads-tbl{width:100%;border-collapse:separate;border-spacing:0;font-size:.82rem;background:#fff;border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow)}
-.leads-tbl th{background:var(--navy);color:#fff;padding:12px 14px;text-align:left;font-size:.72rem;text-transform:uppercase;white-space:nowrap;position:sticky;top:0;z-index:2;cursor:pointer;user-select:none;transition:background .15s}
+.leads-tbl th{background:var(--navy);color:#fff;padding:8px 14px;text-align:left;font-size:.72rem;text-transform:uppercase;white-space:nowrap;line-height:1.25;vertical-align:middle;position:sticky;top:0;z-index:2;cursor:pointer;user-select:none;transition:background .15s}
 .leads-tbl th:hover{background:var(--navy-light)}
 .sort-arrow{display:inline-block;margin-left:4px;font-size:.6rem;opacity:.4;transition:opacity .15s}
 .sort-arrow.asc::after{content:'▲';opacity:1}
@@ -470,6 +470,9 @@ body{background:
 .cnae-list{margin:8px 0 2px;padding-left:22px}
 .cnae-list li{font-size:.78rem;color:#000;padding:2px 0;line-height:1.35}
 .cnae-list:empty::after{content:'Nenhum CNAE — clique na lupa do CNPJ';font-size:.75rem;color:#888;font-style:italic}
+
+/* === Bolinha da coluna Temperatura === */
+.temp-dot{display:inline-block;width:13px;height:13px;border-radius:50%;vertical-align:middle;border:1px solid rgba(0,0,0,.15)}
 
 </style>
 
@@ -896,28 +899,28 @@ html body .login-crm-subtitle{display:block!important;margin:8px 0 10px!importan
   <div class="leads-tbl-wrap"><table class="leads-tbl"><thead><tr id="tblHead">
     <th data-key="Nº" onclick="sortCol('Nº')">Nº <span class="sort-arrow"></span></th>
     <th data-key="Data" onclick="sortCol('Data')">Data <span class="sort-arrow"></span></th>
-    <th data-key="Data Último Contato" onclick="sortCol('Data Último Contato')">Data Último Contato <span class="sort-arrow"></span></th>
-    <th data-key="Data Próxima Ação" onclick="sortCol('Data Próxima Ação')">Data Próxima Ação <span class="sort-arrow"></span></th>
-    <th data-key="Próxima Ação" onclick="sortCol('Próxima Ação')">Próxima Ação <span class="sort-arrow"></span></th>
+    <th data-key="Data Último Contato" onclick="sortCol('Data Último Contato')">Data<br>Último Contato <span class="sort-arrow"></span></th>
+    <th data-key="Data Próxima Ação" onclick="sortCol('Data Próxima Ação')">Data<br>Próxima Ação <span class="sort-arrow"></span></th>
+    <th data-key="Próxima Ação" onclick="sortCol('Próxima Ação')">Próxima<br>Ação <span class="sort-arrow"></span></th>
     <th data-key="Status" onclick="sortCol('Status')">Status <span class="sort-arrow"></span></th>
-    <th data-key="Temperatura Lead" onclick="sortCol('Temperatura Lead')">Temperatura Lead <span class="sort-arrow"></span></th>
+    <th data-key="Temperatura Lead" onclick="sortCol('Temperatura Lead')">Temperatura<br>Lead <span class="sort-arrow"></span></th>
     <th data-key="Prospect" onclick="sortCol('Prospect')">Prospect <span class="sort-arrow"></span></th>
-    <th data-key="Time Comercial" onclick="sortCol('Time Comercial')">Time Comercial <span class="sort-arrow"></span></th>
+    <th data-key="Time Comercial" onclick="sortCol('Time Comercial')">Time<br>Comercial <span class="sort-arrow"></span></th>
     <th data-key="Lead" onclick="sortCol('Lead')">Lead <span class="sort-arrow"></span></th>
-    <th data-key="Razão Social" onclick="sortCol('Razão Social')">Razão Social <span class="sort-arrow"></span></th>
+    <th data-key="Razão Social" onclick="sortCol('Razão Social')">Razão<br>Social <span class="sort-arrow"></span></th>
     <th data-key="CNPJ" onclick="sortCol('CNPJ')">CNPJ <span class="sort-arrow"></span></th>
     <th data-key="Cidade" onclick="sortCol('Cidade')">Cidade <span class="sort-arrow"></span></th>
     <th data-key="UF" onclick="sortCol('UF')">UF <span class="sort-arrow"></span></th>
-    <th data-key="Contato Principal" onclick="sortCol('Contato Principal')">Contato Principal <span class="sort-arrow"></span></th>
+    <th data-key="Contato Principal" onclick="sortCol('Contato Principal')">Contato<br>Principal <span class="sort-arrow"></span></th>
     <th data-key="Telefone" onclick="sortCol('Telefone')">Telefone <span class="sort-arrow"></span></th>
     <th data-key="E-mail" onclick="sortCol('E-mail')">E-mail <span class="sort-arrow"></span></th>
-    <th data-key="Canal Principal" onclick="sortCol('Canal Principal')">Canal Principal <span class="sort-arrow"></span></th>
-    <th data-key="Linha de Interesse" onclick="sortCol('Linha de Interesse')">Linha de Interesse <span class="sort-arrow"></span></th>
-    <th data-key="Produto(s) de Interesse" onclick="sortCol('Produto(s) de Interesse')">Produto(s) de Interesse <span class="sort-arrow"></span></th>
+    <th data-key="Canal Principal" onclick="sortCol('Canal Principal')">Canal<br>Principal <span class="sort-arrow"></span></th>
+    <th data-key="Linha de Interesse" onclick="sortCol('Linha de Interesse')">Linha<br>de Interesse <span class="sort-arrow"></span></th>
+    <th data-key="Produto(s) de Interesse" onclick="sortCol('Produto(s) de Interesse')">Produto(s)<br>de Interesse <span class="sort-arrow"></span></th>
     <th data-key="Observações" onclick="sortCol('Observações')">Observações <span class="sort-arrow"></span></th>
-    <th data-key="Motivo da Perda" onclick="sortCol('Motivo da Perda')">Motivo da Perda <span class="sort-arrow"></span></th>
-    <th data-key="Valor do Pedido" onclick="sortCol('Valor do Pedido')">Valor do Pedido <span class="sort-arrow"></span></th>
-    <th data-key="Nº do Pedido" onclick="sortCol('Nº do Pedido')">Nº do Pedido <span class="sort-arrow"></span></th>
+    <th data-key="Motivo da Perda" onclick="sortCol('Motivo da Perda')">Motivo<br>da Perda <span class="sort-arrow"></span></th>
+    <th data-key="Valor do Pedido" onclick="sortCol('Valor do Pedido')">Valor<br>do Pedido <span class="sort-arrow"></span></th>
+    <th data-key="Nº do Pedido" onclick="sortCol('Nº do Pedido')">Nº<br>do Pedido <span class="sort-arrow"></span></th>
   </tr></thead><tbody id="tblBody"></tbody></table></div>
   <div id="loadMain" class="loading"><div class="loader"></div><span>Carregando dados...</span></div>
 </div>
@@ -1277,13 +1280,24 @@ function temp(s, lead) {
       const today = new Date(); today.setHours(0,0,0,0);
       let mostRecent = null;
       dates.forEach(d => { const p=String(d).split('/'); if(p.length===3){ const dt=new Date(parseInt(p[2]),parseInt(p[1])-1,parseInt(p[0])); if(!mostRecent||dt>mostRecent)mostRecent=dt; }});
-      if (mostRecent && Math.floor((today-mostRecent)/86400000) >= 30) return 'Frio';
+      // Regra de inatividade: 90 dias p/ Canal LOJ. LICITAÇÃO (ciclo longo), 30 dias p/ demais
+      var _canal = String((lead && lead['Canal Principal'])||'').toUpperCase();
+      var _limiteInativo = _canal.indexOf('LICITA') >= 0 ? 90 : 30;
+      if (mostRecent && Math.floor((today-mostRecent)/86400000) >= _limiteInativo) return 'Frio';
     }
   }
   if (['novo','inativo'].includes(v)) return 'Frio';
   if (['contato feito','proposta enviada'].includes(v)) return 'Morno';
   if (['negociando'].includes(v)) return 'Quente';
   return '';
+}
+
+// Bolinha colorida pela temperatura: Quente=vermelho, Morno=amarelo, Frio=azul claro, Perdido=cinza.
+function thermoHTML(t){
+  if(!t) return '';
+  var k=t.toLowerCase();
+  var color = k==='quente'?'#E53935':k==='morno'?'#FBC02D':k==='frio'?'#4FC3F7':'#9E9E9E';
+  return '<span class="temp-dot" title="'+esc(t)+'" aria-label="'+esc(t)+'" style="background:'+color+'"></span>';
 }
 
 // ═══════ TABS ═══════
@@ -1578,7 +1592,7 @@ function renderAll() { setTimeout(applyFilterStyle,50);
   }
   tbody.innerHTML = data.map(l => {
     const t = temp(l['Status'],l);
-    const tc = t ? '<span class="temp-badge tb-'+t.toLowerCase()+'">'+t+'</span>' : '';
+    const tc = thermoHTML(t);
     const sc = ST_C[l['Status']]||'#999';
     // Ícone de anexo se o lead tiver arquivos
     let hasAttach = false;
@@ -1949,11 +1963,12 @@ async function delLead() {
 // Etapas (ordem do pipeline)
 var KB_STAGES = [
   {key:'Novo',             label:'Prospecção',       icon:'🎯', color:'#1A6BB5', bg:'#EBF3FB'},
-  {key:'Contato Feito',    label:'Contato Feito',    icon:'📞', color:'#002F63', bg:'#E6EFF9'},
-  {key:'Proposta Enviada', label:'Proposta Enviada', icon:'📄', color:'#0D4A8A', bg:'#E0EBF8'},
+  {key:'Contato feito',    label:'Contato Feito',    icon:'📞', color:'#002F63', bg:'#E6EFF9'},
+  {key:'Proposta enviada', label:'Proposta Enviada', icon:'📄', color:'#0D4A8A', bg:'#E0EBF8'},
   {key:'Negociando',       label:'Negociando',       icon:'🤝', color:'#A6192E', bg:'#FDECEA'},
   {key:'Ganho',            label:'Ganho',            icon:'✅', color:'#1B7E34', bg:'#E9F5EC'},
   {key:'Perdido',          label:'Perdido',          icon:'❌', color:'#6B7280', bg:'#F3F4F6'},
+  {key:'Inativo',          label:'Inativo',          icon:'💤', color:'#8B6FA6', bg:'#F3E5F5'},
 ];
 
 function openFunil() {
@@ -2063,7 +2078,7 @@ function renderFunil() { setTimeout(applyFilterStyle,80);
   });
 
   // KPIs
-  var activeKeys = ['Novo','Contato Feito','Proposta Enviada','Negociando'];
+  var activeKeys = ['Novo','Contato feito','Proposta enviada','Negociando'];
   var pipeVal=0, cG=0, cP=0, vG=0, allVals=[], forecast=0;
   var probMap = {Novo:10,'Contato Feito':25,'Proposta Enviada':50,Negociando:75,Ganho:100};
   KB_STAGES.forEach(function(s){
