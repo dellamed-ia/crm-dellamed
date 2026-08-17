@@ -139,6 +139,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--teal)}
 .kb-tag-warm{background:#E8F5E9;color:#2E7D32}
 .kb-tag-cold{background:#E3F2FD;color:#1565C0}
 .kb-tag-lost{background:#F3F4F6;color:#6B7280}
+.kb-tag-inactive{background:#F3E5F5;color:#6A1B9A}
 .kb-date{font-size:.65rem;font-weight:600;padding:2px 7px;border-radius:8px}
 .kb-date-ok{background:#E8F5E9;color:#2E7D32}
 .kb-date-late{background:#FFEBEE;color:#C62828}
@@ -339,6 +340,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--teal)}
 .temp-badge{padding:3px 10px;border-radius:12px;font-size:.7rem;font-weight:600;display:inline-block}
 .tb-frio{background:#E3F2FD;color:#1565C0}.tb-morno{background:#FFF3E0;color:#E65100}.tb-quente{background:#FFEBEE;color:#C62828}
 .st-badge{padding:3px 10px;border-radius:12px;font-size:.7rem;font-weight:600;display:inline-block;color:#fff}
+.temp-badge{padding:3px 10px;border-radius:12px;font-size:.7rem;font-weight:600;display:inline-block;white-space:nowrap}
 .tbl-count{font-size:.82rem;color:var(--muted);padding:8px 24px}
 .loader{display:inline-block;width:36px;height:36px;border:3px solid rgba(0,0,0,.1);border-top-color:var(--teal);border-radius:50%;animation:spin .6s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
@@ -614,6 +616,7 @@ html body .kb-col{min-width:290px!important;max-width:340px!important}
 html body .kb-tag-hot{background:rgba(166,25,46,.08)!important;color:#A6192E!important}
 html body .kb-tag-warm{background:rgba(0,47,99,.07)!important;color:#002f63!important}
 html body .kb-tag-cold{background:rgba(139,184,232,.14)!important;color:#1A6BB5!important}
+html body .kb-tag-inactive{background:rgba(139,111,166,.16)!important;color:#8B6FA6!important}
 html body .kb-mv:hover,html body .kb-move-opt:hover{background:#002f63!important;color:#fff!important}
 
 /* ── FUNIL KPI BAR ──────────────────────────────────────────────── */
@@ -705,6 +708,12 @@ html body .dcard.dcard-wide{grid-column:1/-1!important}
 html body .leads-tbl td{color:#000!important}
 html body .leads-tbl td *{color:inherit!important}
 html body .leads-tbl td .st-badge{color:#fff!important}
+html body .leads-tbl td .temp-badge{color:#fff!important}
+html body .leads-tbl td .kb-tag-hot{color:#A6192E!important}
+html body .leads-tbl td .kb-tag-warm{color:#002f63!important}
+html body .leads-tbl td .kb-tag-cold{color:#1A6BB5!important}
+html body .leads-tbl td .kb-tag-lost{color:#6B7280!important}
+html body .leads-tbl td .kb-tag-inactive{color:#8B6FA6!important}
 html body .leads-tbl tbody tr td{background:#f8f9fb!important;border-color:#e4eaf0!important}
 html body .leads-tbl tbody tr:hover td{background:#e8f0f7!important}
 
@@ -886,6 +895,12 @@ html body .login-crm-subtitle{display:block!important;margin:8px 0 10px!importan
   <div style="padding:0 24px 8px;display:flex;gap:10px;flex-wrap:wrap" id="stPills"></div>
   <!-- FILTROS RÁPIDOS -->
   <div class="qf-bar" id="qfBar"><span class="qf-lbl">Atalhos:</span><div id="qfChips"></div></div>
+  <div class="bulk-bar hidden" id="bulkBar">
+    <span class="bulk-count" id="bulkCount">0 selecionados</span>
+    <span class="bulk-grp"><label>Status:</label><select id="bulkStatus"></select><button class="btn btn-sm btn-teal" onclick="bulkApplyStatus()">Aplicar</button></span>
+    <span class="bulk-grp"><label>Reatribuir a:</label><select id="bulkProspect"></select><button class="btn btn-sm btn-navy" onclick="bulkReassign()">Reatribuir</button></span>
+    <button class="btn btn-sm btn-outline" onclick="clearBulk()" title="Limpar seleções">✕ Limpar seleção</button>
+  </div>
   <!-- MAIN FILTERS -->
   <div class="main-flt" id="mainFlt">
     <div class="fg"><label>Prospect</label><div class="sf-wrap" id="sfProspect"></div></div>
@@ -899,10 +914,11 @@ html body .login-crm-subtitle{display:block!important;margin:8px 0 10px!importan
   <!-- TABLE -->
   <div class="tbl-count" id="tblCount"></div>
   <div class="leads-tbl-wrap" id="tblWrap"><table class="leads-tbl"><thead><tr id="tblHead">
-    <th data-key="Nº" onclick="sortCol('Nº')">Nº <span class="sort-arrow"></span></th>
+    <th data-key="Nº" onclick="sortCol('Nº')"><input type="checkbox" id="bulkAll" onclick="event.stopPropagation();toggleAllRows(this)" title="Selecionar todos" style="vertical-align:middle;margin-right:6px;cursor:pointer"> Nº <span class="sort-arrow"></span></th>
     <th data-key="Data" onclick="sortCol('Data')">Data <span class="sort-arrow"></span></th>
     <th data-key="Status" onclick="sortCol('Status')">Status <span class="sort-arrow"></span></th>
     <th data-key="Razão Social" onclick="sortCol('Razão Social')">Razão<br>Social <span class="sort-arrow"></span></th>
+    <th data-key="Canal Principal" onclick="sortCol('Canal Principal')">Canal<br>Principal <span class="sort-arrow"></span></th>
     <th data-key="Temperatura Lead" onclick="sortCol('Temperatura Lead')">Temperatura<br>Lead <span class="sort-arrow"></span></th>
     <th data-key="Data Próxima Ação" onclick="sortCol('Data Próxima Ação')">Data<br>Próxima Ação <span class="sort-arrow"></span></th>
     <th data-key="Próxima Ação" onclick="sortCol('Próxima Ação')">Próxima<br>Ação <span class="sort-arrow"></span></th>
@@ -916,7 +932,6 @@ html body .login-crm-subtitle{display:block!important;margin:8px 0 10px!importan
     <th data-key="Contato Principal" onclick="sortCol('Contato Principal')">Contato<br>Principal <span class="sort-arrow"></span></th>
     <th data-key="Telefone" onclick="sortCol('Telefone')">Telefone <span class="sort-arrow"></span></th>
     <th data-key="E-mail" onclick="sortCol('E-mail')">E-mail <span class="sort-arrow"></span></th>
-    <th data-key="Canal Principal" onclick="sortCol('Canal Principal')">Canal<br>Principal <span class="sort-arrow"></span></th>
     <th data-key="Linha de Interesse" onclick="sortCol('Linha de Interesse')">Linha<br>de Interesse <span class="sort-arrow"></span></th>
     <th data-key="Produto(s) de Interesse" onclick="sortCol('Produto(s) de Interesse')">Produto(s)<br>de Interesse <span class="sort-arrow"></span></th>
     <th data-key="Observações" onclick="sortCol('Observações')">Observações <span class="sort-arrow"></span></th>
@@ -1015,6 +1030,7 @@ html body .login-crm-subtitle{display:block!important;margin:8px 0 10px!importan
 </div>
 
 <!-- TRANSFERS MODAL -->
+<div id="modAuthSent" class="overlay hidden"><div class="modal" style="max-width:420px"><div class="mhd"><b>Solicitação enviada</b></div><div style="padding:22px 24px;text-align:center"><div style="font-size:2.4rem;margin-bottom:8px">📨</div><p id="authSentMsg" style="margin:0 0 4px;font-size:.95rem;color:var(--text)"></p><p style="margin:0;font-size:.82rem;color:var(--muted)">A administradora vai analisar e aprovar a reatribuição.</p></div><div style="padding:0 24px 20px;text-align:right"><button class="btn btn-teal btn-sm" onclick="$('modAuthSent').classList.add('hidden')">Entendi</button></div></div></div>
 <div id="modTransfers" class="overlay hidden">
   <div class="modal" style="max-width:780px">
     <div class="mhd"><h3>📝 Alterações de Leads</h3><button class="mx" id="tClose">✕</button></div>
@@ -1030,19 +1046,21 @@ html body .login-crm-subtitle{display:block!important;margin:8px 0 10px!importan
 
 <style id="crm-redesign-2026">
 /* ===== VISIBILIDADE DE COLUNAS (apenas Nº, Data, Data Próx. Ação, Próx. Ação, Status, Temperatura, Prospect) ===== */
-.leads-tbl th:nth-child(n+9),.leads-tbl td:nth-child(n+9){display:none!important}
+.leads-tbl th:nth-child(n+10),.leads-tbl td:nth-child(n+10){display:none!important}
 /* Data(2): aproximar do Status (reduz espaço lateral) */
 .leads-tbl th:nth-child(2),.leads-tbl td:nth-child(2){padding-right:3px}
 /* Status(3): encostado na Data */
 .leads-tbl th:nth-child(3),.leads-tbl td:nth-child(3){max-width:112px;width:112px;padding-left:5px}
-/* Temperatura(5) */
-.leads-tbl th:nth-child(5),.leads-tbl td:nth-child(5){max-width:104px;width:104px}
-/* Data Próxima Ação(6): cabeçalho SEMPRE em 2 linhas (Data / Próxima Ação), sem reflow no zoom */
-.leads-tbl th:nth-child(6),.leads-tbl td:nth-child(6){max-width:110px;width:110px;padding-left:8px;padding-right:8px;white-space:nowrap}
-/* Próxima Ação(7): maior */
-.leads-tbl th:nth-child(7),.leads-tbl td:nth-child(7){max-width:300px;width:300px}
-/* Prospect(8): menor */
-.leads-tbl th:nth-child(8),.leads-tbl td:nth-child(8){max-width:122px;width:122px}
+/* Canal Principal(5) */
+.leads-tbl th:nth-child(5),.leads-tbl td:nth-child(5){max-width:130px;width:130px}
+/* Temperatura(6) */
+.leads-tbl th:nth-child(6),.leads-tbl td:nth-child(6){max-width:104px;width:104px}
+/* Data Próxima Ação(7): cabeçalho SEMPRE em 2 linhas (Data / Próxima Ação), sem reflow no zoom */
+.leads-tbl th:nth-child(7),.leads-tbl td:nth-child(7){max-width:110px;width:110px;padding-left:8px;padding-right:8px;white-space:nowrap}
+/* Próxima Ação(8): maior */
+.leads-tbl th:nth-child(8),.leads-tbl td:nth-child(8){max-width:300px;width:300px}
+/* Prospect(9): menor */
+.leads-tbl th:nth-child(9),.leads-tbl td:nth-child(9){max-width:122px;width:122px}
 
 /* ===== FILTROS RÁPIDOS ===== */
 .qf-bar{padding:2px 24px 10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
@@ -1126,6 +1144,21 @@ html body .login-crm-subtitle{display:block!important;margin:8px 0 10px!importan
 #lpComposer input,#lpComposer textarea,#lpComposer select{width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:7px;font-family:inherit;font-size:.85rem;box-sizing:border-box;background:#fff;color:var(--text)}
 #lpComposer textarea{resize:vertical}
 .cmp-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:12px}
+/* Semáforo por LINHA inteira (vence o striping !important) */
+html body .leads-tbl tbody tr.row-due-late td{background:#F8D0D5!important}
+html body .leads-tbl tbody tr.row-due-today td{background:#FFEFB0!important}
+html body .leads-tbl tbody tr.row-due-late:hover td{background:#F3BFC5!important}
+html body .leads-tbl tbody tr.row-due-today:hover td{background:#FBE79A!important}
+html body .leads-tbl tbody tr.row-due-late td:nth-child(7){font-weight:700!important;color:#A6192E!important}
+html body .leads-tbl tbody tr.row-due-today td:nth-child(7){font-weight:700!important;color:#7A5B00!important}
+/* Ações em massa */
+.bulk-bar{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin:0 24px 10px;padding:10px 14px;background:#eef4fb;border:1px solid #cfe0f2;border-radius:10px}
+.bulk-bar.hidden{display:none!important}
+.bulk-count{font-weight:800;color:var(--navy);font-size:.85rem}
+.bulk-grp{display:flex;align-items:center;gap:6px}
+.bulk-grp label{font-size:.72rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.03em}
+.bulk-grp select{padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-family:inherit;font-size:.82rem;background:#fff;color:var(--text)}
+.btn-navy{background:var(--navy);color:#fff;border:none}
 </style>
 
 <!-- PAINEL LATERAL DO LEAD (redesign 2026) -->
@@ -1396,34 +1429,82 @@ async function forceRefresh() {
 }
 
 // ═══════ TEMPERATURE ═══════
+// dd/mm/aaaa -> Date (meia-noite) ou null
+function _parseDMY(v){
+  var p=String(v||'').split(' ')[0].split('/'); if(p.length!==3) return null;
+  var d=new Date(+p[2],+p[1]-1,+p[0]); d.setHours(0,0,0,0);
+  return isNaN(d.getTime())?null:d;
+}
+// Data PASSADA (<= hoje) mais recente entre QUALQUER campo de data do lead (inclui registro).
+function _leadRefPastDate(lead, today){
+  if(!lead) return null; var most=null;
+  Object.keys(lead).forEach(function(k){
+    if(!/^data/i.test(String(k).trim())) return;
+    var d=_parseDMY(lead[k]); if(!d) return;
+    if(d.getTime()<=today.getTime() && (!most||d>most)) most=d;
+  });
+  return most;
+}
+// Detecta canal de LICITAÇÃO de forma robusta (ignora acentos, espaços e caixa).
+function _isLicitacao(lead){
+  var c=String((lead&&lead['Canal Principal'])||'');
+  try{ c=c.normalize('NFD').replace(/[\u0300-\u036f]/g,''); }catch(_){}
+  c=c.toUpperCase();
+  return c.indexOf('LICITA')>=0;   // pega LICITAÇÃO, LICITACAO, Licitações, LOJ. LICITAÇÃO...
+}
+// Limite de inatividade: LICITAÇÃO = 90 dias (ciclo longo); demais canais = 30 dias.
+function _inativoLimite(lead){ return _isLicitacao(lead) ? 90 : 30; }
+// Teve interação = algum contato/ação preenchido (não conta só a data de registro).
+function _hasInteraction(lead){
+  return !!(_parseDMY(lead['Data Primeiro Contato']) || _parseDMY(lead['Data Último Contato']) || _parseDMY(lead['Data Próxima Ação']));
+}
+// INATIVO (temperatura): SÓ para leads que NUNCA tiveram interação e cujo registro já passou do limite (90 LICITAÇÃO / 30 demais).
+function _isInativoRule(lead){
+  if(!lead) return false;
+  var v=String(lead['Status']||'').toLowerCase();
+  if(['perdido','ganho','inativo'].indexOf(v)>=0) return false;
+  if(_hasInteraction(lead)) return false;               // teve interação -> nunca é "Inativo"
+  var today=new Date(); today.setHours(0,0,0,0);
+  var refPast=_leadRefPastDate(lead, today);            // aqui sobra a data de registro
+  if(!refPast) return false;
+  return Math.floor((today-refPast)/86400000) >= _inativoLimite(lead);
+}
+// ESFRIADO -> Frio (tem interação, mas travou). Sempre respeita o limite do canal (90 LICITAÇÃO / 30 demais):
+//  • ação HOJE/FUTURA => ativo; caso contrário mede o tempo desde a data passada mais recente vs. o limite.
+function _isEsfriadoRule(lead){
+  if(!lead) return false;
+  var v=String(lead['Status']||'').toLowerCase();
+  if(['perdido','ganho','inativo'].indexOf(v)>=0) return false;
+  if(!_hasInteraction(lead)) return false;
+  var today=new Date(); today.setHours(0,0,0,0);
+  var dpa=_parseDMY(lead['Data Próxima Ação']);
+  if(dpa && dpa.getTime() >= today.getTime()) return false;   // ação futura/hoje -> ativo
+  var refPast=_leadRefPastDate(lead, today);                  // inclui a ação vencida (data passada)
+  if(!refPast) return false;
+  return Math.floor((today-refPast)/86400000) >= _inativoLimite(lead);   // 90 LICITAÇÃO / 30 demais
+}
 function temp(s, lead) {
   const v = (s||'').toLowerCase();
   if (v === 'perdido') return 'Perdido';
   if (v === 'ganho') return 'Quente';
   // Auto-detect 30+ days inactivity
   if (lead && !['perdido','ganho','inativo'].includes(v)) {
-    const dates = [lead['Data Primeiro Contato'], lead['Data Último Contato'], lead['Data Próxima Ação']].filter(Boolean);
-    if (dates.length > 0) {
-      const today = new Date(); today.setHours(0,0,0,0);
-      let mostRecent = null;
-      dates.forEach(d => { const p=String(d).split('/'); if(p.length===3){ const dt=new Date(parseInt(p[2]),parseInt(p[1])-1,parseInt(p[0])); if(!mostRecent||dt>mostRecent)mostRecent=dt; }});
-      // Regra de inatividade: 90 dias p/ Canal LOJ. LICITAÇÃO (ciclo longo), 30 dias p/ demais
-      var _canal = String((lead && lead['Canal Principal'])||'').toUpperCase();
-      var _limiteInativo = _canal.indexOf('LICITA') >= 0 ? 90 : 30;
-      if (mostRecent && Math.floor((today-mostRecent)/86400000) >= _limiteInativo) return 'Frio';
-    }
+    if (_isEsfriadoRule(lead)) return 'Frio';           // teve interação e travou => Frio (nunca Inativo)
   }
   if (['novo','inativo'].includes(v)) return 'Frio';
   if (['contato feito','proposta enviada'].includes(v)) return 'Morno';
   if (['negociando'].includes(v)) return 'Quente';
   return '';
 }
+// Regra de INATIVO (visual): 90 dias sem movimento p/ Canal LOJ. LICITAÇÃO (ciclo longo), 30 dias p/ demais.
+// Não altera o Status/planilha nem os totais do dashboard — apenas o indicador nas guias e no funil.
+function isInativoAuto(lead){ return _isInativoRule(lead); }
 
 // Bolinha colorida pela temperatura: Quente=vermelho, Morno=amarelo, Frio=azul claro, Perdido=cinza.
 function thermoHTML(t){
   if(!t) return '';
   var k=t.toLowerCase();
-  var color = k==='quente'?'#E53935':k==='morno'?'#FBC02D':k==='frio'?'#4FC3F7':'#9E9E9E';
+  var color = k==='quente'?'#E53935':k==='morno'?'#FBC02D':k==='frio'?'#4FC3F7':k==='inativo'?'#8B6FA6':'#9E9E9E';
   return '<span class="temp-dot" title="'+esc(t)+'" aria-label="'+esc(t)+'" style="background:'+color+'"></span>';
 }
 
@@ -1715,6 +1796,7 @@ function renderAll() { setTimeout(applyFilterStyle,50);
   if(DATE_QUICKS.indexOf(activeQuick)>=0){
     data.sort(function(a,b){ return _dprKey(a['Data Próxima Ação']).localeCompare(_dprKey(b['Data Próxima Ação'])); });
   }
+  renderBulkBar();
   $('tblCount').textContent = data.length + ' lead' + (data.length !== 1 ? 's' : '') + ' encontrado' + (data.length !== 1 ? 's' : '');
   const tbody = $('tblBody');
   if (data.length === 0) {
@@ -1733,7 +1815,8 @@ function renderAll() { setTimeout(applyFilterStyle,50);
   }
   tbody.innerHTML = data.map(l => {
     const t = temp(l['Status'],l);
-    const tc = thermoHTML(t);
+    const _inativo = isInativoAuto(l) || String(l['Status']||'').toLowerCase()==='inativo';
+    const tc = _inativo ? tempBadge('Inativo') : tempBadge(t);
     const sc = ST_C[l['Status']]||'#999';
     // Ícone de anexo se o lead tiver arquivos
     let hasAttach = false;
@@ -1745,11 +1828,14 @@ function renderAll() { setTimeout(applyFilterStyle,50);
       }
     } catch(_) {}
     const attachIcon = hasAttach ? ' <span title="Possui anexos" style="font-size:.9rem">📎</span>' : '';
-    return '<tr onclick="openLeadPanel('+l._row+',\''+(l._src||curTab)+'\')">'+
-      '<td style="text-align:center;color:var(--muted);font-size:.75rem">'+esc(l['Nº']||'')+'</td>'+
+    var dueCls='';
+    (function(){var v=l['Data Próxima Ação']||'';var st2=String(l['Status']||'').toLowerCase();if(v&&['ganho','perdido','inativo'].indexOf(st2)<0){var p=String(v).split('/');if(p.length===3){var d=new Date(+p[2],+p[1]-1,+p[0]);d.setHours(0,0,0,0);var t0=new Date();t0.setHours(0,0,0,0);var diff=Math.round((d-t0)/86400000);if(diff<0)dueCls='row-due-late';else if(diff===0)dueCls='row-due-today';}}})();
+    return '<tr class="'+dueCls+'" onclick="openLeadPanel('+l._row+',\''+(l._src||curTab)+'\')">'+
+      '<td style="text-align:center;color:var(--muted);font-size:.75rem;white-space:nowrap"><input type="checkbox" class="bulk-cb" onclick="event.stopPropagation();toggleRow(event,'+l._row+',\''+(l._src||curTab)+'\')" '+(bulkSel.has((l._src||curTab)+':'+l._row)?'checked':'')+' style="vertical-align:middle;margin-right:5px;cursor:pointer">'+esc(l['Nº']||'')+'</td>'+
       '<td style="font-size:.78rem">'+esc(l['Data']||'')+'</td>'+
       '<td><span class="st-badge" style="background:'+sc+'">'+esc(l['Status']||'')+'</span></td>'+
       '<td style="font-weight:600;color:#000;max-width:240px;overflow:hidden;text-overflow:ellipsis" title="'+esc(l['Razão Social']||'')+'">'+esc(l['Razão Social']||'')+'</td>'+
+      '<td title="'+esc(l['Canal Principal']||'')+'">'+esc(l['Canal Principal']||'')+'</td>'+
       '<td>'+tc+attachIcon+'</td>'+
       '<td style="font-size:.78rem">'+esc(l['Data Próxima Ação']||'')+'</td>'+
       '<td style="max-width:300px;overflow:hidden;text-overflow:ellipsis" title="'+esc(l['Próxima Ação']||'')+'">'+esc(l['Próxima Ação']||'')+'</td>'+
@@ -1763,7 +1849,6 @@ function renderAll() { setTimeout(applyFilterStyle,50);
       '<td title="'+esc(l['Contato Principal']||'')+'">'+esc(l['Contato Principal']||'')+'</td>'+
       '<td style="font-size:.78rem" title="'+esc(l['Telefone']||'')+'">'+esc(l['Telefone']||'')+'</td>'+
       '<td style="font-size:.78rem;max-width:220px;overflow:hidden;text-overflow:ellipsis" title="'+esc(l['E-mail']||'')+'">'+esc(l['E-mail']||'')+'</td>'+
-      '<td title="'+esc(l['Canal Principal']||'')+'">'+esc(l['Canal Principal']||'')+'</td>'+
       '<td style="max-width:180px;overflow:hidden;text-overflow:ellipsis" title="'+esc(l['Linha de Interesse']||'')+'">'+esc(l['Linha de Interesse']||'')+'</td>'+
       '<td style="max-width:220px;overflow:hidden;text-overflow:ellipsis" title="'+esc(l['Produto(s) de Interesse']||'')+'">'+esc(l['Produto(s) de Interesse']||'')+'</td>'+
       '<td style="max-width:260px;overflow:hidden;text-overflow:ellipsis" title="'+esc(l['Observações']||'')+'">'+esc(l['Observações']||'')+'</td>'+
@@ -1787,6 +1872,7 @@ function clearMainFlt() {
   $('fltDe').value = '';
   $('fltAte').value = '';
   $('inSearch').value = '';
+  if(typeof bulkSel!=='undefined'){ bulkSel.clear(); var _ba=$('bulkAll'); if(_ba)_ba.checked=false; }
   updateStatusKPIs();
   renderAll();
 }
@@ -1909,7 +1995,8 @@ function openForm(row) {
     fldF('Produto(s) de Interesse','<textarea id="f_pd" rows="2" '+dis+' placeholder="D30, D90, D12...">'+esc(L?L['Produto(s) de Interesse']:'')+'</textarea>')+
     fld('Data Primeiro Contato','<input id="f_dp" value="'+esc(L?L['Data Primeiro Contato']:'')+'" '+dis+' placeholder="dd/mm/aaaa" maxlength="10" oninput="mDate(this)"><div class="fld-err" id="err_dp">Formato inválido. Use dd/mm/aaaa</div>',rq)+
     fld('Data Último Contato','<input id="f_du" value="'+esc(L?L['Data Último Contato']:'')+'" '+dis+' placeholder="dd/mm/aaaa" maxlength="10" oninput="mDate(this)"><div class="fld-err" id="err_du">Formato inválido. Use dd/mm/aaaa</div>')+
-    fldF('Próxima Ação','<textarea id="f_pa" rows="2" '+dis+'>'+esc(L?L['Próxima Ação']:'')+'</textarea>')+
+    fld('Próxima Ação',_proxSelectHTML(L?L['Próxima Ação']:'',dis))+
+    fldF('Observação da próxima ação','<textarea id="f_pa" rows="2" '+dis+' placeholder="Detalhe da ação...">'+esc(_proxObs(L?L['Próxima Ação']:''))+'</textarea>')+
     fld('Data Próxima Ação','<input id="f_da" value="'+esc(L?L['Data Próxima Ação']:'')+'" '+dis+' placeholder="dd/mm/aaaa" maxlength="10" oninput="mDate(this)"><div class="fld-err" id="err_da">Formato inválido. Use dd/mm/aaaa</div>')+
     fld('Valor do Pedido','<input id="f_vl" value="'+esc(L?L['Valor do Pedido']:'')+'" '+dis+' placeholder="R$ 0,00" oninput="mBRL(this)">',ganhoRq)+
     fld('Nº do Pedido','<input id="f_np" value="'+esc(L?L['Nº do Pedido']:'')+'" '+dis+'>',ganhoRq)+
@@ -2021,7 +2108,7 @@ async function _doSaveLead() {
     'Cidade':gv('f_ci'),'UF':gv('f_uf'),'Endereço Fiscal':gv('f_endereco'),'SUFRAMA':gv('f_suframa'),'Regime':gv('f_regime'),'CNAE':gv('f_cnae'),'Canal Principal':gv('f_ca'),
     'Linha de Interesse':msVal('ms_li'),'Produto(s) de Interesse':gv('f_pd'),
     'Data Primeiro Contato':gv('f_dp'),'Data Último Contato':gv('f_du'),
-    'Próxima Ação':gv('f_pa'),'Data Próxima Ação':gv('f_da'),
+    'Próxima Ação':_joinProx(gv('f_pa_tipo'),gv('f_pa')),'Data Próxima Ação':gv('f_da'),
     'Valor do Pedido':gv('f_vl'),'Nº do Pedido':gv('f_np'),
     'Motivo da Perda':msVal('ms_mp'),'Observações':gv('f_ob'),
     'Links':[...document.querySelectorAll('#linksContainer .link-row-input')].map(function(i){return i.value.trim();}).filter(Boolean).join(' | '),
@@ -2292,8 +2379,9 @@ function renderFunil() { setTimeout(applyFilterStyle,80);
           var diasFunil = ld ? Math.floor((now-ld)/86400000) : null;
 
           // Temperature badge
-          var tClass = temp==='Quente'?'kb-tag-hot':temp==='Morno'?'kb-tag-warm':temp==='Perdido'?'kb-tag-lost':'kb-tag-cold';
-          var tLabel = temp||'Frio';
+          var _inat = isInativoAuto(l) || String(l['Status']||'').toLowerCase()==='inativo';
+          var tClass = _inat?'kb-tag-inactive':(temp==='Quente'?'kb-tag-hot':temp==='Morno'?'kb-tag-warm':temp==='Perdido'?'kb-tag-lost':'kb-tag-cold');
+          var tLabel = _inat?'Inativo':(temp||'Frio');
 
           // Next action date
           var dateHtml = '';
@@ -3615,6 +3703,32 @@ function _actTs(a){
   return d.getTime()+t*60000;
 }
 
+// ── Próxima Ação: tipos padronizados + observação (mesma coluna, "Tipo — obs") ──
+var PROX_TIPOS = ['Ligação','E-mail','Visita','WhatsApp','Reunião'];
+function _splitProx(v){
+  var s=String(v||'').trim(); if(!s) return {tipo:'',obs:''};
+  var i=s.indexOf(' — ');
+  if(i>=0){ var t=s.slice(0,i).trim(); if(PROX_TIPOS.indexOf(t)>=0) return {tipo:t,obs:s.slice(i+3).trim()}; }
+  if(PROX_TIPOS.indexOf(s)>=0) return {tipo:s,obs:''};
+  return {tipo:'',obs:s};
+}
+function _joinProx(tipo,obs){ tipo=(tipo||'').trim(); obs=(obs||'').trim();
+  return (tipo&&obs)?(tipo+' — '+obs):(tipo||obs||''); }
+function _proxObs(v){ return _splitProx(v).obs; }
+function _proxOptions(sel){
+  return '<option value="">Selecione o tipo...</option>'+
+    PROX_TIPOS.map(function(t){return '<option'+(sel===t?' selected':'')+'>'+esc(t)+'</option>';}).join('');
+}
+function _proxSelectHTML(v,dis){
+  return '<select id="f_pa_tipo" '+(dis||'')+'>'+_proxOptions(_splitProx(v).tipo)+'</select>';
+}
+// ── Temperatura: badge textual com cor de fundo (padrão dos badges de status) ──
+function tempBadge(t){
+  if(!t) return '';
+  var k=String(t).toLowerCase();
+  var cls = k==='quente'?'kb-tag-hot':k==='morno'?'kb-tag-warm':k==='frio'?'kb-tag-cold':k==='inativo'?'kb-tag-inactive':k==='perdido'?'kb-tag-lost':'kb-tag-cold';
+  return '<span class="kb-tag '+cls+'">'+esc(t)+'</span>';
+}
 // ── Filtros rápidos (compartilhados tabela + funil) ──
 var PROPOSAL_DAYS = 7;                 // dias parado em "Proposta enviada" para contar como sem retorno
 var DATE_QUICKS = ['hoje','amanha','restsemana','proxsemana','futuro'];
@@ -3652,6 +3766,114 @@ function _weekBounds(){
   var endThisWeek=today+(6-dow)*oneDay;      // domingo desta semana
   return {today:today, tomorrow:today+oneDay, endThisWeek:endThisWeek, endNextWeek:endThisWeek+7*oneDay, oneDay:oneDay};
 }
+// ===== Seleção em massa (checkbox por linha) =====
+var bulkSel = new Set();  // chaves "src:row"
+function _leadByKey(key){
+  var i=key.indexOf(':'); var src=key.slice(0,i); var row=+key.slice(i+1);
+  var arr=(src==='wa')?WA_LEADS:LEADS;
+  return arr.find(function(l){return l._row===row;});
+}
+function toggleRow(e,row,src){
+  var key=(src||'leads')+':'+row;
+  if(e.target.checked) bulkSel.add(key); else bulkSel.delete(key);
+  renderBulkBar();
+  var all=$('bulkAll'); if(all) all.checked=false;
+}
+function toggleAllRows(cb){
+  var data=getMainFiltered();
+  data.forEach(function(l){
+    var key=(l._src||curTab)+':'+l._row;
+    if(cb.checked) bulkSel.add(key); else bulkSel.delete(key);
+  });
+  renderAll();
+}
+function clearBulk(){ bulkSel.clear(); renderAll(); }
+function renderBulkBar(){
+  var bar=$('bulkBar'); if(!bar) return;
+  var n=bulkSel.size;
+  bar.classList.toggle('hidden', n===0);
+  var c=$('bulkCount'); if(c) c.textContent = n+' selecionado'+(n!==1?'s':'');
+  if(n===0) return;
+  // status (sem Ganho/Perdido — esses exigem Valor/Motivo, feito individualmente)
+  var stSel=$('bulkStatus');
+  if(stSel && !stSel._filled){
+    var list=(CFG.status&&CFG.status.length?CFG.status:ST).filter(function(x){return ['Ganho','Perdido'].indexOf(x)<0;});
+    stSel.innerHTML='<option value="">Selecione...</option>'+list.map(function(x){return '<option>'+esc(x)+'</option>';}).join('');
+    stSel._filled=true;
+  }
+  var prSel=$('bulkProspect');
+  if(prSel && !prSel._filled){
+    prSel.innerHTML='<option value="">Selecione a pessoa...</option>'+VENDEDORES.map(function(v){return '<option>'+esc(v.nome)+'</option>';}).join('');
+    prSel._filled=true;
+  }
+}
+function _selectedLeads(){
+  var out=[]; bulkSel.forEach(function(k){ var l=_leadByKey(k); if(l) out.push({key:k,lead:l,src:k.slice(0,k.indexOf(':')),row:+k.slice(k.indexOf(':')+1)}); });
+  return out;
+}
+async function bulkApplyStatus(){
+  var ns=(($('bulkStatus')||{}).value||'').trim();
+  if(!ns){ toast('Selecione um status.','err'); return; }
+  var items=_selectedLeads(); if(!items.length){ toast('Nenhum lead selecionado.','err'); return; }
+  if(!confirm('Alterar status de '+items.length+' lead(s) para "'+ns+'"?')) return;
+  var nb=nowBR(), okc=0, err=0;
+  for(var i=0;i<items.length;i++){
+    var it=items[i], L=it.lead, prev=(L['Status']||'');
+    var acts=_getActs(L);
+    if(prev!==ns) acts.unshift({type:'status',date:nb.date,time:nb.time,author:(U&&U.nome)||'—',title:'🔄 Status alterado: '+(prev||'—')+' → '+ns});
+    var patch={'Status':ns,'Atividades':JSON.stringify(acts)};
+    try{
+      var r=await api('POST',{action:(it.src==='wa'?'editWA':'editLead'),userEmail:U.email,row:it.row,lead:patch});
+      if(r&&r.error){err++;} else { L['Status']=ns; L['Atividades']=patch['Atividades']; okc++; }
+    }catch(_){ err++; }
+  }
+  toast('Status alterado em '+okc+' lead(s)'+(err?(' — '+err+' com erro'):'')+'.', err?'err':'ok');
+  bulkSel.clear(); await reload();
+}
+async function bulkReassign(){
+  var nome=(($('bulkProspect')||{}).value||'').trim();
+  if(!nome){ toast('Selecione a pessoa.','err'); return; }
+  var items=_selectedLeads(); if(!items.length){ toast('Nenhum lead selecionado.','err'); return; }
+  var v=VENDEDORES.find(function(x){return x.nome===nome;});
+  var email=v?v.email:'';
+  if(canDirectAssign()){
+    if(!confirm('Reatribuir '+items.length+' lead(s) para '+nome+'?')) return;
+    var okc=0, err=0;
+    for(var i=0;i<items.length;i++){
+      var it=items[i];
+      var patch={'Prospect':nome,'E-mail Prospect':email};
+      try{
+        var r=await api('POST',{action:(it.src==='wa'?'editWA':'editLead'),userEmail:U.email,row:it.row,lead:patch});
+        if(r&&r.error){err++;} else { it.lead['Prospect']=nome; it.lead['E-mail Prospect']=email; okc++; }
+      }catch(_){ err++; }
+    }
+    toast('Reatribuído: '+okc+' lead(s)'+(err?(' — '+err+' com erro'):'')+'.', err?'err':'ok');
+    bulkSel.clear(); await reload();
+  } else {
+    // Não-admin: envia solicitação de autorização para cada lead
+    var sent=0;
+    for(var j=0;j<items.length;j++){
+      var it2=items[j], L2=it2.lead;
+      try{
+        await api('POST',{
+          action:'requestTransfer', userEmail:U.email,
+          sheetName:(it2.src==='wa'?'WHATSAPP':'LEADS'), row:it2.row,
+          razaoSocial:L2['Razão Social']||'', prospectAtual:L2['Prospect']||'',
+          assignToName:nome, assignEmail:email
+        });
+        sent++;
+      }catch(_){}
+    }
+    showAuthSentPopup(sent, nome);
+    bulkSel.clear(); renderAll();
+  }
+}
+function showAuthSentPopup(n, nome){
+  var msg=$('authSentMsg');
+  if(msg) msg.textContent='Solicitação de reatribuição de '+n+' lead(s)'+(nome?(' para '+nome):'')+' enviada para autorização.';
+  var m=$('modAuthSent'); if(m) m.classList.remove('hidden');
+}
+
 function matchesQuick(l,q){
   var st = String(l['Status']||'').toLowerCase();
   if(q==='semcontato'){
@@ -3822,6 +4044,7 @@ function renderPanel(){
   var L=_panelLead(); if(!L) return;
   var st=L['Status']||''; var sc=ST_C[st]||'#999';
   var t=(L['Temperatura Lead']||temp(L['Status'],L)||'');
+  if(isInativoAuto(L) || String(L['Status']||'').toLowerCase()==='inativo') t='Inativo';
   $('lpTitle').textContent=L['Razão Social']||L['Lead']||'Lead';
   var sub=[L['Cidade'],L['UF'],L['CNPJ']?('CNPJ '+L['CNPJ']):''].filter(Boolean).join(' · ');
   $('lpSub').textContent=sub||(L['E-mail']||'');
@@ -3870,8 +4093,10 @@ function openComposer(kind){
   } else if(kind==='note'){
     h+='<label class="cmp-l">Observação</label><textarea id="cmp_body" rows="3" placeholder="Escreva a nota..."></textarea>';
   } else if(kind==='task'){
+    var _pt=_splitProx(L['Próxima Ação']||'');
     h+='<div class="cmp-fg"><label>Data da próxima ação</label><input id="cmp_date" value="'+esc(L['Data Próxima Ação']||'')+'" placeholder="dd/mm/aaaa" maxlength="10"></div>'+
-       '<label class="cmp-l">Próxima ação</label><textarea id="cmp_body" rows="2" placeholder="O que precisa ser feito...">'+esc(L['Próxima Ação']||'')+'</textarea>';
+       '<label class="cmp-l">Tipo</label><select id="cmp_ptipo">'+_proxOptions(_pt.tipo)+'</select>'+
+       '<label class="cmp-l">Observação</label><textarea id="cmp_body" rows="2" placeholder="Detalhe da ação...">'+esc(_pt.obs)+'</textarea>';
   } else if(kind==='status'){
     h+='<label class="cmp-l">Novo status</label><select id="cmp_status" onchange="onComposerStatus()">'+
        statusList.map(function(o){return '<option'+((L['Status']||'')===o?' selected':'')+'>'+esc(o)+'</option>';}).join('')+
@@ -3915,10 +4140,11 @@ async function saveComposer(){
     act={type:'note',date:n.date,time:n.time,author:(U&&U.nome)||'—',title:'📝 Nota',body:body};
   } else if(kind==='task'){
     var td=(($('cmp_date')||{}).value||'').trim();
+    var ptipo=(($('cmp_ptipo')||{}).value||'').trim();
     if(!td){toast('Informe a data da próxima ação.','err');return;}
-    if(!body){toast('Descreva a próxima ação.','err');return;}
-    patch['Data Próxima Ação']=td; patch['Próxima Ação']=body;
-    act={type:'task',date:td,time:n.time,author:(U&&U.nome)||'—',title:'📋 Tarefa agendada',body:body};
+    if(!ptipo && !body){toast('Informe o tipo ou a observação da próxima ação.','err');return;}
+    patch['Data Próxima Ação']=td; patch['Próxima Ação']=_joinProx(ptipo,body);
+    act={type:'task',date:td,time:n.time,author:(U&&U.nome)||'—',title:'📋 Tarefa agendada'+(ptipo?(' — '+ptipo):''),body:body};
   } else if(kind==='status'){
     var ns=(($('cmp_status')||{}).value||'').trim(), prev=(L['Status']||'').trim();
     if(!ns){toast('Selecione um status.','err');return;}
