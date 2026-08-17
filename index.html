@@ -848,6 +848,7 @@ html body .login-crm-subtitle{display:block!important;margin:8px 0 10px!importan
       <p>Insira seu nome e e-mail para acessar</p>
       <input type="text" id="inNome" placeholder="Nome e Sobrenome">
       <input type="email" id="inEmail" placeholder="seu.email@dellamed.com.br">
+      <input type="password" id="inPin" inputmode="numeric" autocomplete="off" placeholder="PIN de administrador" style="display:none">
       <button class="btn btn-teal" id="btnLogin" style="font-family:'Montserrat',sans-serif">ENTRAR</button>
       <div class="login-notice">
         ⚠️ No primeiro acesso, use o nome e sobrenome exatos do cadastro corporativo. Nos acessos seguintes, qualquer variação do nome é aceita.
@@ -1316,6 +1317,7 @@ function autoLogin() {
       fe.value = lock.email;
     }
   } catch(_) {}
+  try { if(($('inEmail').value||'').trim().toLowerCase()===ADMIN_EMAIL){ var _p=$('inPin'); if(_p) _p.style.display=''; } } catch(_){}
   // Auto-sessão
   try { U = JSON.parse(localStorage.getItem('crm_user')); if (U) initApp(); } catch(_){}
 }
@@ -1323,6 +1325,7 @@ function autoLogin() {
 async function doLogin() {
   const email = $('inEmail').value.trim().toLowerCase();
   const nome = $('inNome').value.trim();
+  const pin = ($('inPin')||{value:''}).value.trim();
   if (!nome) return loginMsg('Preencha seu nome.','error');
   if (!email) return loginMsg('Preencha o e-mail.','error');
   // Show progress
@@ -1330,7 +1333,7 @@ async function doLogin() {
   const prog = $('loginProgress'); prog.classList.add('show');
   const fill = $('lpFill'); const txt = $('lpText');
   fill.style.width='20%'; txt.textContent='Conectando ao servidor...';
-  const r = await api('POST',{action:'login',email,nome});
+  const r = await api('POST',{action:'login',email,nome,pin});
   fill.style.width='60%'; txt.textContent='Verificando credenciais...';
   if (r.ok) {
     fill.style.width='80%'; txt.textContent='Carregando dados...';
@@ -3568,6 +3571,9 @@ $('inSearch').oninput = renderAll;
 // Formulário só fecha pelo X ou Cancelar (não fecha ao clicar fora, evita perda de dados)
 $('modAdmin').onclick = e=>{if(e.target===$('modAdmin'))closeAdmin();};
 $('inEmail').onkeydown = e=>{if(e.key==='Enter')doLogin();};
+function _togglePin(){var el=$('inPin');if(!el)return;var isAdm=($('inEmail').value||'').trim().toLowerCase()===ADMIN_EMAIL;el.style.display=isAdm?'':'none';if(!isAdm)el.value='';}
+$('inEmail').addEventListener('input',_togglePin);
+$('inPin').onkeydown = e=>{if(e.key==='Enter')doLogin();};
 
 // ═══════ START ═══════
 
