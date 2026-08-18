@@ -883,7 +883,7 @@ html body .login-crm-subtitle{display:block!important;margin:8px 0 10px!importan
     </div>
   </div>
   <div class="pipe-header">
-    <h2 id="secTitle">Leads Multicanais</h2>
+    <h2 id="secTitle" style="display:none">Leads Multicanais</h2>
     <div class="search-box"><input type="text" id="inSearch" title="Busca única nas abas Leads e WhatsApp: Lead, Time Comercial, Prospect, Cidade, CNPJ, Temperatura, UF e E-mail" placeholder="Buscar em Leads e WhatsApp: lead, time, prospect, cidade, CNPJ, UF, e-mail..."></div>
   </div>
   <!-- TABS -->
@@ -1362,14 +1362,13 @@ async function initApp() {
   // Não-admin: esconde Usuários e Alterações, mostra sino
   $('btnAdmin').classList.toggle('hidden', !U.admin);
   $('btnTransfers').classList.toggle('hidden', !U.admin);
-  $('bellWrap').classList.toggle('hidden', U.admin);
+  $('bellWrap').classList.remove('hidden');   // sino para todos (admin vê atividades dos usuários)
   if (U.admin) {
     checkAdminPending();
     setInterval(checkAdminPending, 60000);
-  } else {
-    checkNotifications();
-    setInterval(checkNotifications, 60000);
   }
+  checkNotifications();
+  setInterval(checkNotifications, 60000);
   // Carrega TUDO em paralelo — 5x mais rápido
   const [c, p, au, d, w] = await Promise.all([
     api('GET',{action:'getConfig'}),
@@ -1720,18 +1719,14 @@ const UF_FULL_NAME = {
 function leadFreeSearchText(l) {
   const uf = String(l['UF'] || '').trim().toUpperCase();
   const temperatura = (l['Temperatura Lead'] || temp(l['Status'], l) || '');
-  return normFreeSearch([
-    l['Lead'],
-    l['Time Comercial'],
-    l['Prospect'],
-    l['Estado'],
-    UF_FULL_NAME[uf] || '',
-    l['Cidade'],
-    l['CNPJ'],
-    temperatura,
-    l['UF'],
-    l['E-mail']
-  ].join(' '));
+  const parts = [];
+  for (const k in l) {
+    if (k === '_row' || k === '_src' || k === 'Atividades' || k === 'Anexos' || k === 'Links') continue;
+    const v = l[k];
+    if (v != null && v !== '') parts.push(v);
+  }
+  parts.push(UF_FULL_NAME[uf] || '', temperatura);
+  return normFreeSearch(parts.join(' '));
 }
 
 function getMainFiltered() {
@@ -1908,6 +1903,7 @@ function openForm(row) {
   const dataValue = isE ? (L['Data']||'') : todayStr;
 
   $('fBody').innerHTML =
+    (isE ? '' : fld('Salvar em','<select id="f_destino"><option value="">Selecione...</option><option value="leads">Leads Multicanais</option><option value="wa">WhatsApp</option></select>',' fld-req')) +
     fld('Data Registro','<input id="f_data" value="'+esc(dataValue)+'" placeholder="dd/mm/aaaa" maxlength="10" '+(!U.admin?'readonly style="background:#f0f0f0;cursor:not-allowed"':'oninput="mDate(this)"')+'><div class="fld-err" id="err_data">Formato inválido. Use dd/mm/aaaa</div>')+
     fld('Status','<select id="f_st" '+dis+' onchange="toggleGanhoReq()">'+((CFG.status||[]).map(s=>'<option'+(L&&L['Status']===s?' selected':'')+'>'+s+'</option>')).join('')+'</select>',rq)+
     fld('Status inicial:',
@@ -2158,7 +2154,9 @@ async function _doSaveLead() {
     if (!_isExp && !t1){toast('Campo obrigatório: Telefone 1','err');return;}
   }
   if (!validateDates()) return;
-  const addAct = curTab==='wa'?'addWA':'addLead', editAct = curTab==='wa'?'editWA':'editLead';
+  const _destino = editRow ? '' : (($('f_destino')||{}).value||'').trim();
+  if (!editRow && !_destino) { toast('Escolha onde salvar: Leads Multicanais ou WhatsApp.','err'); return; }
+  const addAct = _destino==='wa'?'addWA':'addLead', editAct = curTab==='wa'?'editWA':'editLead';
   console.log('Salvando lead:', JSON.stringify(lead).substring(0,200));
   console.log('Action:', editRow ? editAct : addAct, 'Row:', editRow);
   const r = editRow
@@ -2167,6 +2165,7 @@ async function _doSaveLead() {
   console.log('Resposta save:', JSON.stringify(r));
   if (r.error) { toast('Erro: ' + r.error, 'err'); return; }
   if (r.ok) {
+    if (!editRow) notifyAdminActivity('criou um lead', lead['Razão Social'], _destino, r.num);
     // Se transfer pendente, enviar solicitação
     if (pendingTransfer && editRow && !canDirectAssign()) {
       const L = curData().find(l=>l._row===editRow);
@@ -2489,6 +2488,7 @@ window.kbMove = async function(row, newStatus, src) {
     }
     if (r.error) { toast(r.error,'err'); return; }
     toast('Lead movido para '+newStatus,'ok');
+    notifyAdminActivity('moveu para '+newStatus, (lead?lead['Razão Social']:''), src, row);
     renderFunil();
     renderAll();                                  // reflete a mudança nas guias Leads/WhatsApp
     if($('leadPanel')&&$('leadPanel').classList.contains('open')) renderPanel();
@@ -3488,6 +3488,14 @@ async function actTransfer(action, row) {
 }
 
 // ═══════ NOTIFICATIONS BELL ═══════
+async function notifyAdminActivity(detalhe, razaoSocial, src, leadRow){
+  try{
+    if(!U || U.admin) return;                 // não notifica ações do próprio admin
+    await api('POST',{action:'notifyActivity', userEmail:U.email, userNome:U.nome,
+      detalhe:String(detalhe||''), razaoSocial:String(razaoSocial||''),
+      aba:(src||curTab)==='wa'?'WhatsApp':'Leads', leadRow:leadRow||''});
+  }catch(_){}
+}
 async function checkNotifications() {
   if (!U || isFormOpen()) return;
   const r = await api('GET',{action:'getNotifications',email:U.email});
@@ -3502,6 +3510,9 @@ async function checkNotifications() {
   }
   $('bellDD').innerHTML = notifs.length
     ? notifs.map(n => {
+        if (n.tipo==='atividade') {
+          return '<div class="bell-item"><b>'+esc(n.autor||'')+'</b> '+esc(n.detalhe||'')+(n.razaoSocial?(' — <b>'+esc(n.razaoSocial)+'</b>'):'')+'<br><small>'+esc(n.resolvidoEm)+'</small></div>';
+        }
         if (n.tipo==='atribuicao') {
           return '<div class="bell-item"><b>'+esc(n.razaoSocial)+'</b><br>Lead atribuído a você por <b>'+esc(n.fromUser||'')+'</b><br><small>'+esc(n.resolvidoEm)+'</small></div>';
         }
@@ -3833,6 +3844,7 @@ async function bulkApplyStatus(){
     }catch(_){ err++; }
   }
   toast('Status alterado em '+okc+' lead(s)'+(err?(' — '+err+' com erro'):'')+'.', err?'err':'ok');
+  notifyAdminActivity('alterou status de '+okc+' lead(s) para '+ns, '', curTab);
   bulkSel.clear(); await reload();
 }
 async function bulkReassign(){
@@ -4175,6 +4187,7 @@ async function saveComposer(){
   else { toast('Registrado.','ok'); }
   renderAll();
   var fv=$('funilView'); if(fv&&!fv.classList.contains('hidden')) renderFunil();
+  notifyAdminActivity((act&&act.title?act.title:'registrou atividade')+(act&&act.body?(': '+act.body):''), L['Razão Social'], _panelSrc, _panelRow);
 }
 
 autoLogin();
