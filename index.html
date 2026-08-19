@@ -1921,8 +1921,8 @@ function openForm(row) {
         VENDEDORES.map(function(v){
           return '<option value="'+esc(v.nome)+'"'+(v.nome===curProspect?' selected':'')+'>'+esc(v.nome)+'</option>';
         }).join('');
-      if (canDirectAssign()) {
-        // Admin / Camily: dropdown livre
+      if (canDirectAssign() && (!isE || U.admin)) {
+        // Admin sempre; líder apenas na CRIAÇÃO: dropdown livre
         return fld('Prospect (Vendedor)',
           '<select id="f_pr_sel" onchange="onProspectChange()">'+prOpts+'</select>'+
           '<input type="hidden" id="f_pr" value="'+esc(curProspect)+'">',
@@ -1930,6 +1930,16 @@ function openForm(row) {
           fld('E-mail do Vendedor',
           '<input id="f_pr_email" value="'+esc(resolvedEmail)+'" readonly '+
           'style="background:#f0f0f0;cursor:not-allowed" placeholder="Auto-preenchido">');
+      } else if (canDirectAssign() && isE && !U.admin) {
+        // Líder EDITANDO lead existente: trocar o vendedor exige autorização da administradora
+        return fld('Prospect (Vendedor)',
+          '<select id="f_pr_sel" onchange="onProspectChangeReq()">'+prOpts+'</select>'+
+          '<input type="hidden" id="f_pr" value="'+esc(curProspect)+'">'+
+          '<div style="margin-top:4px;font-size:.72rem;color:var(--muted)">🔒 Para trocar o vendedor deste lead é necessária autorização da administradora.</div>'+
+          '<button type="button" class="btn btn-sm btn-teal" id="btnProspReq" style="margin-top:4px;font-size:.72rem;display:none" onclick="markProspectRequest()">📨 Solicitar alteração</button>',
+          rq)+
+          fld('E-mail do Vendedor',
+          '<input id="f_pr_email" value="'+esc(resolvedEmail)+'" readonly style="background:#f0f0f0;cursor:not-allowed">');
       } else {
         // Vendedor comum: nome fixo; transferência apenas via aprovação
         return fld('Prospect (Vendedor)',
@@ -2066,7 +2076,7 @@ function openForm(row) {
 function fld(lbl,html,extra){return '<div class="fld'+(extra||'')+'"><label>'+lbl+'</label>'+html+'</div>';}
 function fldF(lbl,html){return '<div class="fld full"><label>'+lbl+'</label>'+html+'</div>';}
 function isFormOpen(){return !$('modForm').classList.contains('hidden');}
-function closeForm(){$('modForm').classList.add('hidden');editRow=null;pendingTransfer=false;assignedProspect='';if(_returnToPanel){var rr=_returnPanelRow,rs=_returnPanelSrc;_returnToPanel=false;if(rr!=null)openLeadPanel(rr,rs);}}
+function closeForm(){$('modForm').classList.add('hidden');editRow=null;pendingTransfer=false;assignedProspect='';transferTarget='';if(_returnToPanel){var rr=_returnPanelRow,rs=_returnPanelSrc;_returnToPanel=false;if(rr!=null)openLeadPanel(rr,rs);}}
 
 let saving = false;
 async function saveLead() {
@@ -2165,28 +2175,32 @@ async function _doSaveLead() {
   console.log('Resposta save:', JSON.stringify(r));
   if (r.error) { toast('Erro: ' + r.error, 'err'); return; }
   if (r.ok) {
-    if (!editRow) notifyAdminActivity('criou um lead', lead['Razão Social'], _destino, r.num);
+    if (!editRow) notifyAdminActivity('adicionou um novo lead', lead['Razão Social'], _destino, r.num);
     // Se transfer pendente, enviar solicitação
-    if (pendingTransfer && editRow && !canDirectAssign()) {
+    if (pendingTransfer && editRow && !U.admin) {
       const L = curData().find(l=>l._row===editRow);
       const tr = await api('POST', {
         action:'requestTransfer', userEmail:U.email,
         sheetName:curTab==='wa'?'WHATSAPP':'LEADS', row:editRow,
-        razaoSocial:lead['Razão Social']||'', prospectAtual:L?L['Prospect']:''
+        razaoSocial:lead['Razão Social']||'', prospectAtual:L?L['Prospect']:'',
+        assignToName: transferTarget || U.nome
       });
-      pendingTransfer = false;
-      if (tr.ok) { toast('Lead salvo. SOLICITAÇÃO ENVIADA!','ok'); }
+      pendingTransfer = false; transferTarget = '';
+      if (tr.ok) { toast('Lead salvo. SOLICITAÇÃO DE AUTORIZAÇÃO ENVIADA!','ok'); }
       else { toast('Lead salvo, mas erro na solicitação: '+(tr.error||''),'err'); }
-    } else if (pendingTransfer && editRow && canDirectAssign()) {
+    } else if (pendingTransfer && editRow && U.admin) {
       pendingTransfer = false;
       toast('Lead atualizado e atribuído diretamente!','ok');
     } else if (assignedProspect && assignEmail) {
       // Notificar o prospect atribuído — passa quem atribuiu, para quem e prospect anterior
       const _origLead = editRow ? curData().find(function(l){return l._row===editRow;}) : null;
+      const _oldName = _origLead ? (_origLead['Prospect']||'') : '';
+      const _remEmail = _oldName ? ((VENDEDORES.find(function(v){return v.nome===_oldName;})||{}).email||'') : '';
       await api('POST', {
         action:'notifyAssign', assignEmail: assignEmail,
         assignToName:  assignedProspect,
-        prospectAtual: _origLead ? (_origLead['Prospect']||'') : '',
+        prospectAtual: _oldName,
+        removedEmail:  _remEmail,
         razaoSocial:   lead['Razão Social']||'', fromUser: U.nome
       });
       toast('Lead salvo e atribuído a '+assignedProspect+'!','ok');
@@ -2266,6 +2280,8 @@ function resetFunilFlt() {
 function _funilLeads() {
   LEADS.forEach(function(l){l._src='leads';}); WA_LEADS.forEach(function(l){l._src='wa';});
   var leads = LEADS.concat(WA_LEADS);
+  var _fq = normFreeSearch(($('inSearch')||{value:''}).value || '');
+  var _funilTerms = _fq ? _fq.split(/\s+/).filter(Boolean) : [];
   var periodo  = ($('ffl_periodo')||{}).value || 'all';
   var fltTime  = ($('ffl_time')||{}).value || '';
   var fltPros  = ($('ffl_prospect')||{}).value || '';
@@ -2286,6 +2302,7 @@ function _funilLeads() {
     // Filtro de prospect
     if (fltPros && String(l['Prospect']||'').trim() !== fltPros) return false;
     if (funilQuick && !matchesQuick(l, funilQuick)) return false;
+    if (_funilTerms.length) { var _h = leadFreeSearchText(l); if (!_funilTerms.every(function(t){return _h.includes(t);})) return false; }
     // Filtro de data
     if (periodo !== 'all') {
       var ld = parseDt(l['Data']);
@@ -3401,6 +3418,7 @@ async function admDel(em,nome){if(!confirm('Excluir o usuário '+nome+' ('+em+')
 // ═══════ TRANSFERS ═══════
 let pendingTransfer = false;
 let assignedProspect = ''; // nome do prospect atribuído via email
+let transferTarget = ''; // alvo da solicitação de alteração (líder editando)
 
 async function lookupAssign() {
   const email = gv('f_assign');
@@ -3441,6 +3459,22 @@ function markTransfer() {
   }
   toast('Clique em Salvar para confirmar.', 'ok');
 }
+// Líder editando: seleção de novo vendedor apenas MARCA um pedido de autorização (não troca direto)
+window.onProspectChangeReq = function(){
+  var sel = $('f_pr_sel'); if(!sel) return;
+  var chosen = sel.value;
+  var orig = ($('f_pr')||{value:''}).value || '';
+  var btn = $('btnProspReq');
+  if (chosen && chosen !== orig) { transferTarget = chosen; if(btn){ btn.style.display=''; btn.disabled=false; btn.textContent='📨 Solicitar alteração'; btn.style.background=''; } }
+  else { transferTarget = ''; pendingTransfer = false; if(btn) btn.style.display='none'; }
+};
+window.markProspectRequest = function(){
+  if(!transferTarget){ toast('Selecione o novo vendedor primeiro.','err'); return; }
+  pendingTransfer = true;
+  var btn = $('btnProspReq');
+  if(btn){ btn.textContent='✅ Solicitação marcada — clique Salvar'; btn.disabled=true; btn.style.background='var(--navy)'; }
+  toast('Precisa de autorização da administradora. Clique em Salvar para enviar a solicitação.','ok');
+};
 
 async function openTransfers() {
   if (!U.admin) { toast('Acesso restrito à administradora.','err'); return; }
@@ -3493,7 +3527,7 @@ async function notifyAdminActivity(detalhe, razaoSocial, src, leadRow){
     if(!U || U.admin) return;                 // não notifica ações do próprio admin
     await api('POST',{action:'notifyActivity', userEmail:U.email, userNome:U.nome,
       detalhe:String(detalhe||''), razaoSocial:String(razaoSocial||''),
-      aba:(src||curTab)==='wa'?'WhatsApp':'Leads', leadRow:leadRow||''});
+      aba:(src||curTab)==='wa'?'WhatsApp':'Leads Multicanais', leadRow:leadRow||''});
   }catch(_){}
 }
 async function checkNotifications() {
@@ -3510,6 +3544,9 @@ async function checkNotifications() {
   }
   $('bellDD').innerHTML = notifs.length
     ? notifs.map(n => {
+        if (n.texto) {
+          return '<div class="bell-item">'+esc(n.texto)+'<br><small>'+esc(n.resolvidoEm||'')+'</small></div>';
+        }
         if (n.tipo==='atividade') {
           return '<div class="bell-item"><b>'+esc(n.autor||'')+'</b> '+esc(n.detalhe||'')+(n.razaoSocial?(' — <b>'+esc(n.razaoSocial)+'</b>'):'')+'<br><small>'+esc(n.resolvidoEm)+'</small></div>';
         }
@@ -3577,7 +3614,7 @@ $('fSave').onclick = saveLead;
 $('fDel').onclick = delLead;
 $('dClose').onclick = closeDash;
 $('aClose').onclick = closeAdmin;
-$('inSearch').oninput = renderAll;
+$('inSearch').oninput = function(){ var fv=$('funilView'); if(fv && !fv.classList.contains('hidden')) renderFunil(); else renderAll(); };
 // Formulário só fecha pelo X ou Cancelar (não fecha ao clicar fora, evita perda de dados)
 $('modAdmin').onclick = e=>{if(e.target===$('modAdmin'))closeAdmin();};
 $('inEmail').onkeydown = e=>{if(e.key==='Enter')doLogin();};
@@ -3858,10 +3895,17 @@ async function bulkReassign(){
     var okc=0, err=0;
     for(var i=0;i<items.length;i++){
       var it=items[i];
+      var _oldName = it.lead['Prospect']||'';
+      var _oldEmail = _oldName ? ((VENDEDORES.find(function(vd){return vd.nome===_oldName;})||{}).email||'') : '';
       var patch={'Prospect':nome,'E-mail Prospect':email};
       try{
         var r=await api('POST',{action:(it.src==='wa'?'editWA':'editLead'),userEmail:U.email,row:it.row,lead:patch});
-        if(r&&r.error){err++;} else { it.lead['Prospect']=nome; it.lead['E-mail Prospect']=email; okc++; }
+        if(r&&r.error){err++;} else {
+          it.lead['Prospect']=nome; it.lead['E-mail Prospect']=email; okc++;
+          if(_oldName!==nome){
+            try{ await api('POST',{action:'notifyAssign', assignEmail:email, assignToName:nome, prospectAtual:_oldName, removedEmail:_oldEmail, razaoSocial:(it.lead['Razão Social']||''), fromUser:U.nome}); }catch(_){}
+          }
+        }
       }catch(_){ err++; }
     }
     toast('Reatribuído: '+okc+' lead(s)'+(err?(' — '+err+' com erro'):'')+'.', err?'err':'ok');
