@@ -2004,6 +2004,7 @@ function openForm(row) {
       '</div>';
     })()+
     fld('Telefone 2','<div class="phone-row"><input class="ph-ddd" id="f_d2" value="'+esc(p2.d?'('+p2.d+')':'')+'" '+dis+' placeholder="(00)" maxlength="4" oninput="mDDD(this)"><input class="ph-num" id="f_n2" value="'+esc(p2.n)+'" '+dis+' placeholder="00000-0000" maxlength="10" oninput="mPH(this)"></div>')+
+    (isE ? _histLig(L) : '')+
     fld('E-mail','<input id="f_em" value="'+esc(L?L['E-mail']:'')+'" '+dis+'>',rq)+
     fld('Canal Principal','<select id="f_ca" '+dis+'><option value="">Selecione...</option>'+((CFG.canalPrincipal||[]).map(c=>'<option'+(L&&L['Canal Principal']===c?' selected':'')+'>'+c+'</option>')).join('')+'</select>',rq)+
     fld('Linha de Interesse','<div id="ms_li" class="msel" data-sel="'+esc(L?L['Linha de Interesse']:'')+'"></div>')+
@@ -2015,7 +2016,7 @@ function openForm(row) {
     fld('Data Próxima Ação','<input id="f_da" value="'+esc(L?L['Data Próxima Ação']:'')+'" '+dis+' placeholder="dd/mm/aaaa" maxlength="10" oninput="mDate(this)"><div class="fld-err" id="err_da">Formato inválido. Use dd/mm/aaaa</div>')+
     fld('Valor do Pedido','<input id="f_vl" value="'+esc(L?L['Valor do Pedido']:'')+'" '+dis+' placeholder="R$ 0,00" oninput="mBRL(this)">',ganhoRq)+
     fld('Nº do Pedido','<input id="f_np" value="'+esc(L?L['Nº do Pedido']:'')+'" '+dis+'>',ganhoRq)+
-    (isE ? _histForm(L) : '')+
+    (isE ? _histPed(L) : '')+
     fld('Motivo da Perda','<div id="ms_mp" class="msel" data-sel="'+esc(L?L['Motivo da Perda']:'')+'"></div>',perdidoRq)+
     fldF('Observações','<textarea id="f_ob" '+dis+'>'+esc(L?L['Observações']:'')+'</textarea>')+
     (function(){
@@ -4115,16 +4116,19 @@ function _pedFilter(peds){
 }
 // Histórico (somente leitura) para o FORMULÁRIO — ligações e pedidos, com setinha
 function toggleFm(id){ var e=$(id); var c=$(id+'C'); if(!e) return; var open=e.style.display==='none'; e.style.display=open?'block':'none'; if(c) c.textContent=open?'\u25b4':'\u25be'; }
-function _histForm(L){
+function _histLig(L){
   if(!L) return '';
-  var calls=_callsOf(L); var peds=_getPedidos(L); var tot=_pedTotais(peds);
-  var h='<div class="lp-lig"><div class="lp-lig-head" onclick="toggleFm(\'fmLig\')">'+
+  var calls=_callsOf(L);
+  return '<div class="lp-lig"><div class="lp-lig-head" onclick="toggleFm(\'fmLig\')">'+
     '<span>📞 Total de ligações: <b>'+calls.length+'</b></span><span id="fmLigC">\u25be</span></div>'+
     '<div id="fmLig" style="display:none;margin-top:8px">'+_callRows(calls)+'</div></div>';
-  h+='<div class="lp-lig"><div class="lp-lig-head" onclick="toggleFm(\'fmPed\')">'+
+}
+function _histPed(L){
+  if(!L) return '';
+  var peds=_getPedidos(L); var tot=_pedTotais(peds);
+  return '<div class="lp-lig"><div class="lp-lig-head" onclick="toggleFm(\'fmPed\')">'+
     '<span>🧾 Total em pedidos: <b>'+esc(tot.valor)+'</b>'+(tot.temUsd?(' <span style="color:var(--muted);font-weight:400">/ '+esc(tot.usd)+'</span>'):'')+(peds.length?(' <span style="color:var(--muted);font-weight:400">('+peds.length+')</span>'):'')+'</span><span id="fmPedC">\u25be</span></div>'+
     '<div id="fmPed" style="display:none;margin-top:8px">'+_pedRows(peds.map(function(p,i){return {p:p,idx:i};}),false)+'</div></div>';
-  return h;
 }
 function _ligWidget(L){
   var calls=_callsOf(L);
