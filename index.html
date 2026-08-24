@@ -900,6 +900,7 @@ html body .login-crm-subtitle{display:block!important;margin:8px 0 10px!importan
     <span class="bulk-count" id="bulkCount">0 selecionados</span>
     <span class="bulk-grp"><label>Status:</label><select id="bulkStatus"></select><button class="btn btn-sm btn-teal" onclick="bulkApplyStatus()">Aplicar</button></span>
     <span class="bulk-grp"><label>Reatribuir a:</label><select id="bulkProspect"></select><button class="btn btn-sm btn-navy" onclick="bulkReassign()">Reatribuir</button></span>
+    <span class="bulk-grp hidden" id="bulkOcultoGrp"><label>Visibilidade:</label><button class="btn btn-sm btn-teal" onclick="bulkSetOculto('')">👁️ Tornar visível</button><button class="btn btn-sm btn-outline" onclick="bulkSetOculto('1')">🙈 Ocultar</button></span>
   </div>
   <!-- MAIN FILTERS -->
   <div class="main-flt" id="mainFlt">
@@ -1073,6 +1074,14 @@ html body .login-crm-subtitle{display:block!important;margin:8px 0 10px!importan
 .leads-tbl th:nth-child(5),.leads-tbl td:nth-child(5){max-width:none!important;width:150px!important;white-space:normal!important;overflow:visible!important;text-overflow:clip!important;word-break:break-word!important;line-height:1.3}
 /* Prospect(9): nome inteiro sempre — quebra de linha, nunca corta */
 .leads-tbl th:nth-child(9),.leads-tbl td:nth-child(9){max-width:none!important;width:160px!important;white-space:normal!important;overflow:visible!important;text-overflow:clip!important;word-break:break-word!important;line-height:1.3}
+
+/* ===== TOGGLE OLHINHO (ocultar lead) ===== */
+.eye-toggle{display:inline-flex;align-items:center;gap:8px;padding:9px 14px;border-radius:10px;border:1.5px solid var(--border);background:#fff;color:var(--navy);font-family:inherit;font-size:.82rem;font-weight:600;cursor:pointer;transition:all .15s;width:100%;text-align:left}
+.eye-toggle:hover{border-color:var(--teal)}
+.eye-toggle .eye-ic{font-size:1.05rem;line-height:1}
+.eye-toggle.is-oculto{background:#fdecef;border-color:var(--red);color:var(--red)}
+.qf-chip-oculto{border-color:#6B7280;color:#374151}
+.qf-chip-oculto.active{background:#374151!important;border-color:#374151!important;color:#fff!important;box-shadow:0 3px 10px rgba(55,65,81,.25)!important}
 
 /* ===== FILTROS RÁPIDOS ===== */
 .qf-bar{padding:2px 24px 10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
@@ -1776,8 +1785,17 @@ function getMainFiltered() {
     });
   }
   if (activeQuick) data = data.filter(function(l){return matchesQuick(l,activeQuick);});
+  // Visibilidade (Oculto): ocultos ficam invisíveis para todos por padrão.
+  // Admin com o filtro "Ocultos" ativo vê SOMENTE os ocultos.
+  if (U && U.admin && ocultoView) {
+    data = data.filter(function(l){ return String(l['Oculto']||'')==='1'; });
+  } else {
+    data = data.filter(function(l){ return String(l['Oculto']||'')!=='1'; });
+  }
   return data;
 }
+var ocultoView = false;
+function toggleOcultoView(){ ocultoView=!ocultoView; if(typeof bulkSel!=='undefined'){bulkSel.clear();} renderQuickChips(); renderAll(); }
 
 function renderAll() { setTimeout(applyFilterStyle,50);
   LEADS.forEach(function(l){l._src='leads';}); WA_LEADS.forEach(function(l){l._src='wa';});
@@ -1847,7 +1865,7 @@ function renderAll() { setTimeout(applyFilterStyle,50);
     var dueCls='';
     (function(){var v=l['Data Próxima Ação']||'';var st2=String(l['Status']||'').toLowerCase();if(v&&['ganho','perdido','inativo'].indexOf(st2)<0){var p=String(v).split('/');if(p.length===3){var d=new Date(+p[2],+p[1]-1,+p[0]);d.setHours(0,0,0,0);var t0=new Date();t0.setHours(0,0,0,0);var diff=Math.round((d-t0)/86400000);if(diff<0)dueCls='row-due-late';else if(diff===0)dueCls='row-due-today';}}})();
     return '<tr class="'+dueCls+'" onclick="openLeadPanel('+l._row+',\''+(l._src||curTab)+'\')">'+
-      '<td style="text-align:center;color:var(--muted);font-size:.75rem;white-space:nowrap"><input type="checkbox" class="bulk-cb" onclick="event.stopPropagation();toggleRow(event,'+l._row+',\''+(l._src||curTab)+'\')" '+(bulkSel.has((l._src||curTab)+':'+l._row)?'checked':'')+' style="vertical-align:middle;margin-right:5px;cursor:pointer">'+esc(l['Nº']||'')+'</td>'+
+      '<td style="text-align:center;color:var(--muted);font-size:.75rem;white-space:nowrap"><input type="checkbox" class="bulk-cb" onclick="event.stopPropagation();toggleRow(event,'+l._row+',\''+(l._src||curTab)+'\')" '+(bulkSel.has((l._src||curTab)+':'+l._row)?'checked':'')+' style="vertical-align:middle;margin-right:5px;cursor:pointer">'+(String(l['Oculto']||'')==='1'?'<span title="Lead oculto — só admin vê" style="margin-right:3px">🕶️</span>':'')+esc(l['Nº']||'')+'</td>'+
       '<td style="font-size:.78rem">'+esc(l['Data']||'')+'</td>'+
       '<td><span class="st-badge" style="background:'+sc+'">'+esc(l['Status']||'')+'</span></td>'+
       '<td style="font-weight:600;color:#000;max-width:240px;overflow:hidden;text-overflow:ellipsis" title="'+esc(l['Razão Social']||'')+'">'+esc(l['Razão Social']||'')+'</td>'+
@@ -1921,7 +1939,15 @@ function openForm(row) {
   const todayStr = String(today.getDate()).padStart(2,'0')+'/'+String(today.getMonth()+1).padStart(2,'0')+'/'+today.getFullYear();
   const dataValue = isE ? (L['Data']||'') : todayStr;
 
-  $('fBody').innerHTML =
+  const ocultoNow = isE ? (String(L['Oculto']||'')==='1') : false;
+  const ocultoRow = U.admin ? fldF('Visibilidade',
+      '<input type="hidden" id="f_oculto" value="'+(ocultoNow?'1':'')+'">'+
+      '<button type="button" id="btnOculto" class="eye-toggle'+(ocultoNow?' is-oculto':'')+'" onclick="toggleOcultoField()">'+
+        '<span class="eye-ic">'+(ocultoNow?'🙈':'👁️')+'</span>'+
+        '<span class="eye-tx">'+(ocultoNow?'Oculto — só admin vê (clique para tornar visível)':'Visível para todos (clique para ocultar)')+'</span>'+
+      '</button>') : '';
+
+  $('fBody').innerHTML = ocultoRow +
     (isE ? '' : fld('Salvar em','<select id="f_destino"><option value="">Selecione...</option><option value="leads">Leads Multicanais</option><option value="wa">WhatsApp</option></select>',' fld-req')) +
     fld('Data Registro','<input id="f_data" value="'+esc(dataValue)+'" placeholder="dd/mm/aaaa" maxlength="10" '+(!U.admin?'readonly style="background:#f0f0f0;cursor:not-allowed"':'oninput="mDate(this)"')+'><div class="fld-err" id="err_data">Formato inválido. Use dd/mm/aaaa</div>')+
     fld('Status','<select id="f_st" '+dis+' onchange="toggleGanhoReq()">'+((CFG.status||[]).map(s=>'<option'+(L&&L['Status']===s?' selected':'')+'>'+s+'</option>')).join('')+'</select>',rq)+
@@ -2096,6 +2122,16 @@ function openForm(row) {
 
 function fld(lbl,html,extra){return '<div class="fld'+(extra||'')+'"><label>'+lbl+'</label>'+html+'</div>';}
 function fldF(lbl,html){return '<div class="fld full"><label>'+lbl+'</label>'+html+'</div>';}
+function toggleOcultoField(){
+  var h=$('f_oculto'); if(!h) return;
+  var on = h.value!=='1'; h.value = on?'1':'';
+  var b=$('btnOculto'); if(!b) return;
+  b.classList.toggle('is-oculto', on);
+  b.querySelector('.eye-ic').textContent = on?'🙈':'👁️';
+  b.querySelector('.eye-tx').textContent = on
+    ? 'Oculto — só admin vê (clique para tornar visível)'
+    : 'Visível para todos (clique para ocultar)';
+}
 function isFormOpen(){return !$('modForm').classList.contains('hidden');}
 function closeForm(){$('modForm').classList.add('hidden');editRow=null;pendingTransfer=false;assignedProspect='';transferTarget='';if(_returnToPanel){var rr=_returnPanelRow,rs=_returnPanelSrc;_returnToPanel=false;if(rr!=null)openLeadPanel(rr,rs);}}
 
@@ -2143,6 +2179,13 @@ async function _doSaveLead() {
     'Links':[...document.querySelectorAll('#linksContainer .link-row-input')].map(function(i){return i.value.trim();}).filter(Boolean).join(' | '),
     'Anexos':JSON.stringify(_getAttachmentList()),
   };
+  // Oculto: só admin controla; preserva valor existente se o toggle não estiver presente
+  if (U.admin) {
+    lead['Oculto'] = (($('f_oculto')||{value:''}).value)==='1' ? '1' : '';
+  } else if (editRow) {
+    var _Lo = curData().find(function(l){return l._row===editRow;});
+    if (_Lo && String(_Lo['Oculto']||'')==='1') lead['Oculto']='1';
+  }
   // Log automático de atividades (Lead criado / mudança de status)
   (function(){
     var acts=[];
@@ -3898,6 +3941,7 @@ function renderBulkBar(){
   var n=bulkSel.size;
   bar.classList.toggle('hidden', n===0);
   var c=$('bulkCount'); if(c) c.textContent = n+' selecionado'+(n!==1?'s':'');
+  var og=$('bulkOcultoGrp'); if(og) og.classList.toggle('hidden', !(U&&U.admin));
   if(n===0) return;
   // status (sem Ganho/Perdido — esses exigem Valor/Motivo, feito individualmente)
   var stSel=$('bulkStatus');
@@ -3981,6 +4025,23 @@ async function bulkReassign(){
     bulkSel.clear(); renderAll();
   }
 }
+async function bulkSetOculto(flag){
+  if(!(U&&U.admin)){ toast('Ação exclusiva da administradora.','err'); return; }
+  var items=_selectedLeads(); if(!items.length){ toast('Nenhum lead selecionado.','err'); return; }
+  var acao = flag==='1' ? 'ocultar' : 'tornar visível';
+  if(!confirm(acao.charAt(0).toUpperCase()+acao.slice(1)+' '+items.length+' lead(s)?')) return;
+  var okc=0, err=0;
+  for(var i=0;i<items.length;i++){
+    var it=items[i];
+    var patch={'Oculto': flag==='1'?'1':''};
+    try{
+      var r=await api('POST',{action:(it.src==='wa'?'editWA':'editLead'),userEmail:U.email,row:it.row,lead:patch});
+      if(r&&r.error){err++;} else { it.lead['Oculto']=patch['Oculto']; okc++; }
+    }catch(_){ err++; }
+  }
+  toast(okc+' lead(s) '+(flag==='1'?'ocultado(s)':'tornado(s) visível(is)')+(err?(' — '+err+' com erro'):'')+'.', err?'err':'ok');
+  bulkSel.clear(); await reload();
+}
 function showAuthSentPopup(n, nome){
   var msg=$('authSentMsg');
   if(msg) msg.textContent='Solicitação de reatribuição de '+n+' lead(s)'+(nome?(' para '+nome):'')+' enviada para autorização.';
@@ -4026,9 +4087,13 @@ var QUICK_DEFS = [
 var TABLE_QUICK_DEFS = QUICK_DEFS.filter(function(d){ return DATE_QUICKS.indexOf(d.key)<0; });
 function renderQuickChips(){
   var bar=$('qfChips'); if(!bar) return;
-  bar.innerHTML = TABLE_QUICK_DEFS.map(function(d){
+  var html = TABLE_QUICK_DEFS.map(function(d){
     return '<button class="qf-chip'+(activeQuick===d.key?' active':'')+'" onclick="toggleQuick(\''+d.key+'\')">'+d.label+'</button>';
   }).join('');
+  if (U && U.admin) {
+    html += '<button class="qf-chip qf-chip-oculto'+(ocultoView?' active':'')+'" onclick="toggleOcultoView()" title="Ver somente os leads ocultos (visível apenas para admin)">🕶️ Ocultos</button>';
+  }
+  bar.innerHTML = html;
 }
 function toggleQuick(k){ activeQuick=(activeQuick===k?'':k); renderQuickChips(); renderAll(); }
 function renderFunilChips(){
