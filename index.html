@@ -1075,6 +1075,11 @@ html body .login-crm-subtitle{display:block!important;margin:8px 0 10px!importan
 /* Prospect(9): nome inteiro sempre — quebra de linha, nunca corta */
 .leads-tbl th:nth-child(9),.leads-tbl td:nth-child(9){max-width:none!important;width:160px!important;white-space:normal!important;overflow:visible!important;text-overflow:clip!important;word-break:break-word!important;line-height:1.3}
 
+/* ===== AVISO DE CNPJ DUPLICADO ===== */
+.cnpj-dup-warn{margin-top:7px;padding:8px 11px;border-radius:8px;background:#fff7e6;border:1px solid #f0c36d;color:#7a4d00;font-size:.76rem;line-height:1.45}
+.cnpj-dup-warn .cdw-item{display:block;margin-top:2px}
+.cnpj-dup-warn .cdw-pr{color:#9a6b00;font-weight:600}
+
 /* ===== TOGGLE OLHINHO (ocultar lead) ===== */
 .eye-toggle{display:inline-flex;align-items:center;gap:8px;padding:9px 14px;border-radius:10px;border:1.5px solid var(--border);background:#fff;color:var(--navy);font-family:inherit;font-size:.82rem;font-weight:600;cursor:pointer;transition:all .15s;width:100%;text-align:left}
 .eye-toggle:hover{border-color:var(--teal)}
@@ -2003,8 +2008,8 @@ function openForm(row) {
       var isExp = L && String(L['Time Comercial']||'').toLowerCase().includes('exporta');
       // CNPJ (oculto se exportação) — com botão lupa que consulta a Receita e autopreenche
       var cnpjField = '<div id="wrap_cnpj"'+(isExp?' style="display:none"':'')+'>'+
-        fld('CNPJ','<div style="display:flex;gap:6px;align-items:center"><input id="f_cnpj" value="'+esc(L?L['CNPJ']:'')+'" '+dis+' placeholder="00.000.000/0000-00" maxlength="18" oninput="mCNPJ(this)" style="flex:1">'+
-          '<button type="button" class="btn btn-sm btn-teal" title="Buscar dados na Receita e preencher automaticamente" onclick="buscarCNPJ(($(\'f_cnpj\')||{}).value)" style="flex-shrink:0;padding:6px 11px">🔍</button></div>')+
+        fld('CNPJ','<div style="display:flex;gap:6px;align-items:center"><input id="f_cnpj" value="'+esc(L?L['CNPJ']:'')+'" '+dis+' placeholder="00.000.000/0000-00" maxlength="18" oninput="mCNPJ(this)" onblur="checkCnpjDup()" style="flex:1">'+
+          '<button type="button" class="btn btn-sm btn-teal" title="Buscar dados na Receita e preencher automaticamente" onclick="buscarCNPJ(($(\'f_cnpj\')||{}).value)" style="flex-shrink:0;padding:6px 11px">🔍</button></div><div id="cnpjDupWarn" class="cnpj-dup-warn" style="display:none"></div>')+
       '</div>';
       // Registro + País + Telefone Internacional (visível só se exportação)
       var telInt = L ? _parseTelInt(L['Telefone Internacional']||'') : {ddi:'',dd:'',num:''};
@@ -2228,6 +2233,12 @@ async function _doSaveLead() {
     if (!_isExp && !t1){toast('Campo obrigatório: Telefone 1','err');return;}
   }
   if (!validateDates()) return;
+  // Aviso de CNPJ duplicado (varre Leads + WhatsApp). Bloqueio suave: usuário decide.
+  var _dupCnpj = findCnpjDuplicates(lead['CNPJ']);
+  if (_dupCnpj.length) {
+    var _verbo = editRow ? 'Este CNPJ também consta em' : 'Este CNPJ já está cadastrado em';
+    if (!confirm('⚠️ '+_verbo+' '+_dupCnpj.length+' registro(s):\n\n'+_cnpjDupMsg(_dupCnpj)+'\n\nDeseja salvar mesmo assim?')) { return; }
+  }
   const _destino = editRow ? '' : (($('f_destino')||{}).value||'').trim();
   if (!editRow && !_destino) { toast('Escolha onde salvar: Leads Multicanais ou WhatsApp.','err'); return; }
   const addAct = _destino==='wa'?'addWA':'addLead', editAct = curTab==='wa'?'editWA':'editLead';
@@ -2878,6 +2889,42 @@ function ums(id,v){const cb=$(id).querySelector('input[value="'+v+'"]');if(cb){c
 function msVal(id){const c=$(id);if(!c)return '';return Array.from(c.querySelectorAll('input[type=checkbox]:checked')).map(cb=>cb.value).join(', ');}
 
 // ═══════ MASKS ═══════
+// ── Detecção de CNPJ já cadastrado (varre Leads + WhatsApp, já carregados no cliente) ──
+function _cnpjDigits(v){ return String(v||'').replace(/\D/g,''); }
+function findCnpjDuplicates(digits){
+  digits=_cnpjDigits(digits);
+  if(digits.length!==14) return [];
+  var out=[];
+  var scan=function(arr,src,label){
+    (arr||[]).forEach(function(l){
+      if(_cnpjDigits(l['CNPJ'])===digits){
+        // ignora o próprio lead sendo editado
+        if(editRow && (l._row===editRow) && ((l._src||'leads')===(curTab||'leads'))) return;
+        out.push({src:src,label:label,num:l['Nº']||'—',rs:l['Razão Social']||l['Lead']||'(sem razão social)',prospect:l['Prospect']||'—',oculto:String(l['Oculto']||'')==='1'});
+      }
+    });
+  };
+  scan(LEADS,'leads','Leads Multicanais');
+  scan(WA_LEADS,'wa','WhatsApp');
+  return out;
+}
+function _cnpjDupMsg(dups){
+  return dups.map(function(d){
+    return '• '+d.label+' — Nº '+d.num+' · '+d.rs+' (Prospect: '+d.prospect+')'+(d.oculto?' 🕶️ oculto':'');
+  }).join('\n');
+}
+function checkCnpjDup(){
+  var box=$('cnpjDupWarn'); if(!box) return [];
+  var dups=findCnpjDuplicates(($('f_cnpj')||{value:''}).value);
+  if(!dups.length){ box.style.display='none'; box.innerHTML=''; return []; }
+  box.style.display='block';
+  box.innerHTML='⚠️ <b>CNPJ já cadastrado</b> em '+dups.length+' registro(s):<br>'+
+    dups.map(function(d){
+      return '<span class="cdw-item">'+esc(d.label)+' · Nº '+esc(String(d.num))+' · '+esc(d.rs)+
+             ' <span class="cdw-pr">('+esc(d.prospect)+')</span>'+(d.oculto?' 🕶️':'')+'</span>';
+    }).join('');
+  return dups;
+}
 function mCNPJ(el){let v=el.value.replace(/\D/g,'').substring(0,14);if(v.length>12)v=v.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{1,2})/,'$1.$2.$3/$4-$5');else if(v.length>8)v=v.replace(/^(\d{2})(\d{3})(\d{3})(\d{1,4})/,'$1.$2.$3/$4');else if(v.length>5)v=v.replace(/^(\d{2})(\d{3})(\d{1,3})/,'$1.$2.$3');else if(v.length>2)v=v.replace(/^(\d{2})(\d{1,3})/,'$1.$2');el.value=v;}
 // Monta a lista de CNAE (um por linha, colapsável) a partir do valor salvo.
 // Aceita separador " | " (formato salvo) ou quebra de linha.
