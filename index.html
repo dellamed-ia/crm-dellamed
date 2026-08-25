@@ -4119,8 +4119,9 @@ async function bulkApplyStatus(){
     if(prev!==ns) acts.unshift({type:'status',date:nb.date,time:nb.time,author:(U&&U.nome)||'—',title:'🔄 Status alterado: '+(prev||'—')+' → '+ns});
     var patch={'Status':ns,'Atividades':JSON.stringify(acts)};
     try{
-      var r=await api('POST',{action:(it.src==='wa'?'editWA':'editLead'),userEmail:U.email,row:it.row,lead:patch});
-      if(r&&r.error){err++;} else { L['Status']=ns; L['Atividades']=patch['Atividades']; okc++; }
+      L['Status']=ns; L['Atividades']=patch['Atividades'];
+      var r=await api('POST',{action:(it.src==='wa'?'editWA':'editLead'),userEmail:U.email,row:it.row,lead:_fullLeadPayload(L)});
+      if(r&&r.error){err++;} else { okc++; }
     }catch(_){ err++; }
   }
   toast('Status alterado em '+okc+' lead(s)'+(err?(' — '+err+' com erro'):'')+'.', err?'err':'ok');
@@ -4180,10 +4181,11 @@ async function bulkSetOculto(flag){
   var okc=0, err=0;
   for(var i=0;i<items.length;i++){
     var it=items[i];
-    var patch={'Oculto': flag==='1'?'1':''};
+    var flagVal = flag==='1'?'1':'';
     try{
-      var r=await api('POST',{action:(it.src==='wa'?'editWA':'editLead'),userEmail:U.email,row:it.row,lead:patch});
-      if(r&&r.error){err++;} else { it.lead['Oculto']=patch['Oculto']; okc++; }
+      it.lead['Oculto']=flagVal;
+      var r=await api('POST',{action:(it.src==='wa'?'editWA':'editLead'),userEmail:U.email,row:it.row,lead:_fullLeadPayload(it.lead)});
+      if(r&&r.error){err++;} else { okc++; }
     }catch(_){ err++; }
   }
   toast(okc+' lead(s) '+(flag==='1'?'ocultado(s)':'tornado(s) visível(is)')+(err?(' — '+err+' com erro'):'')+'.', err?'err':'ok');
@@ -4275,6 +4277,9 @@ function _panelLead(){
   var arr=_panelSrc==='wa'?WA_LEADS:LEADS;
   return arr.find(function(l){return l._row===_panelRow;});
 }
+// Monta o objeto COMPLETO do lead (todas as colunas da planilha, sem chaves internas _row/_src)
+// para gravar igual ao formulário — o backend persiste o objeto inteiro, não patches parciais.
+function _fullLeadPayload(L){ var o={}; Object.keys(L||{}).forEach(function(k){ if(k.charAt(0)!=='_') o[k]=L[k]; }); return o; }
 // ── Pedidos (JSON na coluna 'Pedidos'; agrega em Valor do Pedido / Nº do Pedido) ──
 function _getPedidos(L){ try{ var a=JSON.parse(L['Pedidos']||'[]'); return Array.isArray(a)?a:[]; }catch(_){ return []; } }
 function _brlNum(v){ return parseFloat(String(v==null?'':v).replace(/[R$\s.]/g,'').replace(',','.'))||0; }
@@ -4581,7 +4586,7 @@ async function _saveAssignFromPanel(L){
     var patch={'Prospect':nome,'E-mail Prospect':email,'Atividades':JSON.stringify(acts)};
     L['Prospect']=nome; L['E-mail Prospect']=email; L['Atividades']=patch['Atividades'];
     closeComposer(); renderPanel();
-    var r=await api('POST',{action:(_panelSrc==='wa'?'editWA':'editLead'),userEmail:U.email,row:_panelRow,lead:patch});
+    var r=await api('POST',{action:(_panelSrc==='wa'?'editWA':'editLead'),userEmail:U.email,row:_panelRow,lead:_fullLeadPayload(L)});
     if(r&&r.error){ toast('Salvo na tela, mas erro ao gravar: '+r.error,'err'); }
     else {
       toast('Lead atribuído a '+nome+'.','ok');
@@ -4659,7 +4664,7 @@ async function saveComposer(){
   patch['Atividades']=JSON.stringify(acts);
   Object.keys(patch).forEach(function(k){ L[k]=patch[k]; });
   closeComposer(); renderPanel();
-  var r=await api('POST',{action:(_panelSrc==='wa'?'editWA':'editLead'),userEmail:U.email,row:_panelRow,lead:patch});
+  var r=await api('POST',{action:(_panelSrc==='wa'?'editWA':'editLead'),userEmail:U.email,row:_panelRow,lead:_fullLeadPayload(L)});
   if(r&&r.error){ toast('Erro ao gravar na planilha: '+r.error,'err'); }
   else { toast('Registrado.','ok'); }
   notifyAdminActivity((act&&act.title?act.title:'registrou atividade')+(act&&act.body?(': '+act.body):''), L['Razão Social'], _panelSrc, _panelRow);
