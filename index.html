@@ -1048,6 +1048,9 @@ html body .login-crm-subtitle{display:block!important;margin:8px 0 10px!importan
 <style id="crm-redesign-2026">
 /* ===== VISIBILIDADE DE COLUNAS (apenas Nº, Data, Data Próx. Ação, Próx. Ação, Status, Temperatura, Prospect) ===== */
 .leads-tbl th:nth-child(n+10),.leads-tbl td:nth-child(n+10){display:none!important}
+/* Divisória vertical MUITO suave entre as colunas visíveis (1 a 8; a 9 não recebe para não criar linha na borda) */
+.leads-tbl td:nth-child(-n+8){border-right:1px solid rgba(0,47,99,.055)!important}
+.leads-tbl th:nth-child(-n+8){border-right:1px solid rgba(255,255,255,.08)!important}
 /* Data(2): aproximar do Status (reduz espaço lateral) */
 .leads-tbl th:nth-child(2),.leads-tbl td:nth-child(2){padding-right:3px}
 /* Status(3): encostado na Data */
@@ -1070,8 +1073,8 @@ html body .login-crm-subtitle{display:block!important;margin:8px 0 10px!importan
 .leads-tbl th:nth-child(2),.leads-tbl td:nth-child(2){max-width:82px!important;width:82px!important;white-space:nowrap!important;padding-left:6px!important;padding-right:6px!important}
 /* Razão Social(4): reduzida; nome trunca com reticências (completo no tooltip), UF sempre visível */
 .leads-tbl th:nth-child(4),.leads-tbl td:nth-child(4){max-width:172px!important;width:172px!important;white-space:nowrap!important;overflow:hidden!important}
-.leads-tbl td:nth-child(4) .rs-cell{display:flex;align-items:center;gap:5px}
-.leads-tbl td:nth-child(4) .rs-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.leads-tbl td:nth-child(4) .rs-cell{display:flex;align-items:center;gap:5px;width:100%;max-width:100%}
+.leads-tbl td:nth-child(4) .rs-name{flex:1 1 0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
 .leads-tbl td:nth-child(4) .rs-uf{flex:0 0 auto;font-size:.66rem;font-weight:700;color:#3d5a80;background:#e8eef6;border:1px solid #d3ddec;border-radius:4px;padding:1px 5px;letter-spacing:.3px}
 /* Canal Principal(5): nome inteiro sempre — quebra de linha, nunca corta */
 .leads-tbl th:nth-child(5),.leads-tbl td:nth-child(5){max-width:none!important;width:150px!important;white-space:normal!important;overflow:visible!important;text-overflow:clip!important;word-break:break-word!important;line-height:1.3}
