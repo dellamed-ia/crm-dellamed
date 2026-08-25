@@ -104,6 +104,10 @@ input:focus,select:focus,textarea:focus{border-color:var(--teal)}
 .tel3-col{flex:1 1 0;min-width:150px;display:flex;flex-direction:column}
 .tel3-lbl{font-size:.66rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin:0 0 4px}
 .tel3-lbl.req::after{content:' *';color:var(--red)}
+.canal-sug{margin-top:6px;font-size:.76rem;line-height:1.4;padding:6px 9px;border-radius:7px}
+.canal-sug.has-match{background:#eaf5ef;border:1px solid #a9d8bf;color:#1e5b3a}
+.canal-sug.no-match{background:#f2f4f7;border:1px solid #d8dee6;color:#5a6472}
+.canal-sug .cs-hint{color:inherit;opacity:.75;font-weight:400}
 
 /* ═══ FUNIL DE VENDAS ═══════════════════════════════════════════ */
 /* ═══ FUNIL DE VENDAS — KANBAN ══════════════════════════════ */
@@ -2071,7 +2075,7 @@ function openForm(row) {
     })()+
     (isE ? _histLig(L) : '')+
     fld('E-mail','<input id="f_em" value="'+esc(L?L['E-mail']:'')+'" '+dis+'>',rq)+
-    fld('Canal Principal','<select id="f_ca" '+dis+'><option value="">Selecione...</option>'+((CFG.canalPrincipal||[]).map(c=>'<option'+(L&&L['Canal Principal']===c?' selected':'')+'>'+c+'</option>')).join('')+'</select>',rq)+
+    fld('Canal Principal','<select id="f_ca" '+dis+'><option value="">Selecione...</option>'+((CFG.canalPrincipal||[]).map(c=>'<option'+(L&&L['Canal Principal']===c?' selected':'')+'>'+c+'</option>')).join('')+'</select><div id="canalSug" class="canal-sug" style="display:none"></div>',rq)+
     fld('Linha de Interesse','<div id="ms_li" class="msel" data-sel="'+esc(L?L['Linha de Interesse']:'')+'"></div>')+
     fldF('Produto(s) de Interesse','<textarea id="f_pd" rows="2" '+dis+' placeholder="D30, D90, D12...">'+esc(L?L['Produto(s) de Interesse']:'')+'</textarea>')+
     fld('Data Primeiro Contato','<input id="f_dp" value="'+esc(L?L['Data Primeiro Contato']:'')+'" '+dis+' placeholder="dd/mm/aaaa" maxlength="10" oninput="mDate(this)"><div class="fld-err" id="err_dp">Formato inválido. Use dd/mm/aaaa</div>',rq)+
@@ -2144,6 +2148,7 @@ function openForm(row) {
   initMS('ms_li', CFG.linhaInteresse||[], !canE);
   initMS('ms_mp', CFG.motivoPerda||[], !canE);
   renderCNAE($('f_cnae') ? $('f_cnae').value : '');
+  renderCanalSug($('f_cnae') ? $('f_cnae').value : '');
   $('modForm').classList.remove('hidden');
 }
 
@@ -2951,6 +2956,57 @@ function checkCnpjDup(){
 function mCNPJ(el){let v=el.value.replace(/\D/g,'').substring(0,14);if(v.length>12)v=v.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{1,2})/,'$1.$2.$3/$4-$5');else if(v.length>8)v=v.replace(/^(\d{2})(\d{3})(\d{3})(\d{1,4})/,'$1.$2.$3/$4');else if(v.length>5)v=v.replace(/^(\d{2})(\d{3})(\d{1,3})/,'$1.$2.$3');else if(v.length>2)v=v.replace(/^(\d{2})(\d{1,3})/,'$1.$2');el.value=v;}
 // Monta a lista de CNAE (um por linha, colapsável) a partir do valor salvo.
 // Aceita separador " | " (formato salvo) ou quebra de linha.
+// ── Sugestão provisória de Canal Principal a partir do CNAE ──
+// Só sugere: nunca preenche o campo. Casa por palavra-chave contra CFG.canalPrincipal
+// (não depende dos textos exatos da lista, funciona com o que estiver configurado).
+function _canalNorm(s){ return String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,''); }
+function _cnaeCanalGuess(cnaeStr){
+  if(!cnaeStr) return null;
+  var parts=String(cnaeStr).split('|').map(function(s){return s.trim();}).filter(Boolean);
+  var main=parts.find(function(p){return /principal/i.test(p);})||parts[0]||'';
+  var digits=(main.match(/\d/g)||[]).join('');
+  var id4=digits.slice(0,4), div=digits.slice(0,2);
+  var t=_canalNorm(main);
+  var g=function(tokens,motivo){return {tokens:tokens,motivo:motivo};};
+  if(/internet|comercio eletronico|e-?commerce|pela internet/.test(t))
+    return g(['online','internet','e-commerce','ecommerce','loja online','lojista on','varejo online','on'],'CNAE de venda pela internet');
+  if(div==='84')
+    return g(['licitacao','publico','governo','b2g','orgao','prefeitura','municipal','estadual','federal'],'CNAE de administração pública (indício de B2G/licitação)');
+  if(div==='86')
+    return g(['profissional','profissional de saude','saude','clinica','hospital','consultorio','consumidor','b2c'],'CNAE de atenção à saúde (clínica/hospital/consultório)');
+  if(['4664','4645','4644','4646','4649','4632','4693'].indexOf(id4)>=0 || /atacadista|atacado|distribuic/.test(t))
+    return g(['revenda','revendedor','distribuidor','atacado','atacadista','b2b'],'CNAE de comércio atacadista/distribuição');
+  if(id4==='3250' || /fabricacao|industria/.test(t))
+    return g(['revenda','distribuidor','industria','fabricante','b2b','industria'],'CNAE de fabricação de material médico');
+  if(['4773','4771','4772','4774','4789'].indexOf(id4)>=0 || /varejista|varejo/.test(t))
+    return g(['lojista','loja','varejo','lojista off','lojista fisico','off','revenda'],'CNAE de comércio varejista (loja)');
+  return null;
+}
+function _matchCanalFromTokens(tokens){
+  var opts=(CFG.canalPrincipal||[]), best='', bestScore=0;
+  opts.forEach(function(o){
+    var no=_canalNorm(o), sc=0;
+    tokens.forEach(function(tk){ if(no.indexOf(_canalNorm(tk))>=0) sc++; });
+    if(sc>bestScore){ bestScore=sc; best=o; }
+  });
+  return bestScore>0 ? best : '';
+}
+function renderCanalSug(cnaeStr){
+  var box=$('canalSug'); if(!box) return;
+  var g=_cnaeCanalGuess(cnaeStr);
+  if(!g){ box.style.display='none'; box.innerHTML=''; return; }
+  var match=_matchCanalFromTokens(g.tokens);
+  box.style.display='block';
+  if(match){
+    box.className='canal-sug has-match';
+    box.innerHTML='💡 Sugestão pelo CNAE: <b>'+esc(match)+'</b> <span class="cs-hint">— provisório, confirme e selecione manualmente</span>';
+    box.title=g.motivo;
+  } else {
+    box.className='canal-sug no-match';
+    box.innerHTML='💡 Perfil pelo CNAE: '+esc(g.motivo)+' <span class="cs-hint">(sem canal equivalente na sua lista)</span>';
+    box.title='Não encontrei um canal correspondente na lista atual de Canal Principal';
+  }
+}
 function renderCNAE(str){
   var ul=$('cnaeList'), sum=$('cnaeSum'); if(!ul) return;
   var items=String(str||'').split(/\s*\|\s*|\n/).map(function(s){return s.trim();}).filter(Boolean);
@@ -3002,6 +3058,7 @@ async function buscarCNPJ(cnpj){
     var cnaeStr = cn.join(' | ');
     var ce=$('f_cnae'); if(ce) ce.value=cnaeStr;
     renderCNAE(cnaeStr);
+    renderCanalSug(cnaeStr);
     var box=document.querySelector('.cnae-box'); if(box) box.open=true; // abre pra mostrar o que veio
     toast('Dados do CNPJ preenchidos','ok');
   }catch(e){ console.error('Falha na consulta CNPJ', e); toast('Falha ao consultar CNPJ','err'); }
