@@ -1146,6 +1146,7 @@ html body .login-crm-subtitle{display:block!important;margin:8px 0 10px!importan
 .pnl-more{font-size:.7rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;cursor:pointer}
 .lp-empty{font-size:.82rem;color:var(--muted);padding:14px 0}
 .tl-actions{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px}
+.lp-locked{width:100%;padding:9px 12px;border-radius:8px;background:#f2f4f7;border:1px solid #d8dee6;color:#4a5568;font-size:.78rem;line-height:1.45;margin-bottom:8px}
 .lp-lig{background:#f7f9fc;border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:14px}
 .lp-lig-head{display:flex;justify-content:space-between;align-items:center;cursor:pointer;font-size:.9rem;color:var(--navy);font-weight:700}
 .lp-lig-filter{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
@@ -1317,6 +1318,13 @@ const PAISES_INFO = {
 const PAISES_AMERICA = Object.keys(PAISES_INFO);
 function canDirectAssign(){
   return !!(U && (U.admin || DIRECT_ASSIGN_EMAILS.includes(String(U.email||'').trim().toLowerCase())));
+}
+// ── Regra central de permissão de modificação de lead ──
+// admin e autorizados: tudo. Demais: só o próprio prospect. Lead novo (sem L): liberado.
+function _canModifyLead(L){
+  if(!L) return true;
+  if(canDirectAssign()) return true;
+  return String(L['Prospect']||'').trim().toLowerCase() === String((U&&U.nome)||'').trim().toLowerCase();
 }
 
 // ═══════ STATE ═══════
@@ -1946,13 +1954,17 @@ function openForm(row, viewOnly) {
   _formViewOnly = !!viewOnly;
   const L = editRow ? curData().find(l=>l._row===editRow) : null;
   const isE = !!L;
-  const canE = !_formViewOnly; // view-only trava a edição
-  $('fTitle').textContent = _formViewOnly ? '👁️ Visualização rápida (somente leitura)' : (isE ? 'Editar Lead' : 'Novo Lead');
-  $('fSave').textContent = isE ? 'Atualizar' : 'Salvar';
-  $('fSave').style.display = _formViewOnly ? 'none' : '';
-  // Admin e e-mails autorizados excluem qualquer lead; demais, só os próprios (Prospect = nome)
+  // Só pode editar: lead novo, admin/autorizado (canDirectAssign) ou o próprio dono (Prospect = você).
   const isOwnLead = isE && L && String(L['Prospect']||'').trim().toLowerCase() === String(U.nome||'').trim().toLowerCase();
-  const canDel = isE && !_formViewOnly && (canDirectAssign() || isOwnLead);
+  const canEditLead = _canModifyLead(L);
+  const canE = !_formViewOnly && canEditLead; // trava total quando o lead não é seu
+  const _lockedOther = isE && !_formViewOnly && !canEditLead; // bloqueado por ser de outro vendedor
+  $('fTitle').textContent = _formViewOnly
+    ? '👁️ Visualização rápida (somente leitura)'
+    : (_lockedOther ? '🔒 Somente leitura — lead de outro vendedor' : (isE ? 'Editar Lead' : 'Novo Lead'));
+  $('fSave').textContent = isE ? 'Atualizar' : 'Salvar';
+  $('fSave').style.display = canE ? '' : 'none';
+  const canDel = isE && canE && (canDirectAssign() || isOwnLead);
   $('fDel').classList.toggle('hidden', !canDel);
   const dis = canE?'':'disabled';
   const rq = U.admin ? '' : ' fld-req';
@@ -2181,6 +2193,16 @@ function closeForm(){$('modForm').classList.add('hidden');editRow=null;pendingTr
 let saving = false;
 async function saveLead() {
   if (saving) return;
+  // Trava de segurança: não salva em modo visualização nem lead de outro vendedor
+  if (_formViewOnly) return;
+  if (editRow) {
+    var _Lg = curData().find(function(l){return l._row===editRow;});
+    var _own = _Lg && String(_Lg['Prospect']||'').trim().toLowerCase() === String(U.nome||'').trim().toLowerCase();
+    if (_Lg && !canDirectAssign() && !_own) {
+      toast('Este lead é de outro vendedor. Você não pode editá-lo.','err');
+      return;
+    }
+  }
   const saveBtn = $('fSave');
   saving = true;
   saveBtn.classList.add('btn-loading');
@@ -2290,6 +2312,7 @@ async function _doSaveLead() {
   if (r.error) { toast('Erro: ' + r.error, 'err'); return; }
   if (r.ok) {
     if (!editRow) notifyAdminActivity('adicionou um novo lead', lead['Razão Social'], _destino, r.num);
+    else notifyAdminActivity('editou o cadastro do lead', lead['Razão Social'], (curTab==='wa'?'wa':'leads'), editRow);
     // Se transfer pendente, enviar solicitação
     if (pendingTransfer && editRow && !U.admin) {
       const L = curData().find(l=>l._row===editRow);
@@ -4110,8 +4133,11 @@ function _selectedLeads(){
 async function bulkApplyStatus(){
   var ns=(($('bulkStatus')||{}).value||'').trim();
   if(!ns){ toast('Selecione um status.','err'); return; }
-  var items=_selectedLeads(); if(!items.length){ toast('Nenhum lead selecionado.','err'); return; }
-  if(!confirm('Alterar status de '+items.length+' lead(s) para "'+ns+'"?')) return;
+  var all=_selectedLeads(); if(!all.length){ toast('Nenhum lead selecionado.','err'); return; }
+  var items=all.filter(function(it){return _canModifyLead(it.lead);});
+  var blocked=all.length-items.length;
+  if(!items.length){ toast('Você não tem permissão para alterar os leads selecionados (são de outros vendedores).','err'); return; }
+  if(!confirm('Alterar status de '+items.length+' lead(s) para "'+ns+'"?'+(blocked?('\n\n'+blocked+' lead(s) de outros vendedores serão ignorados.'):''))) return;
   var nb=nowBR(), okc=0, err=0;
   for(var i=0;i<items.length;i++){
     var it=items[i], L=it.lead, prev=(L['Status']||'');
@@ -4409,7 +4435,10 @@ function _panelDetails(L){
   var isExp=String(L['Time Comercial']||'').toLowerCase().indexOf('exporta')>=0;
   var tel=L['Telefone']||L['Telefone Internacional']||'';
   var s='';
-  s+='<div class="lp-editrow"><button class="btn btn-teal btn-sm" onclick="editFromPanel()">✏️ Editar</button><button class="btn btn-outline btn-sm lp-eye" title="Visualização rápida (somente leitura, todos os campos)" onclick="openForm(_panelRow,true)">👁️</button></div>';
+  var _canMod=_canModifyLead(L);
+  s+='<div class="lp-editrow">'+
+     (_canMod?'<button class="btn btn-teal btn-sm" onclick="editFromPanel()">✏️ Editar</button>':'<button class="btn btn-outline btn-sm" onclick="requestTransferFromPanel()">🔄 Solicitar transferência</button>')+
+     '<button class="btn btn-outline btn-sm lp-eye" title="Visualização rápida (somente leitura, todos os campos)" onclick="openForm(_panelRow,true)">👁️</button></div>';
   s+='<div class="pnl-sec"><div class="pnl-sec-t">Contato</div><div class="info-grid">'+
      _row2('Contato Principal',L['Contato Principal'])+_row2('Telefone',tel)+
      _row2('E-mail',L['E-mail'])+_row2('Canal Principal',L['Canal Principal'])+'</div></div>';
@@ -4489,16 +4518,25 @@ function renderPanel(){
     var body=a.body?('<div class="tl-body">'+esc(a.body)+'</div>'):'';
     return '<div class="tl-item"><div class="tl-dot '+dotc+'"></div><div class="tl-head"><span class="tl-type">'+esc(a.title||'')+'</span><span class="tl-date">'+when+'</span><span class="tl-author">'+esc(a.author||'')+'</span></div>'+body+'</div>';
   }).join('');
-  $('timeline-tab').innerHTML=
-    _ligWidget(L)+
-    _pedWidget(L)+
-    '<div class="tl-actions">'+
+  var _canMod = _canModifyLead(L);
+  var _actionsHtml;
+  if(_canMod){
+    _actionsHtml =
       '<button class="tl-btn" onclick="openComposer(\'call\')">📞 Registrar Ligação</button>'+
       '<button class="tl-btn" onclick="openComposer(\'email\')">📧 Registrar E-mail</button>'+
       '<button class="tl-btn" onclick="openComposer(\'note\')">📝 Adicionar Nota</button>'+
       '<button class="tl-btn" onclick="openComposer(\'task\')">📋 Agendar Tarefa</button>'+
       '<button class="tl-btn" onclick="openComposer(\'status\')">🔄 Alterar Status</button>'+
-      '<button class="tl-btn" onclick="openComposer(\'assign\')">👤 Atribuir a Prospect</button>'+
+      '<button class="tl-btn" onclick="openComposer(\'assign\')">👤 Atribuir a Prospect</button>';
+  } else {
+    _actionsHtml =
+      '<div class="lp-locked">🔒 Somente leitura — este lead é de <b>'+esc(L['Prospect']||'outro vendedor')+'</b>. Você pode visualizar e solicitar a transferência.</div>'+
+      '<button class="tl-btn" onclick="requestTransferFromPanel()">🔄 Solicitar transferência para mim</button>';
+  }
+  $('timeline-tab').innerHTML=
+    _ligWidget(L)+
+    _pedWidget(L)+
+    '<div class="tl-actions">'+_actionsHtml+
     '</div><div id="lpComposer" style="display:none"></div><div class="tl-wrap">'+(tl||'<div class="lp-empty">Sem atividades registradas.</div>')+'</div>';
   $('details-tab').innerHTML=_panelDetails(L);
   $('deal-tab').innerHTML=_panelDeal(L);
@@ -4570,7 +4608,20 @@ function onComposerStatus(){
   } else { ex.innerHTML=''; }
 }
 function closeComposer(){ var b=$('lpComposer'); if(b){b.style.display='none'; b.innerHTML='';} _composerKind=''; }
+async function requestTransferFromPanel(){
+  var L=_panelLead(); if(!L) return;
+  if(_canModifyLead(L)){ toast('Este lead já é seu (ou você tem acesso total).','ok'); return; }
+  if(!confirm('Solicitar à administradora a transferência do lead "'+(L['Razão Social']||'')+'" para você?')) return;
+  try{
+    var r=await api('POST',{action:'requestTransfer',userEmail:U.email,
+      sheetName:(_panelSrc==='wa'?'WHATSAPP':'LEADS'),row:_panelRow,
+      razaoSocial:L['Razão Social']||'',prospectAtual:L['Prospect']||'',assignToName:U.nome});
+    if(r&&r.error){ toast('Erro: '+r.error,'err'); }
+    else { showAuthSentPopup(1,U.nome); }
+  }catch(_){ toast('Falha ao enviar solicitação.','err'); }
+}
 async function _saveAssignFromPanel(L){
+  if(!_canModifyLead(L)){ toast('Sem permissão para reatribuir este lead.','err'); closeComposer(); return; }
   curTab=_panelSrc; // grava e recarrega na mesma aba do lead aberto
   var nome=(($('cmp_prospect')||{}).value||'').trim();
   if(!nome){ toast('Selecione a pessoa.','err'); return; }
@@ -4608,6 +4659,7 @@ async function _saveAssignFromPanel(L){
 }
 async function saveComposer(){
   var L=_panelLead(); if(!L) return;
+  if(!_canModifyLead(L)){ toast('Sem permissão: este lead é de outro vendedor.','err'); closeComposer(); return; }
   curTab=_panelSrc; // garante que gravação e reload usem a mesma aba do lead aberto
   if(_composerKind==='assign'){ await _saveAssignFromPanel(L); return; }
   var kind=_composerKind, n=nowBR(), patch={}, act=null;
