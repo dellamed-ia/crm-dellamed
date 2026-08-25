@@ -1324,7 +1324,9 @@ function canDirectAssign(){
 function _canModifyLead(L){
   if(!L) return true;
   if(canDirectAssign()) return true;
-  return String(L['Prospect']||'').trim().toLowerCase() === String((U&&U.nome)||'').trim().toLowerCase();
+  var byName = String(L['Prospect']||'').trim().toLowerCase() === String((U&&U.nome)||'').trim().toLowerCase();
+  var byEmail = String(L['E-mail Prospect']||'').trim().toLowerCase() === String((U&&U.email)||'').trim().toLowerCase();
+  return byName || (!!String(L['E-mail Prospect']||'').trim() && byEmail);
 }
 
 // ═══════ STATE ═══════
@@ -1955,7 +1957,10 @@ function openForm(row, viewOnly) {
   const L = editRow ? curData().find(l=>l._row===editRow) : null;
   const isE = !!L;
   // Só pode editar: lead novo, admin/autorizado (canDirectAssign) ou o próprio dono (Prospect = você).
-  const isOwnLead = isE && L && String(L['Prospect']||'').trim().toLowerCase() === String(U.nome||'').trim().toLowerCase();
+  const isOwnLead = isE && L && (
+    String(L['Prospect']||'').trim().toLowerCase() === String(U.nome||'').trim().toLowerCase() ||
+    (!!String(L['E-mail Prospect']||'').trim() && String(L['E-mail Prospect']||'').trim().toLowerCase() === String(U.email||'').trim().toLowerCase())
+  );
   const canEditLead = _canModifyLead(L);
   const canE = !_formViewOnly && canEditLead; // trava total quando o lead não é seu
   const _lockedOther = isE && !_formViewOnly && !canEditLead; // bloqueado por ser de outro vendedor
@@ -2012,7 +2017,8 @@ function openForm(row, viewOnly) {
         VENDEDORES.map(function(v){
           return '<option value="'+esc(v.nome)+'"'+(v.nome===curProspect?' selected':'')+'>'+esc(v.nome)+'</option>';
         }).join('');
-      if (canDirectAssign() && (!isE || U.admin)) {
+      if (canDirectAssign()) {
+        // Admin e usuários autorizados: atribuição direta livre, tanto criando quanto editando
         return fld('Prospect (Vendedor)',
           '<select id="f_pr_sel" onchange="onProspectChange()">'+prOpts+'</select>'+
           '<input type="hidden" id="f_pr" value="'+esc(curProspect)+'">',
@@ -2020,15 +2026,6 @@ function openForm(row, viewOnly) {
           fld('E-mail do Vendedor',
           '<input id="f_pr_email" value="'+esc(resolvedEmail)+'" readonly '+
           'style="background:#f0f0f0;cursor:not-allowed" placeholder="Auto-preenchido">');
-      } else if (canDirectAssign() && isE && !U.admin) {
-        return fld('Prospect (Vendedor)',
-          '<select id="f_pr_sel" onchange="onProspectChangeReq()">'+prOpts+'</select>'+
-          '<input type="hidden" id="f_pr" value="'+esc(curProspect)+'">'+
-          '<div style="margin-top:4px;font-size:.72rem;color:var(--muted)">🔒 Para trocar o vendedor deste lead é necessária autorização da administradora.</div>'+
-          '<button type="button" class="btn btn-sm btn-teal" id="btnProspReq" style="margin-top:4px;font-size:.72rem;display:none" onclick="markProspectRequest()">📨 Solicitar alteração</button>',
-          rq)+
-          fld('E-mail do Vendedor',
-          '<input id="f_pr_email" value="'+esc(resolvedEmail)+'" readonly style="background:#f0f0f0;cursor:not-allowed">');
       } else {
         return fld('Prospect (Vendedor)',
           '<input id="f_pr" value="'+esc(curProspect)+'" readonly style="background:#f0f0f0;cursor:not-allowed">'+
