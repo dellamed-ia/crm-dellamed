@@ -4590,6 +4590,8 @@ async function _saveAssignFromPanel(L){
     renderAll();
     var fv=$('funilView'); if(fv&&!fv.classList.contains('hidden')) renderFunil();
     notifyAdminActivity('👤 atribuiu o lead a '+nome, L['Razão Social'], _panelSrc, _panelRow);
+    await reload();  // re-sincroniza a tabela com a planilha
+    if($('leadPanel')&&$('leadPanel').classList.contains('open')) renderPanel();
   } else {
     try{
       await api('POST',{action:'requestTransfer',userEmail:U.email,sheetName:(_panelSrc==='wa'?'WHATSAPP':'LEADS'),row:_panelRow,razaoSocial:L['Razão Social']||'',prospectAtual:curP,assignToName:nome,assignEmail:email});
@@ -4658,11 +4660,12 @@ async function saveComposer(){
   Object.keys(patch).forEach(function(k){ L[k]=patch[k]; });
   closeComposer(); renderPanel();
   var r=await api('POST',{action:(_panelSrc==='wa'?'editWA':'editLead'),userEmail:U.email,row:_panelRow,lead:patch});
-  if(r&&r.error){ toast('Salvo na tela, mas erro ao gravar na planilha: '+r.error,'err'); }
+  if(r&&r.error){ toast('Erro ao gravar na planilha: '+r.error,'err'); }
   else { toast('Registrado.','ok'); }
-  renderAll();
-  var fv=$('funilView'); if(fv&&!fv.classList.contains('hidden')) renderFunil();
   notifyAdminActivity((act&&act.title?act.title:'registrou atividade')+(act&&act.body?(': '+act.body):''), L['Razão Social'], _panelSrc, _panelRow);
+  await reload();  // re-sincroniza a tabela com a planilha, igual ao formulário e às ações em massa
+  if($('leadPanel')&&$('leadPanel').classList.contains('open')) renderPanel();
+  { var fv=$('funilView'); if(fv&&!fv.classList.contains('hidden')) renderFunil(); }
 }
 
 autoLogin();
