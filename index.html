@@ -1084,6 +1084,8 @@ html body .login-crm-subtitle{display:block!important;margin:8px 0 10px!importan
 .leads-tbl td:nth-child(4) .rs-cell{display:flex;align-items:center;gap:5px;width:100%;max-width:100%}
 .leads-tbl td:nth-child(4) .rs-name{flex:1 1 0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
 .leads-tbl td:nth-child(4) .rs-uf{flex:0 0 auto;font-size:.66rem;font-weight:700;color:#3d5a80;background:#e8eef6;border:1px solid #d3ddec;border-radius:4px;padding:1px 5px;letter-spacing:.3px}
+.leads-tbl td:nth-child(4) .rs-exp{color:#7a4d00;background:#fff3d6;border-color:#f0c36d;font-size:.72rem;padding:1px 4px}
+.lp-editrow .lp-eye{margin-left:6px;padding:6px 10px}
 /* Canal Principal(5): nome inteiro sempre — quebra de linha, nunca corta */
 .leads-tbl th:nth-child(5),.leads-tbl td:nth-child(5){max-width:none!important;width:150px!important;white-space:normal!important;overflow:visible!important;text-overflow:clip!important;word-break:break-word!important;line-height:1.3}
 /* Prospect(9): nome inteiro sempre — quebra de linha, nunca corta */
@@ -1889,7 +1891,7 @@ function renderAll() { setTimeout(applyFilterStyle,50);
       '<td style="text-align:center;color:var(--muted);font-size:.75rem;white-space:nowrap"><input type="checkbox" class="bulk-cb" onclick="event.stopPropagation();toggleRow(event,'+l._row+',\''+(l._src||curTab)+'\')" '+(bulkSel.has((l._src||curTab)+':'+l._row)?'checked':'')+' style="vertical-align:middle;margin-right:5px;cursor:pointer">'+(String(l['Oculto']||'')==='1'?'<span title="Lead oculto — só admin vê" style="margin-right:3px">🕶️</span>':'')+esc(l['Nº']||'')+'</td>'+
       '<td style="font-size:.78rem">'+esc(l['Data']||'')+'</td>'+
       '<td><span class="st-badge" style="background:'+sc+'">'+esc(l['Status']||'')+'</span></td>'+
-      '<td style="font-weight:600;color:#000" title="'+esc(l['Razão Social']||'')+(l['UF']?(' — '+esc(l['UF'])):'')+'"><div class="rs-cell"><span class="rs-name">'+esc(l['Razão Social']||'')+'</span>'+(l['UF']?'<span class="rs-uf">'+esc(String(l['UF']).toUpperCase())+'</span>':'')+'</div></td>'+
+      '<td style="font-weight:600;color:#000" title="'+esc(l['Razão Social']||'')+(l['UF']?(' — '+esc(l['UF'])):'')+'"><div class="rs-cell"><span class="rs-name">'+esc(l['Razão Social']||'')+'</span>'+(l['UF']?'<span class="rs-uf">'+esc(String(l['UF']).toUpperCase())+'</span>':'')+(String(l['Time Comercial']||'').toLowerCase().indexOf('exporta')>=0?'<span class="rs-uf rs-exp" title="Lead de exportação">🌎</span>':'')+'</div></td>'+
       '<td title="'+esc(l['Canal Principal']||'')+'">'+esc(l['Canal Principal']||'')+'</td>'+
       '<td>'+tc+attachIcon+'</td>'+
       '<td style="font-size:.78rem">'+esc(l['Data Próxima Ação']||'')+'</td>'+
@@ -1933,16 +1935,19 @@ function clearMainFlt() {
 }
 
 // ═══════ FORM ═══════
-function openForm(row) {
+var _formViewOnly = false;
+function openForm(row, viewOnly) {
   editRow = row||null;
+  _formViewOnly = !!viewOnly;
   const L = editRow ? curData().find(l=>l._row===editRow) : null;
   const isE = !!L;
-  const canE = true; // todos editam
-  $('fTitle').textContent = isE ? 'Editar Lead' : 'Novo Lead';
+  const canE = !_formViewOnly; // view-only trava a edição
+  $('fTitle').textContent = _formViewOnly ? '👁️ Visualização rápida (somente leitura)' : (isE ? 'Editar Lead' : 'Novo Lead');
   $('fSave').textContent = isE ? 'Atualizar' : 'Salvar';
+  $('fSave').style.display = _formViewOnly ? 'none' : '';
   // Admin e e-mails autorizados excluem qualquer lead; demais, só os próprios (Prospect = nome)
   const isOwnLead = isE && L && String(L['Prospect']||'').trim().toLowerCase() === String(U.nome||'').trim().toLowerCase();
-  const canDel = isE && (canDirectAssign() || isOwnLead);
+  const canDel = isE && !_formViewOnly && (canDirectAssign() || isOwnLead);
   $('fDel').classList.toggle('hidden', !canDel);
   const dis = canE?'':'disabled';
   const rq = U.admin ? '' : ' fld-req';
@@ -4394,7 +4399,7 @@ function _panelDetails(L){
   var isExp=String(L['Time Comercial']||'').toLowerCase().indexOf('exporta')>=0;
   var tel=L['Telefone']||L['Telefone Internacional']||'';
   var s='';
-  s+='<div class="lp-editrow"><button class="btn btn-teal btn-sm" onclick="editFromPanel()">✏️ Editar</button></div>';
+  s+='<div class="lp-editrow"><button class="btn btn-teal btn-sm" onclick="editFromPanel()">✏️ Editar</button><button class="btn btn-outline btn-sm lp-eye" title="Visualização rápida (somente leitura, todos os campos)" onclick="openForm(_panelRow,true)">👁️</button></div>';
   s+='<div class="pnl-sec"><div class="pnl-sec-t">Contato</div><div class="info-grid">'+
      _row2('Contato Principal',L['Contato Principal'])+_row2('Telefone',tel)+
      _row2('E-mail',L['E-mail'])+_row2('Canal Principal',L['Canal Principal'])+'</div></div>';
