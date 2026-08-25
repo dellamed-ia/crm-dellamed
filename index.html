@@ -100,6 +100,10 @@ input:focus,select:focus,textarea:focus{border-color:var(--teal)}
 .fld-err{font-size:.7rem;color:var(--red);margin-top:2px;display:none}
 .fld-err.show{display:block}
 .phone-row{display:flex;gap:6px}.phone-row .ph-ddd{width:72px;flex-shrink:0}.phone-row .ph-num{flex:1}
+.tel3-row{display:flex;gap:12px;flex-wrap:wrap}
+.tel3-col{flex:1 1 0;min-width:150px;display:flex;flex-direction:column}
+.tel3-lbl{font-size:.66rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin:0 0 4px}
+.tel3-lbl.req::after{content:' *';color:var(--red)}
 
 /* ═══ FUNIL DE VENDAS ═══════════════════════════════════════════ */
 /* ═══ FUNIL DE VENDAS — KANBAN ══════════════════════════════ */
@@ -2050,12 +2054,21 @@ function openForm(row) {
     (function(){
       var isExp = L && String(L['Time Comercial']||'').toLowerCase().includes('exporta');
       var telReq = isExp ? '' : rq; // Telefone 1 não obrigatório em exportação
-      return '<div id="wrap_tel1"'+(isExp?' style="display:none"':'')+'>'+
-        fld('Telefone 1','<div class="phone-row"><input class="ph-ddd" id="f_d1" value="'+esc(p1.d?'('+p1.d+')':'')+'" '+dis+' placeholder="(00)" maxlength="4" oninput="mDDD(this)"><input class="ph-num" id="f_n1" value="'+esc(p1.n)+'" '+dis+' placeholder="00000-0000" maxlength="10" oninput="mPH(this)"></div>',telReq)+
-      '</div>';
+      return '<div class="fld full"><label>Telefones</label><div class="tel3-row">'+
+        '<div class="tel3-col">'+
+          '<span class="tel3-lbl">Cadastrado na RF</span>'+
+          '<input id="f_tel_rf" value="'+esc(L?(L['Telefone RF']||''):'')+'" '+dis+' placeholder="Preenchido pela lupa do CNPJ">'+
+        '</div>'+
+        '<div class="tel3-col" id="wrap_tel1"'+(isExp?' style="display:none"':'')+'>'+
+          '<span class="tel3-lbl'+(telReq?' req':'')+'">Telefone 1</span>'+
+          '<div class="phone-row"><input class="ph-ddd" id="f_d1" value="'+esc(p1.d?'('+p1.d+')':'')+'" '+dis+' placeholder="(00)" maxlength="4" oninput="mDDD(this)"><input class="ph-num" id="f_n1" value="'+esc(p1.n)+'" '+dis+' placeholder="00000-0000" maxlength="10" oninput="mPH(this)"></div>'+
+        '</div>'+
+        '<div class="tel3-col">'+
+          '<span class="tel3-lbl">Telefone 2</span>'+
+          '<div class="phone-row"><input class="ph-ddd" id="f_d2" value="'+esc(p2.d?'('+p2.d+')':'')+'" '+dis+' placeholder="(00)" maxlength="4" oninput="mDDD(this)"><input class="ph-num" id="f_n2" value="'+esc(p2.n)+'" '+dis+' placeholder="00000-0000" maxlength="10" oninput="mPH(this)"></div>'+
+        '</div>'+
+      '</div></div>';
     })()+
-    fld('Telefone 2','<div class="phone-row"><input class="ph-ddd" id="f_d2" value="'+esc(p2.d?'('+p2.d+')':'')+'" '+dis+' placeholder="(00)" maxlength="4" oninput="mDDD(this)"><input class="ph-num" id="f_n2" value="'+esc(p2.n)+'" '+dis+' placeholder="00000-0000" maxlength="10" oninput="mPH(this)"></div>')+
-    fldF('Telefone cadastrado na RF','<input id="f_tel_rf" value="'+esc(L?(L['Telefone RF']||''):'')+'" '+dis+' placeholder="Preenchido pela lupa do CNPJ">')+
     (isE ? _histLig(L) : '')+
     fld('E-mail','<input id="f_em" value="'+esc(L?L['E-mail']:'')+'" '+dis+'>',rq)+
     fld('Canal Principal','<select id="f_ca" '+dis+'><option value="">Selecione...</option>'+((CFG.canalPrincipal||[]).map(c=>'<option'+(L&&L['Canal Principal']===c?' selected':'')+'>'+c+'</option>')).join('')+'</select>',rq)+
