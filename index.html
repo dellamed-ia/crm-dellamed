@@ -2053,6 +2053,7 @@ function openForm(row) {
       '</div>';
     })()+
     fld('Telefone 2','<div class="phone-row"><input class="ph-ddd" id="f_d2" value="'+esc(p2.d?'('+p2.d+')':'')+'" '+dis+' placeholder="(00)" maxlength="4" oninput="mDDD(this)"><input class="ph-num" id="f_n2" value="'+esc(p2.n)+'" '+dis+' placeholder="00000-0000" maxlength="10" oninput="mPH(this)"></div>')+
+    fldF('Telefone cadastrado na RF','<input id="f_tel_rf" value="'+esc(L?(L['Telefone RF']||''):'')+'" '+dis+' placeholder="Preenchido pela lupa do CNPJ">')+
     (isE ? _histLig(L) : '')+
     fld('E-mail','<input id="f_em" value="'+esc(L?L['E-mail']:'')+'" '+dis+'>',rq)+
     fld('Canal Principal','<select id="f_ca" '+dis+'><option value="">Selecione...</option>'+((CFG.canalPrincipal||[]).map(c=>'<option'+(L&&L['Canal Principal']===c?' selected':'')+'>'+c+'</option>')).join('')+'</select>',rq)+
@@ -2181,6 +2182,7 @@ async function _doSaveLead() {
     'Status':gv('f_st'),'Status Inicial':gv('f_si'),'Prospect':assignedProspect||gv('f_pr'),'E-mail Prospect':($('f_pr_email')||{value:''}).value.trim(),'Time Comercial':gv('f_tm'),
     'Razão Social':gv('f_rs'),'Lead':gv('f_lead'),'CNPJ':gv('f_cnpj'),'Registro':gv('f_registro'),'País':gv('f_pais'),'Contato Principal':gv('f_cp'),
     'Telefone':[t1,t2].filter(Boolean).join(' | '),'Telefone Internacional':[($('f_ddi')||{value:''}).value,($('f_intdd')||{value:''}).value,($('f_intnum')||{value:''}).value].filter(Boolean).join(' '),'E-mail':gv('f_em'),
+    'Telefone RF':($('f_tel_rf')||{value:''}).value.trim(),
     'Cidade':gv('f_ci'),'UF':gv('f_uf'),'Endereço Fiscal':gv('f_endereco'),'SUFRAMA':gv('f_suframa'),'Regime':gv('f_regime'),'CNAE':gv('f_cnae'),'Canal Principal':gv('f_ca'),
     'Linha de Interesse':msVal('ms_li'),'Produto(s) de Interesse':gv('f_pd'),
     'Data Primeiro Contato':gv('f_dp'),'Data Último Contato':gv('f_du'),
@@ -2955,6 +2957,16 @@ async function buscarCNPJ(cnpj){
     set('f_endereco', [a.street,a.number,a.district].filter(Boolean).join(', '));
     set('f_ci', a.city||'');
     var ufEl=$('f_uf'); if(ufEl && a.state) ufEl.value=a.state;
+    // Telefone(s) cadastrado(s) na Receita Federal
+    var tels=(d.phones||[]).map(function(p){
+      var ddd=(p.area||'').replace(/\D/g,'');
+      var num=(p.number||'').replace(/\D/g,'');
+      if(!ddd&&!num) return '';
+      var fmt=num.length>=9?num.replace(/^(\d{5})(\d{4})$/,'$1-$2'):num.replace(/^(\d{4})(\d{4})$/,'$1-$2');
+      return (ddd?'('+ddd+') ':'')+fmt;
+    }).filter(Boolean);
+    var telRf=$('f_tel_rf');
+    if(telRf && tels.length) telRf.value=tels.join(' | ');
     // SUFRAMA — OK apenas se inscrição aprovada e ativa
     var suf=(d.suframa||[]).find(function(s){return s.approved && s.status && s.status.text==='Ativa';});
     set('f_suframa', suf ? ('OK — ativa (nº '+suf.number+')') : 'Sem SUFRAMA');
