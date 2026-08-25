@@ -1177,6 +1177,8 @@ html body .login-crm-subtitle{display:block!important;margin:8px 0 10px!importan
 /* ===== COMPOSER DE ATIVIDADES ===== */
 #lpComposer{background:#f7f9fc;border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:16px}
 .cmp-head{font-weight:800;color:var(--navy);font-size:.9rem;margin-bottom:10px}
+.cmp-note{margin-top:8px;font-size:.76rem;color:var(--muted);line-height:1.4}
+.cmp-note-warn{margin-top:8px;padding:8px 10px;border-radius:7px;background:#fff7e6;border:1px solid #f0c36d;color:#7a4d00}
 .cmp-row{display:flex;gap:10px}
 .cmp-fg{flex:1;margin-bottom:8px}
 .cmp-fg label,.cmp-l{display:block;font-size:.66rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin:0 0 4px}
@@ -4411,6 +4413,7 @@ function renderPanel(){
       '<button class="tl-btn" onclick="openComposer(\'note\')">📝 Adicionar Nota</button>'+
       '<button class="tl-btn" onclick="openComposer(\'task\')">📋 Agendar Tarefa</button>'+
       '<button class="tl-btn" onclick="openComposer(\'status\')">🔄 Alterar Status</button>'+
+      '<button class="tl-btn" onclick="openComposer(\'assign\')">👤 Atribuir a Prospect</button>'+
     '</div><div id="lpComposer" style="display:none"></div><div class="tl-wrap">'+(tl||'<div class="lp-empty">Sem atividades registradas.</div>')+'</div>';
   $('details-tab').innerHTML=_panelDetails(L);
   $('deal-tab').innerHTML=_panelDeal(L);
@@ -4429,9 +4432,18 @@ function openComposer(kind){
   var n=nowBR();
   var box=$('lpComposer'); if(!box) return;
   var statusList=(CFG.status&&CFG.status.length?CFG.status:ST);
-  var head={call:'📞 Registrar Ligação',email:'📧 Registrar E-mail',note:'📝 Adicionar Nota',task:'📋 Agendar Tarefa',status:'🔄 Alterar Status',pedido:'🧾 Adicionar Pedido'}[kind]||'';
+  var head={call:'📞 Registrar Ligação',email:'📧 Registrar E-mail',note:'📝 Adicionar Nota',task:'📋 Agendar Tarefa',status:'🔄 Alterar Status',pedido:'🧾 Adicionar Pedido',assign:'👤 Atribuir a Prospect'}[kind]||'';
   var h='<div class="cmp-head">'+head+'</div>';
-  if(kind==='call'){
+  if(kind==='assign'){
+    var curP=L['Prospect']||'';
+    var direct=canDirectAssign();
+    h+='<label class="cmp-l">Atribuir este lead a</label>'+
+       '<select id="cmp_prospect"><option value="">Selecione a pessoa...</option>'+
+         VENDEDORES.map(function(v){return '<option'+(v.nome===curP?' selected':'')+'>'+esc(v.nome)+'</option>';}).join('')+
+       '</select>'+
+       (curP?('<div class="cmp-note">Atualmente atribuído a: <b>'+esc(curP)+'</b></div>'):'')+
+       (direct?'':'<div class="cmp-note cmp-note-warn">Você não pode reatribuir diretamente. Ao salvar, uma solicitação será enviada à administradora para aprovação.</div>');
+  } else if(kind==='call'){
     h+='<div class="cmp-row"><div class="cmp-fg"><label>Data</label><input id="cmp_date" value="'+esc(n.date)+'" placeholder="dd/mm/aaaa" maxlength="10"></div>'+
        '<div class="cmp-fg"><label>Horário</label><input id="cmp_time" value="'+esc(n.time)+'" placeholder="hh:mm" maxlength="5"></div></div>'+
        '<label class="cmp-l">Descrição</label><textarea id="cmp_body" rows="3" placeholder="Resumo da ligação..."></textarea>';
@@ -4473,8 +4485,42 @@ function onComposerStatus(){
   } else { ex.innerHTML=''; }
 }
 function closeComposer(){ var b=$('lpComposer'); if(b){b.style.display='none'; b.innerHTML='';} _composerKind=''; }
+async function _saveAssignFromPanel(L){
+  var nome=(($('cmp_prospect')||{}).value||'').trim();
+  if(!nome){ toast('Selecione a pessoa.','err'); return; }
+  var curP=(L['Prospect']||'').trim();
+  if(nome===curP){ toast('Este lead já está atribuído a '+nome+'.','err'); return; }
+  var v=VENDEDORES.find(function(x){return x.nome===nome;});
+  var email=v?v.email:'';
+  var n=nowBR();
+  if(canDirectAssign()){
+    var _oldName=curP;
+    var _oldEmail=_oldName?((VENDEDORES.find(function(vd){return vd.nome===_oldName;})||{}).email||''):'';
+    var acts=_getActs(L);
+    acts.unshift({type:'contact',date:n.date,time:n.time,author:(U&&U.nome)||'—',title:'👤 Prospect atribuído'+(_oldName?(': '+_oldName+' → '+nome):(' → '+nome))});
+    var patch={'Prospect':nome,'E-mail Prospect':email,'Atividades':JSON.stringify(acts)};
+    L['Prospect']=nome; L['E-mail Prospect']=email; L['Atividades']=patch['Atividades'];
+    closeComposer(); renderPanel();
+    var r=await api('POST',{action:(_panelSrc==='wa'?'editWA':'editLead'),userEmail:U.email,row:_panelRow,lead:patch});
+    if(r&&r.error){ toast('Salvo na tela, mas erro ao gravar: '+r.error,'err'); }
+    else {
+      toast('Lead atribuído a '+nome+'.','ok');
+      if(_oldName!==nome){ try{ await api('POST',{action:'notifyAssign',assignEmail:email,assignToName:nome,prospectAtual:_oldName,removedEmail:_oldEmail,razaoSocial:(L['Razão Social']||''),fromUser:(U&&U.nome)||''}); }catch(_){} }
+    }
+    renderAll();
+    var fv=$('funilView'); if(fv&&!fv.classList.contains('hidden')) renderFunil();
+    notifyAdminActivity('👤 atribuiu o lead a '+nome, L['Razão Social'], _panelSrc, _panelRow);
+  } else {
+    try{
+      await api('POST',{action:'requestTransfer',userEmail:U.email,sheetName:(_panelSrc==='wa'?'WHATSAPP':'LEADS'),row:_panelRow,razaoSocial:L['Razão Social']||'',prospectAtual:curP,assignToName:nome,assignEmail:email});
+      closeComposer();
+      showAuthSentPopup(1,nome);
+    }catch(_){ toast('Falha ao enviar solicitação de autorização.','err'); }
+  }
+}
 async function saveComposer(){
   var L=_panelLead(); if(!L) return;
+  if(_composerKind==='assign'){ await _saveAssignFromPanel(L); return; }
   var kind=_composerKind, n=nowBR(), patch={}, act=null;
   var body=(($('cmp_body')||{}).value||'').trim();
   if(kind==='call'){
