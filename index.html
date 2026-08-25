@@ -4571,6 +4571,7 @@ function onComposerStatus(){
 }
 function closeComposer(){ var b=$('lpComposer'); if(b){b.style.display='none'; b.innerHTML='';} _composerKind=''; }
 async function _saveAssignFromPanel(L){
+  curTab=_panelSrc; // grava e recarrega na mesma aba do lead aberto
   var nome=(($('cmp_prospect')||{}).value||'').trim();
   if(!nome){ toast('Selecione a pessoa.','err'); return; }
   var curP=(L['Prospect']||'').trim();
@@ -4607,6 +4608,7 @@ async function _saveAssignFromPanel(L){
 }
 async function saveComposer(){
   var L=_panelLead(); if(!L) return;
+  curTab=_panelSrc; // garante que gravação e reload usem a mesma aba do lead aberto
   if(_composerKind==='assign'){ await _saveAssignFromPanel(L); return; }
   var kind=_composerKind, n=nowBR(), patch={}, act=null;
   var body=(($('cmp_body')||{}).value||'').trim();
