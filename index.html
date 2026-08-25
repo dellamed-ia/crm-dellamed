@@ -2004,7 +2004,7 @@ function openForm(row, viewOnly) {
     '</div>'+
     '<div class="frow frow-2">'+
     (function(){
-      const curProspect = isE ? (L['Prospect']||'') : U.nome;
+      const curProspect = isE ? (L['Prospect']||'') : (U.admin ? '' : U.nome);
       const storedEmail = isE ? (L['E-mail Prospect']||'') : '';
       const resolvedEmail = storedEmail ||
         (VENDEDORES.find(function(v){return v.nome===curProspect;})||{email:''}).email;
