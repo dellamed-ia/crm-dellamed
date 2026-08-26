@@ -1797,6 +1797,14 @@ function leadFreeSearchText(l) {
     if (v != null && v !== '') parts.push(v);
   }
   parts.push(UF_FULL_NAME[uf] || '', temperatura);
+  // Versão só-dígitos do CNPJ e telefones: permite buscar por número puro,
+  // com ponto, barra, traço ou vírgula — a pontuação é ignorada de qualquer forma.
+  parts.push(
+    String(l['CNPJ'] || '').replace(/\D/g,''),
+    String(l['Telefone'] || '').replace(/\D/g,''),
+    String(l['Telefone RF'] || '').replace(/\D/g,''),
+    String(l['Telefone Internacional'] || '').replace(/\D/g,'')
+  );
   return normFreeSearch(parts.join(' '));
 }
 
