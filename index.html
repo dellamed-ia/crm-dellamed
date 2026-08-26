@@ -3340,13 +3340,20 @@ function buildDF() {
   const mts=duniq(src.flatMap(l=>(l['Motivo da Perda']||'').split(',').map(s=>s.trim())));
   const tps=['Frio','Morno','Quente'];
   const fs=[{id:'dfA',l:'Ano',o:yrs},{id:'dfM',l:'Mês',o:mos},{id:'dfP',l:'Prospect',o:pros},{id:'dfT',l:'Time Comercial',o:tms},{id:'dfC',l:'Canal',o:cas},{id:'dfU',l:'UF',o:ufs},{id:'dfMo',l:'Motivo Perda',o:mts},{id:'dfTp',l:'Temperatura',o:tps}];
+  // Mês/ano mais recente presente nos dados → abre o dashboard já filtrado nele
+  var _latestYM = src.map(function(l){var p=String(l['Data']||'').split('/');return (p.length>=3 && /^\d{4}$/.test(p[2]) && /^\d{1,2}$/.test(p[1])) ? (p[2]+'-'+String(p[1]).padStart(2,'0')) : '';}).filter(Boolean).sort().pop() || '';
+  var _ly = _latestYM ? _latestYM.split('-')[0] : '';
+  var _lm = _latestYM ? _latestYM.split('-')[1] : '';
   $('dFilters').innerHTML=
     '<div class="dfg dfg-chan"><label>Canais</label><div class="chan-toggle">'+
       '<button type="button" class="chan-btn'+(dashChannels.leads?' on':'')+'" onclick="toggleDashChan(\'leads\')">Multicanais</button>'+
       '<button type="button" class="chan-btn'+(dashChannels.wa?' on':'')+'" onclick="toggleDashChan(\'wa\')">WhatsApp</button>'+
     '</div></div>'+
     fs.map(f=>'<div class="dfg"><label>'+f.l+'</label><div class="sf-wrap" id="'+f.id+'"></div></div>').join('')+'<div class="dfg"><label>&nbsp;</label><button class="btn btn-sm btn-teal" style="width:100%" onclick="clearDF()">Limpar filtros</button></div>';
-  fs.forEach(f => buildSF(f.id, f.o, renderDash));
+  fs.forEach(function(f){
+    var init = f.id==='dfA' ? (_ly?[_ly]:[]) : (f.id==='dfM' ? (_lm?[_lm]:[]) : []);
+    buildSF(f.id, f.o, renderDash, init);
+  });
 }
 function clearDF(){
   ['dfA','dfM','dfP','dfT','dfC','dfU','dfMo','dfTp'].forEach(id=>{
