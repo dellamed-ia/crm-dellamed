@@ -1326,12 +1326,22 @@ function canDirectAssign(){
 }
 // ── Regra central de permissão de modificação de lead ──
 // admin e autorizados: tudo. Demais: só o próprio prospect. Lead novo (sem L): liberado.
+function _myProspectNames(){
+  // meu nome de login + o nome do vendedor na aba PROSPECTS que corresponde ao meu e-mail
+  var out=[]; var meEmail=String((U&&U.email)||'').trim().toLowerCase();
+  var meNome=String((U&&U.nome)||'').trim().toLowerCase(); if(meNome) out.push(meNome);
+  try{ var vv=(VENDEDORES||[]).find(function(v){return String(v.email||'').trim().toLowerCase()===meEmail;});
+       if(vv&&vv.nome) out.push(String(vv.nome).trim().toLowerCase()); }catch(_){}
+  return out;
+}
 function _canModifyLead(L){
   if(!L) return true;
   if(canDirectAssign()) return true;
-  var byName = String(L['Prospect']||'').trim().toLowerCase() === String((U&&U.nome)||'').trim().toLowerCase();
-  var byEmail = String(L['E-mail Prospect']||'').trim().toLowerCase() === String((U&&U.email)||'').trim().toLowerCase();
-  return byName || (!!String(L['E-mail Prospect']||'').trim() && byEmail);
+  var lp=String(L['Prospect']||'').trim().toLowerCase();
+  var lpe=String(L['E-mail Prospect']||'').trim().toLowerCase();
+  var meEmail=String((U&&U.email)||'').trim().toLowerCase();
+  if(lpe && lpe===meEmail) return true;
+  return _myProspectNames().indexOf(lp)>=0 && lp!=='';
 }
 
 // ═══════ STATE ═══════
@@ -1970,10 +1980,7 @@ function openForm(row, viewOnly) {
   const L = editRow ? curData().find(l=>l._row===editRow) : null;
   const isE = !!L;
   // Só pode editar: lead novo, admin/autorizado (canDirectAssign) ou o próprio dono (Prospect = você).
-  const isOwnLead = isE && L && (
-    String(L['Prospect']||'').trim().toLowerCase() === String(U.nome||'').trim().toLowerCase() ||
-    (!!String(L['E-mail Prospect']||'').trim() && String(L['E-mail Prospect']||'').trim().toLowerCase() === String(U.email||'').trim().toLowerCase())
-  );
+  const isOwnLead = isE && _canModifyLead(L) && !canDirectAssign();
   const canEditLead = _canModifyLead(L);
   const canE = !_formViewOnly && canEditLead; // trava total quando o lead não é seu
   const _lockedOther = isE && !_formViewOnly && !canEditLead; // bloqueado por ser de outro vendedor
@@ -2211,8 +2218,7 @@ async function saveLead() {
   if (_formViewOnly) return;
   if (editRow) {
     var _Lg = curData().find(function(l){return l._row===editRow;});
-    var _own = _Lg && String(_Lg['Prospect']||'').trim().toLowerCase() === String(U.nome||'').trim().toLowerCase();
-    if (_Lg && !canDirectAssign() && !_own) {
+    if (_Lg && !_canModifyLead(_Lg)) {
       toast('Este lead é de outro vendedor. Você não pode editá-lo.','err');
       return;
     }
@@ -4268,6 +4274,9 @@ function matchesQuick(l,q){
     var tp=(l['Temperatura Lead']||temp(l['Status'],l)||'').toLowerCase();
     return tp==='quente';
   }
+  if(q==='semprospect'){
+    return String(l['Prospect']||'').trim()==='';
+  }
   if(DATE_QUICKS.indexOf(q)>=0){
     var due=parseBR(l['Data Próxima Ação']); if(!due) return false;
     var w=_weekBounds(), dd2=due.getTime();
@@ -4283,6 +4292,7 @@ var QUICK_DEFS = [
   {key:'semcontato', label:'⏳ Sem contato 7d+'},
   {key:'propostasr', label:'📄 Proposta s/ retorno'},
   {key:'quentes',    label:'🔥 Leads quentes'},
+  {key:'semprospect',label:'🙋 Sem prospect'},
   {key:'hoje',       label:'📅 Hoje'},
   {key:'amanha',     label:'📅 Amanhã'},
   {key:'restsemana', label:'📆 Resto da semana'},
