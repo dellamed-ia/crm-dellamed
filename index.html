@@ -96,6 +96,11 @@ input:focus,select:focus,textarea:focus{border-color:var(--teal)}
 .mbody .frow-2{grid-template-columns:1fr 1fr}
 .mbody .frow-3{grid-template-columns:1fr 1fr 1fr}
 .mbody .frow-addr{grid-column:1/-1;display:grid;gap:14px;align-items:start;grid-template-columns:2.2fr 1.4fr .55fr}
+/* subtítulo discreto de e-mail do vendedor, abaixo do select de Prospect */
+.pr-email-sub{border:none!important;background:transparent!important;padding:2px 2px 0!important;margin-top:2px;font-size:.72rem;color:var(--muted);cursor:default;width:100%}
+.pr-email-sub:focus{outline:none}
+/* Time Comercial congelado (preenchido pelo vendedor) */
+.tm-frozen{background:#f0f0f0!important;cursor:not-allowed;color:var(--navy)}
 @media(max-width:640px){.mbody .frow-2,.mbody .frow-3,.mbody .frow-addr{grid-template-columns:1fr}}
 .fld label{display:block;font-size:.75rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.3px;margin-bottom:4px}
 .fld input,.fld select,.fld textarea{width:100%}
@@ -1996,48 +2001,47 @@ function openForm(row, viewOnly) {
       '</button>') : '';
 
   $('fBody').innerHTML = ocultoRow +
-    (isE ? '' : fld('Salvar em','<select id="f_destino"><option value="">Selecione...</option><option value="leads">Leads Multicanais</option><option value="wa">WhatsApp</option></select>',' fld-req')) +
-    fld('Data Registro','<input id="f_data" value="'+esc(dataValue)+'" placeholder="dd/mm/aaaa" maxlength="10" '+(!U.admin?'readonly style="background:#f0f0f0;cursor:not-allowed"':'oninput="mDate(this)"')+'><div class="fld-err" id="err_data">Formato inválido. Use dd/mm/aaaa</div>')+
     '<div class="frow frow-3">'+
+      fld('Data Registro','<input id="f_data" value="'+esc(dataValue)+'" placeholder="dd/mm/aaaa" maxlength="10" '+(!U.admin?'readonly style="background:#f0f0f0;cursor:not-allowed"':'oninput="mDate(this)"')+'><div class="fld-err" id="err_data">Formato inválido. Use dd/mm/aaaa</div>')+
+      (isE
+        ? '<div class="fld"></div>'
+        : fld('Salvar em','<select id="f_destino"><option value="">Selecione...</option><option value="leads">Leads Multicanais</option><option value="wa">WhatsApp</option></select>',' fld-req'))+
       fld('Status inicial:',
         '<select id="f_si" '+(canE?'':'disabled')+'>'+
           '<option value="">Selecione...</option>'+
           ['Cliente Novo','Inativo','Sem compras'].map(function(o){return '<option'+(L&&L['Status Inicial']===o?' selected':'')+'>'+o+'</option>';}).join('')+
         '</select>',' fld-req')+
-      fld('Status','<select id="f_st" '+dis+' onchange="toggleGanhoReq()">'+((CFG.status||[]).map(s=>'<option'+(L&&L['Status']===s?' selected':'')+'>'+s+'</option>')).join('')+'</select>',rq)+
-      fld('Time Comercial','<select id="f_tm" '+dis+' onchange="toggleExportacao()"><option value="">Selecione...</option>'+((CFG.timeComercial||[]).map(t=>'<option'+(L&&L['Time Comercial']===t?' selected':'')+'>'+t+'</option>')).join('')+'</select>',rq)+
     '</div>'+
-    '<div class="frow frow-2">'+
-    (function(){
-      const curProspect = isE ? (L['Prospect']||'') : (U.admin ? '' : U.nome);
-      const storedEmail = isE ? (L['E-mail Prospect']||'') : '';
-      const resolvedEmail = storedEmail ||
-        (VENDEDORES.find(function(v){return v.nome===curProspect;})||{email:''}).email;
-      const prOpts = '<option value="">Selecione o vendedor...</option>' +
-        VENDEDORES.map(function(v){
-          return '<option value="'+esc(v.nome)+'"'+(v.nome===curProspect?' selected':'')+'>'+esc(v.nome)+'</option>';
-        }).join('');
-      if (canDirectAssign()) {
-        // Admin e usuários autorizados: atribuição direta livre, tanto criando quanto editando
-        return fld('Prospect (Vendedor)',
-          '<select id="f_pr_sel" onchange="onProspectChange()">'+prOpts+'</select>'+
-          '<input type="hidden" id="f_pr" value="'+esc(curProspect)+'">',
-          rq)+
-          fld('E-mail do Vendedor',
-          '<input id="f_pr_email" value="'+esc(resolvedEmail)+'" readonly '+
-          'style="background:#f0f0f0;cursor:not-allowed" placeholder="Auto-preenchido">');
-      } else {
-        return fld('Prospect (Vendedor)',
-          '<input id="f_pr" value="'+esc(curProspect)+'" readonly style="background:#f0f0f0;cursor:not-allowed">'+
-          (isE && curProspect.toLowerCase()!==U.nome.toLowerCase()
-            ? '<button type="button" class="btn btn-sm btn-teal" id="btnTransferReq" '+
-              'style="margin-top:4px;font-size:.72rem" onclick="markTransfer()">🔄 Alterar para meu usuário</button>'
-            : ''),
-          rq)+
-          fld('E-mail do Vendedor',
-          '<input id="f_pr_email" value="'+esc(resolvedEmail)+'" readonly style="background:#f0f0f0;cursor:not-allowed">');
-      }
-    })()+
+    '<div class="frow frow-3">'+
+      fld('Status','<select id="f_st" '+dis+' onchange="toggleGanhoReq()">'+((CFG.status||[]).map(s=>'<option'+(L&&L['Status']===s?' selected':'')+'>'+s+'</option>')).join('')+'</select>',rq)+
+      (function(){
+        const curProspect = isE ? (L['Prospect']||'') : (U.admin ? '' : U.nome);
+        const storedEmail = isE ? (L['E-mail Prospect']||'') : '';
+        const resolvedEmail = storedEmail ||
+          (VENDEDORES.find(function(v){return v.nome===curProspect;})||{email:''}).email;
+        const prOpts = '<option value="">Selecione o vendedor...</option>' +
+          VENDEDORES.map(function(v){
+            return '<option value="'+esc(v.nome)+'"'+(v.nome===curProspect?' selected':'')+'>'+esc(v.nome)+'</option>';
+          }).join('');
+        const emailSub = '<input id="f_pr_email" class="pr-email-sub" value="'+esc(resolvedEmail)+'" readonly placeholder="e-mail do vendedor" tabindex="-1">';
+        if (canDirectAssign()) {
+          // Admin e usuários autorizados: atribuição direta livre (criar ou editar)
+          return fld('Prospect (Vendedor)',
+            '<select id="f_pr_sel" onchange="onProspectChange()">'+prOpts+'</select>'+
+            '<input type="hidden" id="f_pr" value="'+esc(curProspect)+'">'+
+            emailSub,
+            rq);
+        } else {
+          return fld('Prospect (Vendedor)',
+            '<input id="f_pr" value="'+esc(curProspect)+'" readonly style="background:#f0f0f0;cursor:not-allowed">'+
+            (isE && curProspect.toLowerCase()!==U.nome.toLowerCase()
+              ? '<button type="button" class="btn btn-sm btn-teal" id="btnTransferReq" style="margin-top:4px;font-size:.72rem" onclick="markTransfer()">🔄 Alterar para meu usuário</button>'
+              : '')+
+            emailSub,
+            rq);
+        }
+      })()+
+      fld('Time Comercial','<select id="f_tm" class="tm-frozen" disabled onchange="toggleExportacao()"><option value="">— definido pelo vendedor —</option>'+((CFG.timeComercial||[]).map(t=>'<option'+(L&&L['Time Comercial']===t?' selected':'')+'>'+t+'</option>')).join('')+'</select>',rq)+
     '</div>'+
     (function(){
       var isExp = L && String(L['Time Comercial']||'').toLowerCase().includes('exporta');
@@ -2097,7 +2101,7 @@ function openForm(row, viewOnly) {
     fld('Canal Principal','<select id="f_ca" '+dis+'><option value="">Selecione...</option>'+((CFG.canalPrincipal||[]).map(c=>'<option'+(L&&L['Canal Principal']===c?' selected':'')+'>'+c+'</option>')).join('')+'</select><div id="canalSug" class="canal-sug" style="display:none"></div>',rq)+
     fld('Linha de Interesse','<div id="ms_li" class="msel" data-sel="'+esc(L?L['Linha de Interesse']:'')+'"></div>')+
     fldF('Produto(s) de Interesse','<textarea id="f_pd" rows="2" '+dis+' placeholder="D30, D90, D12...">'+esc(L?L['Produto(s) de Interesse']:'')+'</textarea>')+
-    fld('Data Primeiro Contato','<input id="f_dp" value="'+esc(L?L['Data Primeiro Contato']:'')+'" '+dis+' placeholder="dd/mm/aaaa" maxlength="10" oninput="mDate(this)"><div class="fld-err" id="err_dp">Formato inválido. Use dd/mm/aaaa</div>',rq)+
+    fld('Data Primeiro Contato','<input id="f_dp" value="'+esc(L?L['Data Primeiro Contato']:'')+'" '+dis+' placeholder="dd/mm/aaaa" maxlength="10" oninput="mDate(this)"><div class="fld-err" id="err_dp">Formato inválido. Use dd/mm/aaaa</div>')+
     fld('Data Último Contato','<input id="f_du" value="'+esc(L?L['Data Último Contato']:'')+'" '+dis+' placeholder="dd/mm/aaaa" maxlength="10" oninput="mDate(this)"><div class="fld-err" id="err_du">Formato inválido. Use dd/mm/aaaa</div>')+
     fld('Próxima Ação',_proxSelectHTML(L?L['Próxima Ação']:'',dis))+
     fldF('Observação da próxima ação','<textarea id="f_pa" rows="2" '+dis+' placeholder="Detalhe da ação...">'+esc(_proxObs(L?L['Próxima Ação']:''))+'</textarea>')+
@@ -2168,6 +2172,11 @@ function openForm(row, viewOnly) {
   initMS('ms_mp', CFG.motivoPerda||[], !canE);
   renderCNAE($('f_cnae') ? $('f_cnae').value : '');
   renderCanalSug($('f_cnae') ? $('f_cnae').value : '');
+  // Em lead novo, se já há um prospect (ex.: vendedor comum = ele mesmo), preenche o Time do vendedor
+  if (!isE) {
+    var _pn = (($('f_pr')||{}).value||'').trim();
+    if (_pn) { var _pv = VENDEDORES.find(function(x){return x.nome===_pn;}); if (_pv) _setTimeFromVendor(_pv); }
+  }
   if (typeof toggleExportacao==='function') toggleExportacao();
   $('modForm').classList.remove('hidden');
 }
@@ -2283,8 +2292,7 @@ async function _doSaveLead() {
     const req=[
       ['Status','Status'],['Prospect','Prospect'],['Time Comercial','Time Comercial'],
       ['Razão Social','Razão Social'],['Contato Principal','Contato Principal'],
-      ['E-mail','E-mail'],['Canal Principal','Canal Principal'],
-      ['Data Primeiro Contato','Data Primeiro Contato']
+      ['E-mail','E-mail'],['Canal Principal','Canal Principal']
     ];
     if (!_isExp) { req.push(['CNPJ','CNPJ']); req.push(['UF','UF']); }
     for (const [f,l] of req) if(!lead[f]){toast('Campo obrigatório: '+l,'err');return;}
@@ -3706,9 +3714,19 @@ window.onProspectChange = function() {
   if (hid) hid.value = name;
   var emailInp = $('f_pr_email');
   if (emailInp) emailInp.value = email;
+  _setTimeFromVendor(v); // preenche o Time Comercial (congelado) a partir do vendedor
   // Marcar atribuição para notificação ao salvar
   assignedProspect = (name && U && name !== U.nome) ? name : '';
 };
+function _setTimeFromVendor(v){
+  var timeSel = $('f_tm');
+  if (!timeSel || !v || !v.time) return;
+  var alvo = String(v.time).trim().toLowerCase();
+  for (var i=0;i<timeSel.options.length;i++){
+    if (String(timeSel.options[i].value).trim().toLowerCase()===alvo){ timeSel.selectedIndex=i; break; }
+  }
+  if (typeof toggleExportacao==='function') toggleExportacao();
+}
 
 function markTransfer() {
   pendingTransfer = true;
