@@ -2058,8 +2058,8 @@ function openForm(row, viewOnly) {
         '</select>')+
         fld('Telefone Internacional',
           '<div class="phone-row" style="gap:6px">'+
-            '<input id="f_ddi" value="'+esc(telInt.ddi)+'" '+dis+' placeholder="DDI" style="width:70px;flex-shrink:0" readonly>'+
-            '<input id="f_intdd" value="'+esc(telInt.dd)+'" '+dis+' placeholder="DDD" style="width:70px;flex-shrink:0" maxlength="4" oninput="this.value=this.value.replace(/\\D/g,\'\')">'+
+            '<input id="f_ddi" value="'+esc(telInt.ddi?('+'+String(telInt.ddi).replace(/^\+/,'')):'')+'" '+dis+' placeholder="DDI" style="width:70px;flex-shrink:0" readonly>'+
+            '<input id="f_intdd" value="'+esc(telInt.dd)+'" '+dis+' placeholder="DDD" style="width:70px;flex-shrink:0" maxlength="4" oninput="mIntDD(this)">'+
             '<input id="f_intnum" value="'+esc(telInt.num)+'" '+dis+' placeholder="Número" style="flex:1" oninput="mIntPhone(this)">'+
           '</div>'+
           '<div class="fld-err" id="err_int" style="display:none">Número fora do padrão do país</div>')+
@@ -2240,7 +2240,7 @@ async function _doSaveLead() {
     'Data':gv('f_data'),
     'Status':gv('f_st'),'Status Inicial':gv('f_si'),'Prospect':assignedProspect||gv('f_pr'),'E-mail Prospect':($('f_pr_email')||{value:''}).value.trim(),'Time Comercial':gv('f_tm'),
     'Razão Social':gv('f_rs'),'Lead':gv('f_lead'),'CNPJ':gv('f_cnpj'),'Registro':gv('f_registro'),'País':gv('f_pais'),'Contato Principal':gv('f_cp'),
-    'Telefone':[t1,t2].filter(Boolean).join(' | '),'Telefone Internacional':[($('f_ddi')||{value:''}).value,($('f_intdd')||{value:''}).value,($('f_intnum')||{value:''}).value].filter(Boolean).join(' '),'E-mail':gv('f_em'),
+    'Telefone':[t1,t2].filter(Boolean).join(' | '),'Telefone Internacional':[($('f_ddi')||{value:''}).value,($('f_intdd')||{value:''}).value,($('f_intnum')||{value:''}).value].filter(Boolean).join(' ').replace(/^\+/,''),'E-mail':gv('f_em'),
     'Telefone RF':($('f_tel_rf')||{value:''}).value.trim(),
     'Cidade':gv('f_ci'),'UF':gv('f_uf'),'Endereço Fiscal':gv('f_endereco'),'SUFRAMA':gv('f_suframa'),'Regime':gv('f_regime'),'CNAE':gv('f_cnae'),'Canal Principal':gv('f_ca'),
     'Linha de Interesse':msVal('ms_li'),'Produto(s) de Interesse':gv('f_pd'),
@@ -3199,38 +3199,46 @@ window.onPaisChange = function(){
   var num = $('f_intnum');
   if (info) {
     if (ddi) ddi.value = info.ddi;
-    if (num) { num.placeholder = info.mask; num.value = ''; }
+    if (num) { num.placeholder = 'Número (sem DDD)'; num.value = ''; }
+    var errI = $('err_int'); if (errI) errI.style.display = 'none';
   } else {
     if (ddi) ddi.value = '';
     if (num) { num.placeholder = 'Número'; }
   }
 };
 
-// Máscara do número internacional conforme o país selecionado
+// Máscara/validação do número internacional — desconta os dígitos já digitados no campo DDD,
+// já que o DDD tem campo separado (evita contar o DDD duas vezes e acusar erro falso).
 window.mIntPhone = function(el){
   var sel = $('f_pais');
   var info = sel ? PAISES_INFO[sel.value] : null;
   var digits = el.value.replace(/\D/g,'');
   if (info) {
-    digits = digits.substring(0, info.len);
-    // Aplicar máscara (0 = dígito, outros chars = separador)
-    var out = '', di = 0;
-    for (var i = 0; i < info.mask.length && di < digits.length; i++) {
-      if (info.mask[i] === '0') { out += digits[di]; di++; }
-      else out += info.mask[i];
-    }
+    var ddEl = $('f_intdd');
+    var ddLen = ddEl ? ddEl.value.replace(/\D/g,'').length : 0;
+    var subLen = Math.max(0, info.len - ddLen); // dígitos esperados só do número (sem DDD)
+    digits = digits.substring(0, subLen);
+    // formatação leve e neutra: agrupa os 4 últimos dígitos com hífen
+    var out = digits;
+    if (digits.length > 4) out = digits.slice(0, digits.length-4) + '-' + digits.slice(digits.length-4);
     el.value = out;
-    // Validação de comprimento
     var err = $('err_int');
-    if (err) err.style.display = (digits.length > 0 && digits.length < info.len) ? 'block' : 'none';
+    if (err) err.style.display = (digits.length > 0 && subLen > 0 && digits.length < subLen) ? 'block' : 'none';
   } else {
     el.value = digits;
   }
+};
+// Revalida o número quando o DDD muda (o comprimento esperado do número depende do DDD)
+window.mIntDD = function(el){
+  el.value = el.value.replace(/\D/g,'');
+  var num = $('f_intnum'); if (num) window.mIntPhone(num);
 };
 
 // Reconstrói telefone internacional a partir do valor salvo (DDI DD NÚMERO)
 function _parseTelInt(str){
   if (!str) return {ddi:'',dd:'',num:''};
+  // Ignora valores de erro do Sheets (ex.: #ERROR!, #REF!) de registros antigos
+  if (/^#/.test(String(str).trim())) return {ddi:'',dd:'',num:''};
   var parts = String(str).trim().split(/\s+/);
   var ddi = '', dd = '', num = '';
   if (parts.length >= 3) { ddi = parts[0]; dd = parts[1]; num = parts.slice(2).join(' '); }
