@@ -3177,6 +3177,19 @@ async function buscarCNPJ(cnpj){
     toast('Dados do CNPJ preenchidos','ok');
   }catch(e){ console.error('Falha na consulta CNPJ', e); toast('Falha ao consultar CNPJ','err'); }
 }
+// A API pública do CNPJá (open.cnpja.com) é limitada a 5 consultas/minuto por IP.
+// Espaçamos as chamadas em ~13s (60s/5 + folga) pra não estourar o limite, e tratamos
+// 429 (limite excedido) com espera + retentativa, em vez de rotular como "não encontrado".
+var CNPJA_MIN_INTERVAL_MS = 13000;
+async function _cnpjaFetch(num, tentativa){
+  tentativa = tentativa||1;
+  var r = await fetch('https://open.cnpja.com/office/'+num+'?suframa=true');
+  if(r.status===429 && tentativa<3){
+    await new Promise(function(res){ setTimeout(res, 20000); }); // aguarda a janela de limite liberar
+    return _cnpjaFetch(num, tentativa+1);
+  }
+  return r;
+}
 // Atualização EM MASSA: consulta a Receita para cada lead selecionado com CNPJ de 14 dígitos
 // e grava direto no cadastro (sem precisar abrir o formulário um por um). Restrito à admin.
 async function bulkAtualizarCNPJ(){
@@ -3188,28 +3201,39 @@ async function bulkAtualizarCNPJ(){
     if(num.length===14) valid.push({it:it,num:num}); else semCnpj++;
   });
   if(!valid.length){ toast('Nenhum dos selecionados tem CNPJ de 14 dígitos.','err'); return; }
+  var estMin = Math.ceil((valid.length*CNPJA_MIN_INTERVAL_MS)/60000);
   if(!confirm('Consultar a Receita e atualizar '+valid.length+' lead(s) com CNPJ válido?'+
     (semCnpj?('\n\n'+semCnpj+' selecionado(s) sem CNPJ de 14 dígitos serão ignorados.'):'')+
-    '\n\nIsso consulta uma API pública, uma consulta por vez — pode levar alguns segundos por lead.')) return;
-  var okc=0, err=0, errList=[];
-  toast('Consultando '+valid.length+' CNPJ(s) na Receita...','ok');
+    '\n\nA API pública da Receita permite só 5 consultas por minuto, então isso é sequencial e devagar de propósito: leva cerca de '+estMin+' minuto(s) para '+valid.length+' lead(s). Não feche a aba enquanto roda.')) return;
+  var okc=0, err=0, notFound=0, errList=[];
+  toast('Consultando '+valid.length+' CNPJ(s) na Receita (5/min, aguarde)...','ok');
   for(var i=0;i<valid.length;i++){
     var v=valid[i], L=v.it.lead;
+    var t0=Date.now();
     try{
-      var r=await fetch('https://open.cnpja.com/office/'+v.num+'?suframa=true');
-      if(!r.ok){ err++; errList.push((L['Razão Social']||L['CNPJ']||v.num)+': não encontrado na Receita'); continue; }
-      var d=await r.json();
-      var patch=_cnpjaExtract(d);
-      Object.keys(patch).forEach(function(k){ if(patch[k]) L[k]=patch[k]; });
-      var rr=await api('POST',{action:(v.it.src==='wa'?'editWA':'editLead'),userEmail:U.email,row:v.it.row,lead:_fullLeadPayload(L)});
-      if(rr&&rr.error){ err++; errList.push((L['Razão Social']||v.num)+': '+rr.error); }
-      else okc++;
-    }catch(e){ err++; errList.push(v.num+': falha de conexão'); }
+      var r=await _cnpjaFetch(v.num);
+      if(r.status===404){ notFound++; errList.push((L['Razão Social']||v.num)+': CNPJ não encontrado na Receita'); }
+      else if(r.status===429){ err++; errList.push((L['Razão Social']||v.num)+': limite de consultas da API excedido, tente novamente mais tarde'); }
+      else if(!r.ok){ err++; errList.push((L['Razão Social']||v.num)+': erro '+r.status+' na consulta'); }
+      else {
+        var d=await r.json();
+        var patch=_cnpjaExtract(d);
+        Object.keys(patch).forEach(function(k){ if(patch[k]) L[k]=patch[k]; });
+        var rr=await api('POST',{action:(v.it.src==='wa'?'editWA':'editLead'),userEmail:U.email,row:v.it.row,lead:_fullLeadPayload(L)});
+        if(rr&&rr.error){ err++; errList.push((L['Razão Social']||v.num)+': '+rr.error); }
+        else okc++;
+      }
+    }catch(e){ err++; errList.push((L['Razão Social']||v.num)+': falha de conexão'); }
     renderAll(); // atualiza a tabela linha a linha, sem esperar o lote inteiro terminar
-    if(i<valid.length-1) await new Promise(function(res){ setTimeout(res,300); }); // não martelar a API pública
+    var elapsed=Date.now()-t0;
+    var falta=CNPJA_MIN_INTERVAL_MS-elapsed;
+    if(i<valid.length-1 && falta>0) await new Promise(function(res){ setTimeout(res,falta); });
   }
-  if(err && errList.length) console.warn('Erros na atualização em massa de CNPJ:', errList);
-  toast('CNPJ atualizado em '+okc+' lead(s)'+(err?(' — '+err+' com erro'):'')+(semCnpj?(' — '+semCnpj+' ignorado(s) sem CNPJ'):'')+'.', err?'err':'ok');
+  if(errList.length) console.warn('Erros/pendências na atualização em massa de CNPJ:', errList);
+  toast('CNPJ atualizado em '+okc+' lead(s)'+
+    (notFound?(' — '+notFound+' não encontrado(s) na Receita'):'')+
+    (err?(' — '+err+' com erro/limite'):'')+
+    (semCnpj?(' — '+semCnpj+' ignorado(s) sem CNPJ'):'')+'.', (err||notFound)?'err':'ok');
   notifyAdminActivity('atualizou dados de CNPJ em '+okc+' lead(s) via consulta em massa', '', curTab);
   bulkSel.clear(); await reload();
 }
