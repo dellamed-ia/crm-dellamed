@@ -923,6 +923,7 @@ html body .login-crm-subtitle{display:block!important;margin:8px 0 10px!importan
     <span class="bulk-grp"><label>Status:</label><select id="bulkStatus"></select><button class="btn btn-sm btn-teal" onclick="bulkApplyStatus()">Aplicar</button></span>
     <span class="bulk-grp"><label>Reatribuir a:</label><select id="bulkProspect"></select><button class="btn btn-sm btn-navy" onclick="bulkReassign()">Reatribuir</button></span>
     <span class="bulk-grp hidden" id="bulkOcultoGrp"><label>Visibilidade:</label><button class="btn btn-sm btn-teal" onclick="bulkSetOculto('')">👁️ Tornar visível</button><button class="btn btn-sm btn-outline" onclick="bulkSetOculto('1')">🙈 Ocultar</button></span>
+    <span class="bulk-grp hidden" id="bulkCnpjGrp"><button class="btn btn-sm btn-outline" onclick="bulkAtualizarCNPJ()" title="Consulta a Receita (CNPJá) e atualiza Razão Social, endereço, cidade/UF, telefone RF, porte, SUFRAMA, regime e CNAE de todos os selecionados com CNPJ válido">🔍 Atualizar CNPJ</button></span>
   </div>
   <!-- MAIN FILTERS -->
   <div class="main-flt" id="mainFlt">
@@ -3107,7 +3108,43 @@ function renderCNAE(str){
   ul.innerHTML = items.map(function(it){return '<li>'+esc(it)+'</li>';}).join('');
   if(sum) sum.textContent = items.length ? ('CNAE ('+items.length+' atividade'+(items.length>1?'s':'')+')') : 'CNAE';
 }
-// Consulta CNPJ (Receita via CNPJá open, grátis) e AUTOPREENCHE todos os dados disponíveis.
+// Consulta CNPJ (Receita via CNPJá open, grátis).
+// _cnpjaExtract: parsing puro (sem tocar DOM) — reaproveitado pelo formulário (buscarCNPJ)
+// e pela atualização em massa (bulkAtualizarCNPJ), garantindo que os dois caminhos
+// preencham exatamente os mesmos campos, do mesmo jeito.
+function _cnpjaExtract(d){
+  var a=d.address||{};
+  var out={};
+  out['Razão Social'] = (d.company&&d.company.name) ? d.company.name : (d.alias||'');
+  out['Endereço Fiscal'] = [a.street,a.number,a.district].filter(Boolean).join(', ');
+  out['Cidade'] = a.city||'';
+  out['UF'] = a.state||'';
+  // Telefone(s) cadastrado(s) na Receita Federal
+  var tels=(d.phones||[]).map(function(p){
+    var ddd=(p.area||'').replace(/\D/g,'');
+    var num=(p.number||'').replace(/\D/g,'');
+    if(!ddd&&!num) return '';
+    var fmt=num.length>=9?num.replace(/^(\d{5})(\d{4})$/,'$1-$2'):num.replace(/^(\d{4})(\d{4})$/,'$1-$2');
+    return (ddd?'('+ddd+') ':'')+fmt;
+  }).filter(Boolean);
+  if(tels.length) out['Telefone RF']=tels.join(' | ');
+  // Porte da empresa (Receita Federal) — company.size
+  var _size = d.company && d.company.size ? d.company.size : null;
+  if(_size) out['Porte'] = _size.text || _size.acronym || '';
+  // SUFRAMA — OK apenas se inscrição aprovada e ativa
+  var suf=(d.suframa||[]).find(function(s){return s.approved && s.status && s.status.text==='Ativa';});
+  out['SUFRAMA'] = suf ? ('OK — ativa (nº '+suf.number+')') : 'Sem SUFRAMA';
+  // Regime — API resolve só Simples/MEI; Lucro Real x Presumido é seleção manual (não entra aqui)
+  if(d.company&&d.company.simei&&d.company.simei.optant) out['Regime']='MEI';
+  else if(d.company&&d.company.simples&&d.company.simples.optant) out['Regime']='Simples Nacional';
+  // CNAE — principal + secundárias
+  var cn=[];
+  if(d.mainActivity) cn.push(d.mainActivity.id+' — '+d.mainActivity.text+' (principal)');
+  (d.sideActivities||[]).forEach(function(c){ cn.push(c.id+' — '+c.text); });
+  out['CNAE'] = cn.join(' | ');
+  return out;
+}
+// AUTOPREENCHE o formulário aberto com os dados do CNPJ consultado.
 async function buscarCNPJ(cnpj){
   try{
     var num=(cnpj||'').replace(/\D/g,'');
@@ -3115,50 +3152,66 @@ async function buscarCNPJ(cnpj){
     var r=await fetch('https://open.cnpja.com/office/'+num+'?suframa=true');
     if(!r.ok){ toast('CNPJ não encontrado na Receita','err'); return; }
     var d=await r.json();
-    var a=d.address||{};
+    var patch=_cnpjaExtract(d);
     var set=function(id,val){var el=$(id); if(el && val!==undefined && val!==null && val!=='') el.value=val;};
-    // Razão social, endereço fiscal, cidade e UF
-    set('f_rs', (d.company&&d.company.name) ? d.company.name : (d.alias||''));
-    set('f_endereco', [a.street,a.number,a.district].filter(Boolean).join(', '));
-    set('f_ci', a.city||'');
-    var ufEl=$('f_uf'); if(ufEl && a.state) ufEl.value=a.state;
-    // Telefone(s) cadastrado(s) na Receita Federal
-    var tels=(d.phones||[]).map(function(p){
-      var ddd=(p.area||'').replace(/\D/g,'');
-      var num=(p.number||'').replace(/\D/g,'');
-      if(!ddd&&!num) return '';
-      var fmt=num.length>=9?num.replace(/^(\d{5})(\d{4})$/,'$1-$2'):num.replace(/^(\d{4})(\d{4})$/,'$1-$2');
-      return (ddd?'('+ddd+') ':'')+fmt;
-    }).filter(Boolean);
-    var telRf=$('f_tel_rf');
-    if(telRf && tels.length) telRf.value=tels.join(' | ');
-    // Porte da empresa (Receita Federal) — company.size
-    var _size = d.company && d.company.size ? d.company.size : null;
-    if (_size) set('f_porte', _size.text || _size.acronym || '');
-    // SUFRAMA — OK apenas se inscrição aprovada e ativa
-    var suf=(d.suframa||[]).find(function(s){return s.approved && s.status && s.status.text==='Ativa';});
-    set('f_suframa', suf ? ('OK — ativa (nº '+suf.number+')') : 'Sem SUFRAMA');
-    // Regime — API resolve só Simples/MEI; Lucro Real x Presumido é seleção manual
+    set('f_rs', patch['Razão Social']);
+    set('f_endereco', patch['Endereço Fiscal']);
+    set('f_ci', patch['Cidade']);
+    var ufEl=$('f_uf'); if(ufEl && patch['UF']) ufEl.value=patch['UF'];
+    var telRf=$('f_tel_rf'); if(telRf && patch['Telefone RF']) telRf.value=patch['Telefone RF'];
+    if(patch['Porte']) set('f_porte', patch['Porte']);
+    set('f_suframa', patch['SUFRAMA']);
     var rg=$('f_regime');
     if(rg){
-      if(d.company&&d.company.simei&&d.company.simei.optant) rg.value='MEI';
-      else if(d.company&&d.company.simples&&d.company.simples.optant) rg.value='Simples Nacional';
+      if(patch['Regime']) rg.value=patch['Regime'];
       // não-optante: não sobrescreve; usuário escolhe Presumido/Real
       var precisa=!rg.value;
       rg.style.borderColor = precisa ? '#FFB300' : '';
       rg.style.background  = precisa ? '#FFF8E1' : '';
     }
-    // CNAE — principal + secundárias
-    var cn=[];
-    if(d.mainActivity) cn.push(d.mainActivity.id+' — '+d.mainActivity.text+' (principal)');
-    (d.sideActivities||[]).forEach(function(c){ cn.push(c.id+' — '+c.text); });
-    var cnaeStr = cn.join(' | ');
+    var cnaeStr = patch['CNAE']||'';
     var ce=$('f_cnae'); if(ce) ce.value=cnaeStr;
     renderCNAE(cnaeStr);
     renderCanalSug(cnaeStr);
     var box=document.querySelector('.cnae-box'); if(box) box.open=true; // abre pra mostrar o que veio
     toast('Dados do CNPJ preenchidos','ok');
   }catch(e){ console.error('Falha na consulta CNPJ', e); toast('Falha ao consultar CNPJ','err'); }
+}
+// Atualização EM MASSA: consulta a Receita para cada lead selecionado com CNPJ de 14 dígitos
+// e grava direto no cadastro (sem precisar abrir o formulário um por um). Restrito à admin.
+async function bulkAtualizarCNPJ(){
+  if(!(U&&U.admin)){ toast('Ação exclusiva da administradora.','err'); return; }
+  var items=_selectedLeads(); if(!items.length){ toast('Nenhum lead selecionado.','err'); return; }
+  var valid=[], semCnpj=0;
+  items.forEach(function(it){
+    var num=(it.lead['CNPJ']||'').replace(/\D/g,'');
+    if(num.length===14) valid.push({it:it,num:num}); else semCnpj++;
+  });
+  if(!valid.length){ toast('Nenhum dos selecionados tem CNPJ de 14 dígitos.','err'); return; }
+  if(!confirm('Consultar a Receita e atualizar '+valid.length+' lead(s) com CNPJ válido?'+
+    (semCnpj?('\n\n'+semCnpj+' selecionado(s) sem CNPJ de 14 dígitos serão ignorados.'):'')+
+    '\n\nIsso consulta uma API pública, uma consulta por vez — pode levar alguns segundos por lead.')) return;
+  var okc=0, err=0, errList=[];
+  toast('Consultando '+valid.length+' CNPJ(s) na Receita...','ok');
+  for(var i=0;i<valid.length;i++){
+    var v=valid[i], L=v.it.lead;
+    try{
+      var r=await fetch('https://open.cnpja.com/office/'+v.num+'?suframa=true');
+      if(!r.ok){ err++; errList.push((L['Razão Social']||L['CNPJ']||v.num)+': não encontrado na Receita'); continue; }
+      var d=await r.json();
+      var patch=_cnpjaExtract(d);
+      Object.keys(patch).forEach(function(k){ if(patch[k]) L[k]=patch[k]; });
+      var rr=await api('POST',{action:(v.it.src==='wa'?'editWA':'editLead'),userEmail:U.email,row:v.it.row,lead:_fullLeadPayload(L)});
+      if(rr&&rr.error){ err++; errList.push((L['Razão Social']||v.num)+': '+rr.error); }
+      else okc++;
+    }catch(e){ err++; errList.push(v.num+': falha de conexão'); }
+    renderAll(); // atualiza a tabela linha a linha, sem esperar o lote inteiro terminar
+    if(i<valid.length-1) await new Promise(function(res){ setTimeout(res,300); }); // não martelar a API pública
+  }
+  if(err && errList.length) console.warn('Erros na atualização em massa de CNPJ:', errList);
+  toast('CNPJ atualizado em '+okc+' lead(s)'+(err?(' — '+err+' com erro'):'')+(semCnpj?(' — '+semCnpj+' ignorado(s) sem CNPJ'):'')+'.', err?'err':'ok');
+  notifyAdminActivity('atualizou dados de CNPJ em '+okc+' lead(s) via consulta em massa', '', curTab);
+  bulkSel.clear(); await reload();
 }
 function mDDD(el){let v=el.value.replace(/\D/g,'').substring(0,2);if(v.length>0)v='('+v;if(v.length>2)v+=')';el.value=v;}
 function mPH(el){let v=el.value.replace(/\D/g,'').substring(0,9);if(v.length>4)v=v.replace(/^(\d{4,5})(\d{1,4})/,'$1-$2');el.value=v;}
@@ -4304,6 +4357,7 @@ function renderBulkBar(){
   bar.classList.toggle('hidden', n===0);
   var c=$('bulkCount'); if(c) c.textContent = n+' selecionado'+(n!==1?'s':'');
   var og=$('bulkOcultoGrp'); if(og) og.classList.toggle('hidden', !(U&&U.admin));
+  var cg=$('bulkCnpjGrp'); if(cg) cg.classList.toggle('hidden', !(U&&U.admin));
   if(n===0) return;
   // status (sem Ganho/Perdido — esses exigem Valor/Motivo, feito individualmente)
   var stSel=$('bulkStatus');
