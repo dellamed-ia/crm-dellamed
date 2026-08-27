@@ -3346,7 +3346,7 @@ function buildDF() {
   const tps=['Frio','Morno','Quente'];
   const fs=[{id:'dfA',l:'Ano',o:yrs},{id:'dfM',l:'Mês',o:mos},{id:'dfP',l:'Prospect',o:pros},{id:'dfT',l:'Time Comercial',o:tms},{id:'dfC',l:'Canal',o:cas},{id:'dfU',l:'UF',o:ufs},{id:'dfMo',l:'Motivo Perda',o:mts},{id:'dfTp',l:'Temperatura',o:tps}];
   // Mês/ano mais recente presente nos dados → abre o dashboard já filtrado nele
-  var _latestYM = src.map(function(l){var p=StringString(l['Data']||'').split('/');return (p.length>=3 && /^\d{4}$/.test(p[2]) && /^\d{1,2}$/.test(p[1])) ? (p[2]+'-'+String(p[1]).padStart(2,'0')) : '';}).filter(Boolean).sort().pop() || '';
+  var _latestYM = src.map(function(l){var p=String(l['Data']||'').split('/');return (p.length>=3 && /^\d{4}$/.test(p[2]) && /^\d{1,2}$/.test(p[1])) ? (p[2]+'-'+String(p[1]).padStart(2,'0')) : '';}).filter(Boolean).sort().pop() || '';
   var _ly = _latestYM ? _latestYM.split('-')[0] : '';
   var _lm = _latestYM ? _latestYM.split('-')[1] : '';
   $('dFilters').innerHTML=
@@ -3549,9 +3549,9 @@ function renderDash() {
     var perdidos=d.filter(function(l){return l['Status']==='Perdido';});
     var monthsSet={}, motivesSet={};
     perdidos.forEach(function(l){
-      var p=StringString(l['Data']||'').split('/'); if(p.length<3) return;
+      var p=String(l['Data']||'').split('/'); if(p.length<3) return;
       monthsSet[p[2]+'-'+p[1]]=true;
-      StringString(l['Motivo da Perda']||'').split(',').map(function(x){return x.trim();}).filter(Boolean).forEach(function(mo){motivesSet[mo]=true;});
+      String(l['Motivo da Perda']||'').split(',').map(function(x){return x.trim();}).filter(Boolean).forEach(function(mo){motivesSet[mo]=true;});
     });
     var months=Object.keys(monthsSet).sort();
     var motives=Object.keys(motivesSet);
@@ -3560,9 +3560,9 @@ function renderDash() {
       var idx={}; motives.forEach(function(m,i){idx[m]=i;});
       var matrix=motives.map(function(){return months.map(function(){return 0;});});
       perdidos.forEach(function(l){
-        var p=StringString(l['Data']||'').split('/'); if(p.length<3) return;
+        var p=String(l['Data']||'').split('/'); if(p.length<3) return;
         var ci=mIdx[p[2]+'-'+p[1]]; if(ci==null) return;
-        StringString(l['Motivo da Perda']||'').split(',').map(function(x){return x.trim();}).filter(Boolean).forEach(function(mo){ matrix[idx[mo]][ci]++; });
+        String(l['Motivo da Perda']||'').split(',').map(function(x){return x.trim();}).filter(Boolean).forEach(function(mo){ matrix[idx[mo]][ci]++; });
       });
       dCharts.push(mkPerdaMensal('c7', months.map(monthLabel), motives, matrix, pal(motives.length)));
     } else {
