@@ -1372,6 +1372,7 @@ function _canModifyLead(L){
 
 // ═══════ STATE ═══════
 let U = null, LEADS = [], WA_LEADS = [], CFG = {}, editRow = null, curTab = 'leads', waError = '';
+let _cnpjLookupOK = ''; // dígitos do CNPJ cuja busca na lupa foi concluída com sucesso no form atual
 const ST = ['Novo','Contato feito','Proposta enviada','Negociando','Ganho','Perdido','Inativo'];
 const ST_C = {'Novo':'#1A6BB5','Contato feito':'#002f63','Proposta enviada':'#0D4A8A','Negociando':'#3B82C4','Ganho':'#1B7E34','Perdido':'#A6192E','Inativo':'#6B7280'};
 const ST_S = {'Novo':'s-novo','Contato feito':'s-contato','Proposta enviada':'s-proposta','Negociando':'s-negociando','Ganho':'s-ganho','Perdido':'s-perdido','Inativo':'s-inativo'};
@@ -2017,6 +2018,9 @@ function openForm(row, viewOnly) {
   _formViewOnly = !!viewOnly;
   const L = editRow ? curData().find(l=>l._row===editRow) : null;
   const isE = !!L;
+  // Exige clique na lupa do CNPJ antes de salvar. Em edição, pré-marca o CNPJ já existente
+  // como verificado (não trava edições que não mexem no CNPJ); em lead novo, começa vazio.
+  _cnpjLookupOK = isE ? String((L && L['CNPJ']) || '').replace(/\D/g,'') : '';
   // Só pode editar: lead novo, admin/autorizado (canDirectAssign) ou o próprio dono (Prospect = você).
   const isOwnLead = isE && _canModifyLead(L) && !canDirectAssign();
   const canEditLead = _canModifyLead(L);
@@ -2351,6 +2355,15 @@ async function _doSaveLead() {
     if (!_isExp) { req.push(['CNPJ','CNPJ']); req.push(['UF','UF']); }
     for (const [f,l] of req) if(!lead[f]){toast('Campo obrigatório: '+l,'err');return;}
     if (!_isExp && !t1){toast('Campo obrigatório: Telefone 1','err');return;}
+    // OBRIGATÓRIO: dados do CNPJ preenchidos pela lupa (busca na Receita) antes de salvar.
+    if (!_isExp) {
+      var _cnpjDig = String(lead['CNPJ']||'').replace(/\D/g,'');
+      if (_cnpjDig !== _cnpjLookupOK) {
+        toast('Clique na \uD83D\uDD0D do CNPJ para buscar e preencher os dados na Receita antes de salvar','err');
+        var _cf=$('f_cnpj'); if(_cf){ _cf.style.borderColor='#A6192E'; _cf.focus(); }
+        return;
+      }
+    }
   }
   if (!validateDates()) return;
   // CNPJ duplicado (varre Leads + WhatsApp)
@@ -3162,6 +3175,8 @@ async function buscarCNPJ(cnpj){
     renderCNAE(cnaeStr);
     renderCanalSug(cnaeStr);
     var box=document.querySelector('.cnae-box'); if(box) box.open=true; // abre pra mostrar o que veio
+    _cnpjLookupOK = num; // CNPJ verificado pela lupa
+    var _cfok=$('f_cnpj'); if(_cfok) _cfok.style.borderColor='';
     toast('Dados do CNPJ preenchidos','ok');
   }catch(e){ console.error('Falha na consulta CNPJ', e); toast('Falha ao consultar CNPJ','err'); }
 }
