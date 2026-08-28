@@ -2106,7 +2106,7 @@ function openForm(row, viewOnly) {
         fld('CNPJ','<div style="display:flex;gap:6px;align-items:center"><input id="f_cnpj" value="'+esc(L?L['CNPJ']:'')+'" '+dis+' placeholder="00.000.000/0000-00" maxlength="18" oninput="mCNPJ(this)" onblur="checkCnpjDup()" style="flex:1">'+
           '<button type="button" class="btn btn-sm btn-teal" title="Buscar dados na Receita e preencher automaticamente" onclick="buscarCNPJ(($(\'f_cnpj\')||{}).value)" style="flex-shrink:0;padding:6px 11px">🔍</button></div><div id="cnpjDupWarn" class="cnpj-dup-warn" style="display:none"></div>')+
       '</div>';
-      var razao = fld('Razão Social','<input id="f_rs" value="'+esc(L?L['Razão Social']:'')+'" '+dis+'>',rq);
+      var razao = fld('Razão Social','<input id="f_rs" value="'+esc(L?L['Razão Social']:'')+'" '+(U.admin?dis:'disabled')+(U.admin?'':' title="Somente o admin edita este campo — preenchido automaticamente pela lupa do CNPJ" placeholder="Preenchido pela lupa do CNPJ"')+'>',rq);
       var telInt = L ? _parseTelInt(L['Telefone Internacional']||'') : {ddi:'',dd:'',num:''};
       var expFields = '<div id="wrap_exp"'+(isExp?'':' style="display:none"')+'>'+
         fld('Registro','<input id="f_registro" value="'+esc(L?(L['Registro']||''):'')+'" '+dis+' placeholder="Número de registro / documento">')+
@@ -2309,6 +2309,9 @@ async function _doSaveLead() {
     'Links':[...document.querySelectorAll('#linksContainer .link-row-input')].map(function(i){return i.value.trim();}).filter(Boolean).join(' | '),
     'Anexos':JSON.stringify(_getAttachmentList()),
   };
+  // Preserva o histórico de pedidos (coluna JSON 'Pedidos') — o formulário só edita os campos
+  // planos Valor/Nº do Pedido; sem isto uma edição pelo form poderia zerar o histórico.
+  if (editRow) { var _Lped=curData().find(function(l){return l._row===editRow;}); if(_Lped && _Lped['Pedidos']!=null && _Lped['Pedidos']!=='') lead['Pedidos']=_Lped['Pedidos']; }
   // Oculto: só admin controla; preserva valor existente se o toggle não estiver presente
   if (U.admin) {
     lead['Oculto'] = (($('f_oculto')||{value:''}).value)==='1' ? '1' : '';
@@ -4524,6 +4527,18 @@ function _panelLead(){
 function _fullLeadPayload(L){ var o={}; Object.keys(L||{}).forEach(function(k){ if(k.charAt(0)!=='_') o[k]=L[k]; }); return o; }
 // ── Pedidos (JSON na coluna 'Pedidos'; agrega em Valor do Pedido / Nº do Pedido) ──
 function _getPedidos(L){ try{ var a=JSON.parse(L['Pedidos']||'[]'); return Array.isArray(a)?a:[]; }catch(_){ return []; } }
+// Pedidos EFETIVOS para contagem/total: usa o histórico JSON quando existe; caso contrário,
+// sintetiza 1 pedido a partir das colunas planas (Valor do Pedido / Nº do Pedido) — assim um
+// pedido lançado no formulário ou ao marcar Ganho também entra no "Total em pedidos".
+function _pedsEfetivos(L){
+  var arr=_getPedidos(L);
+  if(arr.length) return arr;
+  var vRaw=String((L&&L['Valor do Pedido'])||'').trim();
+  if(vRaw && _brlNum(vRaw)>0){
+    return [{ valor:vRaw, usd:'', numero:String((L&&L['Nº do Pedido'])||'').trim(), data:String((L&&L['Data'])||'').split(' ')[0]||'', _flat:true }];
+  }
+  return [];
+}
 function _brlNum(v){ return parseFloat(String(v==null?'':v).replace(/[R$\s.]/g,'').replace(',','.'))||0; }
 function _brlFmt(n){ return 'R$ '+Number(n||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}); }
 function _pedTotais(peds){
@@ -4531,7 +4546,7 @@ function _pedTotais(peds){
   return { valor:_brlFmt(soma), usd:_usdFmt(somaUsd), temUsd:temUsd, numeros:nums.join(', ') };
 }
 function _pedWidget(L){
-  var peds=_getPedidos(L);
+  var peds=_pedsEfetivos(L);
   var items=_pedFilter(peds);
   var tot=_pedTotais(items.map(function(it){return it.p;}));
   var anosObj={}; peds.forEach(function(p){ var d=String(p.data||'').split(' ')[0].split('/'); if(d.length===3) anosObj[d[2]]=1; });
@@ -4575,7 +4590,7 @@ function _pedRows(items, editable){
   return items.map(function(it){
     var p=(it&&it.p)?it.p:it; var idx=(it&&it.idx!=null)?it.idx:0;
     return '<div class="ped-row"><div><b>'+esc(_brlFmt(_brlNum(p.valor)))+'</b>'+(p.usd?(' <span style="color:var(--muted)">/ '+esc(_usdFmt(_usdNum(p.usd)))+'</span>'):'')+(p.numero?(' · Nº '+esc(p.numero)):'')+(p.data?(' · '+esc(p.data)):'')+'</div>'+
-      (editable?('<button class="ped-del" title="Remover" onclick="removePedido('+idx+')">✕</button>'):'')+'</div>';
+      ((editable && !p._flat)?('<button class="ped-del" title="Remover" onclick="removePedido('+idx+')">✕</button>'):'')+'</div>';
   }).join('');
 }
 function _pedFilter(peds){
@@ -4596,7 +4611,7 @@ function _histLig(L){
 }
 function _histPed(L){
   if(!L) return '';
-  var peds=_getPedidos(L); var tot=_pedTotais(peds);
+  var peds=_pedsEfetivos(L); var tot=_pedTotais(peds);
   return '<div class="lp-lig"><div class="lp-lig-head" onclick="toggleFm(\'fmPed\')">'+
     '<span>🧾 Total em pedidos: <b>'+esc(tot.valor)+'</b>'+(tot.temUsd?(' <span style="color:var(--muted);font-weight:400">/ '+esc(tot.usd)+'</span>'):'')+(peds.length?(' <span style="color:var(--muted);font-weight:400">('+peds.length+')</span>'):'')+'</span><span id="fmPedC">\u25be</span></div>'+
     '<div id="fmPed" style="display:none;margin-top:8px">'+_pedRows(peds.map(function(p,i){return {p:p,idx:i};}),false)+'</div></div>';
@@ -4908,7 +4923,12 @@ async function saveComposer(){
     var pd=(($('cmp_pdata')||{}).value||'').trim();
     if(!pv){toast('Informe o valor do pedido.','err');return;}
     var pu=(($('cmp_pusd')||{}).value||'').trim();
-    var peds=_getPedidos(L); peds.push({valor:pv,usd:pu,numero:pn,data:pd||n.date});
+    var peds=_getPedidos(L);
+    if(!peds.length){
+      var _vSeed=String(L['Valor do Pedido']||'').trim();
+      if(_vSeed && _brlNum(_vSeed)>0){ peds.push({valor:_vSeed,usd:'',numero:String(L['Nº do Pedido']||'').trim(),data:String(L['Data']||'').split(' ')[0]||n.date}); }
+    }
+    peds.push({valor:pv,usd:pu,numero:pn,data:pd||n.date});
     var tot=_pedTotais(peds);
     patch['Pedidos']=JSON.stringify(peds);
     patch['Valor do Pedido']=tot.valor;
