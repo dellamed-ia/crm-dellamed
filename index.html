@@ -930,8 +930,19 @@ html body .login-crm-subtitle{display:block!important;margin:8px 0 10px!importan
     <div class="fg"><label>Time Comercial</label><div class="sf-wrap" id="sfTime"></div></div>
     <div class="fg"><label>UF</label><div class="sf-wrap" id="sfUF"></div></div>
     <div class="fg"><label>Canal</label><div class="sf-wrap" id="sfCanal"></div></div>
-    <div class="fg"><label>Data de</label><input type="date" id="fltDe" onchange="renderAll()"></div>
-    <div class="fg"><label>Data até</label><input type="date" id="fltAte" onchange="renderAll()"></div>
+    <div class="fg"><label>Período</label>
+      <select id="fltPeriodo" onchange="onMainPeriodo()">
+        <option value="all">Todos os períodos</option>
+        <option value="7">Últimos 7 dias</option>
+        <option value="30">Últimos 30 dias</option>
+        <option value="90">Últimos 90 dias</option>
+        <option value="365">Este ano</option>
+        <option value="custom">Personalizado</option>
+      </select>
+    </div>
+    <div class="fg hidden" id="fltCustomWrap"><label>Intervalo</label>
+      <div class="ffbar-row"><input type="date" id="fltDe" onchange="renderAll()" style="flex:1;min-width:0"><span class="ffbar-sep">→</span><input type="date" id="fltAte" onchange="renderAll()" style="flex:1;min-width:0"></div>
+    </div>
     <div class="fg"><label>&nbsp;</label><button class="btn btn-sm btn-teal" style="width:100%" onclick="clearMainFlt()">Limpar filtros</button></div>
   </div>
   <!-- TABLE -->
@@ -1110,8 +1121,8 @@ html body .login-crm-subtitle{display:block!important;margin:8px 0 10px!importan
 .leads-tbl td:nth-child(4) .rs-uf{flex:0 0 auto;font-size:.66rem;font-weight:700;color:#3d5a80;background:#e8eef6;border:1px solid #d3ddec;border-radius:4px;padding:1px 5px;letter-spacing:.3px}
 .leads-tbl td:nth-child(4) .rs-exp{color:#7a4d00;background:#fff3d6;border-color:#f0c36d;font-size:.72rem;padding:1px 4px}
 .rs-porte{display:inline-block;flex:0 0 auto;font-size:.66rem;font-weight:700;border-radius:4px;padding:1px 5px;letter-spacing:.3px;color:#4b3b73!important;background:#efeafc!important;border:1px solid #d6cbef!important}
-.leads-tbl td:nth-child(5) .rs-cell{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
-.leads-tbl td:nth-child(5) .rs-name{min-width:0}
+.leads-tbl td:nth-child(5) .rs-cell{display:flex;align-items:center;gap:6px;width:100%;max-width:100%}
+.leads-tbl td:nth-child(5) .rs-name{flex:1 1 0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
 .lp-editrow .lp-eye{margin-left:6px;padding:6px 10px}
 /* Canal Principal(5): nome inteiro sempre — quebra de linha, nunca corta */
 .leads-tbl th:nth-child(5),.leads-tbl td:nth-child(5){max-width:none!important;width:150px!important;white-space:normal!important;overflow:visible!important;text-overflow:clip!important;word-break:break-word!important;line-height:1.3}
@@ -1642,6 +1653,7 @@ function switchTab(tab) {
     const cl=w.querySelector('.sf-clear'); if(cl)cl.classList.remove('show');
   });
   $('fltDe').value = ''; $('fltAte').value = '';
+  { var _fp=$('fltPeriodo'); if(_fp)_fp.value='all'; var _fcw=$('fltCustomWrap'); if(_fcw)_fcw.classList.add('hidden'); }
   buildMainFilters();
   renderAll();
 }
@@ -1873,16 +1885,31 @@ function getMainFiltered() {
   const ft = sfVal('sfTime'); if (ft.length) data = data.filter(l => ft.some(f=>f.toLowerCase()===(l['Time Comercial']||'').toLowerCase()));
   const fu = sfVal('sfUF'); if (fu.length) data = data.filter(l => fu.some(f=>f.toLowerCase()===(l['UF']||'').toLowerCase()));
   const fc = sfVal('sfCanal'); if (fc.length) data = data.filter(l => fc.some(f=>f.toLowerCase()===(l['Canal Principal']||'').toLowerCase()));
-  const de = $('fltDe').value, ate = $('fltAte').value;
-  if (de || ate) {
-    data = data.filter(l => {
-      const raw = l['Data']||''; const p = raw.split('/');
-      if (p.length < 3) return true;
-      const iso = p[2]+'-'+p[1]+'-'+p[0];
-      if (de && iso < de) return false;
-      if (ate && iso > ate) return false;
-      return true;
-    });
+  // Filtro de data igual ao da aba Funil de Vendas: Período (Todos / N dias / Este ano / Personalizado)
+  const _periodo = ($('fltPeriodo')||{value:'all'}).value || 'all';
+  if (_periodo !== 'all') {
+    if (_periodo === 'custom') {
+      const de = $('fltDe').value, ate = $('fltAte').value;
+      if (de || ate) {
+        data = data.filter(l => {
+          const raw = l['Data']||''; const p = raw.split('/');
+          if (p.length < 3) return false;
+          const iso = p[2]+'-'+p[1]+'-'+p[0];
+          if (de && iso < de) return false;
+          if (ate && iso > ate) return false;
+          return true;
+        });
+      }
+    } else {
+      const _now = new Date(); _now.setHours(0,0,0,0);
+      const _cut = new Date(_now); _cut.setDate(_cut.getDate()-parseInt(_periodo,10));
+      data = data.filter(l => {
+        const raw = l['Data']||''; const p = raw.split('/');
+        if (p.length < 3) return false;
+        const ld = new Date(+p[2], +p[1]-1, +p[0]);
+        return ld >= _cut;
+      });
+    }
   }
   if (activeQuick) data = data.filter(function(l){return matchesQuick(l,activeQuick);});
   // Visibilidade (Oculto): ocultos ficam invisíveis para todos por padrão.
@@ -1993,6 +2020,12 @@ function renderAll() { setTimeout(applyFilterStyle,50);
   }).join('');
 }
 
+function onMainPeriodo() {
+  var v = ($('fltPeriodo')||{}).value;
+  var wrap = $('fltCustomWrap');
+  if (wrap) { if (v==='custom') wrap.classList.remove('hidden'); else wrap.classList.add('hidden'); }
+  renderAll();
+}
 function clearMainFlt() {
   activeStatus = '';
   activeQuick = '';
@@ -2005,6 +2038,7 @@ function clearMainFlt() {
   });
   $('fltDe').value = '';
   $('fltAte').value = '';
+  { var _fp2=$('fltPeriodo'); if(_fp2)_fp2.value='all'; var _fcw2=$('fltCustomWrap'); if(_fcw2)_fcw2.classList.add('hidden'); }
   $('inSearch').value = '';
   if(typeof bulkSel!=='undefined'){ bulkSel.clear(); var _ba=$('bulkAll'); if(_ba)_ba.checked=false; }
   updateStatusKPIs();
