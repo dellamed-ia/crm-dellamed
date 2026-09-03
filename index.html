@@ -2141,7 +2141,12 @@ function openForm(row, viewOnly) {
         fld('CNPJ','<div style="display:flex;gap:6px;align-items:center"><input id="f_cnpj" value="'+esc(L?L['CNPJ']:'')+'" '+dis+' placeholder="00.000.000/0000-00" maxlength="18" oninput="mCNPJ(this)" onblur="checkCnpjDup()" style="flex:1">'+
           '<button type="button" class="btn btn-sm btn-teal" title="Buscar dados na Receita e preencher automaticamente" onclick="buscarCNPJ(($(\'f_cnpj\')||{}).value)" style="flex-shrink:0;padding:6px 11px">🔍</button></div><div id="cnpjDupWarn" class="cnpj-dup-warn" style="display:none"></div>')+
       '</div>';
-      var razao = fld('Razão Social','<input id="f_rs" value="'+esc(L?L['Razão Social']:'')+'" '+(U.admin?dis:'disabled')+(U.admin?'':' title="Somente o admin edita este campo — preenchido automaticamente pela lupa do CNPJ" placeholder="Preenchido pela lupa do CNPJ"')+'>',rq);
+      // Exportação não usa CNPJ (não é norma para todos os países): Razão Social é digitada à mão.
+      var _rsDisabled = (U.admin || isExp) ? dis : 'disabled';
+      var _rsHint = (U.admin || isExp)
+        ? (isExp ? ' placeholder="Razão social / nome da empresa"' : '')
+        : ' title="Somente o admin edita este campo — preenchido automaticamente pela lupa do CNPJ" placeholder="Preenchido pela lupa do CNPJ"';
+      var razao = fld('Razão Social','<input id="f_rs" value="'+esc(L?L['Razão Social']:'')+'" '+_rsDisabled+_rsHint+'>',rq);
       var telInt = L ? _parseTelInt(L['Telefone Internacional']||'') : {ddi:'',dd:'',num:''};
       var expFields = '<div id="wrap_exp"'+(isExp?'':' style="display:none"')+'>'+
         fld('Registro','<input id="f_registro" value="'+esc(L?(L['Registro']||''):'')+'" '+dis+' placeholder="Número de registro / documento">')+
@@ -3303,6 +3308,26 @@ window.toggleExportacao = function(){
     ['f_uf','f_suframa','f_regime','f_cnae'].forEach(function(id){ var el=$(id); if(el) el.value=''; });
     var ul=$('cnaeList'); if(ul) ul.innerHTML='';
     var ufEl=$('f_uf'); if(ufEl){ var ufFld=ufEl.closest('.fld'); if(ufFld) ufFld.classList.remove('fld-req'); }
+  }
+  // Razão Social: em exportação é digitada à mão (sem lupa do CNPJ); no nacional volta a ser
+  // preenchida pela lupa e travada para o não-admin. Segue a editabilidade do restante do form.
+  var rsEl = $('f_rs');
+  if (rsEl) {
+    var _cp = $('f_cp');
+    var _formEditable = _cp ? !_cp.disabled : true; // espelha o canE dos demais campos
+    if (isExp) {
+      rsEl.disabled = !_formEditable;
+      rsEl.removeAttribute('title');
+      rsEl.placeholder = 'Razão social / nome da empresa';
+    } else if (U.admin) {
+      rsEl.disabled = !_formEditable;
+      rsEl.removeAttribute('title');
+      rsEl.placeholder = '';
+    } else {
+      rsEl.disabled = true;
+      rsEl.title = 'Somente o admin edita este campo — preenchido automaticamente pela lupa do CNPJ';
+      rsEl.placeholder = 'Preenchido pela lupa do CNPJ';
+    }
   }
 };
 
