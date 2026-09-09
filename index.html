@@ -885,6 +885,52 @@ html body .login-crm-subtitle{display:block!important;margin:8px 0 10px!importan
   </div>
 </div>
 
+<style id="crm-sidebar">
+:root{--topbar-h:64px;--sidenav-w:266px}
+html body .app-shell{display:flex;align-items:stretch;gap:0;width:100%}
+html body .app-main{flex:1 1 auto;min-width:0;display:block}
+html body .side-nav{flex:0 0 var(--sidenav-w);width:var(--sidenav-w);position:sticky;top:var(--topbar-h);align-self:flex-start;height:calc(100vh - var(--topbar-h));overflow-y:auto;overflow-x:hidden;background:#f0f4f9!important;border-right:2px solid #c5d5e8;padding:16px 16px 22px;display:flex;flex-direction:column;gap:18px;z-index:40}
+html body .side-nav::-webkit-scrollbar{width:6px}
+html body .side-nav::-webkit-scrollbar-thumb{background:#c5d5e8;border-radius:20px}
+html body .side-menu-lbl,html body .side-sec-lbl{font-family:'Montserrat',sans-serif;font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#002f63;padding:0 2px 8px;margin:0}
+html body .side-menu{display:flex;flex-direction:column;gap:8px}
+html body .side-item{display:flex;align-items:center;gap:11px;width:100%;text-align:left;padding:10px 13px;border-radius:7px;background:#fff;border:1.5px solid #c5d5e8;color:#002f63;font-family:'Montserrat',sans-serif;font-size:.82rem;font-weight:600;cursor:pointer;transition:all .15s;line-height:1.15}
+html body .side-item .si-ic{font-size:1rem;flex:0 0 auto;width:20px;text-align:center}
+html body .side-item:hover{border-color:#002f63;background:#eaf1fb}
+html body .side-item.active{background:#002f63;border-color:#002f63;color:#fff;font-weight:700;box-shadow:inset 3px 0 0 #A6192E,0 2px 8px rgba(0,47,99,.2)}
+html body .side-sec{border-top:1px solid #c5d5e8;padding-top:16px}
+html body .side-nav .main-flt{display:flex!important;flex-direction:column;gap:12px;padding:0!important;background:none!important;border:none!important;box-shadow:none!important}
+html body .side-nav .main-flt .fg{width:100%}
+html body .side-nav .main-flt label{color:#002f63!important;font-size:.62rem!important}
+html body .side-nav .main-flt select,html body .side-nav .main-flt .sf-input,html body .side-nav .main-flt input[type="date"]{width:100%!important;min-width:0!important;background:#fff!important;border:1.5px solid #c5d5e8!important;color:#002f63!important;border-radius:7px!important;height:36px!important}
+html body .side-nav .main-flt .btn-sm{width:100%!important;background:#A6192E!important;border:none!important;color:#fff!important;height:36px!important;border-radius:7px!important;font-weight:700!important}
+/* Busca no topo da lateral — mesmo visual dos campos de filtro */
+html body .side-sec-first{border-top:none;padding-top:0}
+html body .side-search{max-width:none;flex:none;width:100%}
+html body .side-search input{width:100%!important;padding-left:34px!important;background:#fff!important;border:1.5px solid #c5d5e8!important;color:#002f63!important;border-radius:7px!important;height:36px!important;font-size:.8rem!important}
+html body .side-search input::placeholder{color:#8babc9!important}
+html body .side-search input:focus{border-color:#002f63!important;box-shadow:0 0 0 2px rgba(0,47,99,.1)!important}
+html body .side-search::before{content:'\1F50D';position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:.85rem;z-index:1}
+/* pipe-header (agora sem a busca) fica oculto para a lateral alinhar com os KPIs */
+html body .app-main .pipe-header{display:none!important}
+html body #funilFbar{display:none!important}
+html body .kpi-legend{margin:14px 24px 26px;padding:14px 16px;border:1px solid #d0dce8;border-radius:10px;background:#fff;box-shadow:0 2px 10px rgba(0,47,99,.07)}
+html body .kpi-legend-hd{font-size:.64rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:#002f63;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid #e4eaf0}
+html body .kpi-legend-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:8px 24px}
+html body .kpi-legend-grid span{font-size:.74rem;color:#4a5a6e;line-height:1.45}
+html body .kpi-legend-grid b{color:#002f63;font-weight:700}
+html body .dfg-period .df-period-val{font-size:.8rem;font-weight:700;color:#002f63;padding:7px 10px;background:#eef3fb;border:1.5px solid #c5d5e8;border-radius:7px;white-space:nowrap;height:36px;display:flex;align-items:center}
+html body .app-main #funilView{height:calc(100vh - var(--topbar-h) - 96px);padding:0 24px 14px}
+@media(max-width:1024px){
+  html body .app-shell{flex-direction:column}
+  html body .side-nav{position:static;width:auto;flex:none;height:auto;border-right:none;border-bottom:2px solid #c5d5e8}
+  html body .side-nav .side-menu{flex-direction:row;flex-wrap:wrap}
+  html body .side-item{flex:1 1 160px}
+  html body .side-nav .main-flt{flex-direction:row;flex-wrap:wrap}
+  html body .side-nav .main-flt .fg{flex:1 1 180px;width:auto}
+}
+</style>
+
 <!-- APP -->
 <div id="scApp" class="hidden">
   <div class="topbar">
@@ -905,15 +951,46 @@ html body .login-crm-subtitle{display:block!important;margin:8px 0 10px!importan
       <div class="user-badge"><span id="uName"></span><button class="btn btn-outline btn-sm" id="btnLogout">Sair</button></div>
     </div>
   </div>
-  <div class="pipe-header">
+  <div class="app-shell">
+  <aside class="side-nav" id="sideNav">
+    <div class="side-sec side-sec-first">
+      <div class="side-sec-lbl">Busca</div>
+      <div class="search-box side-search"><input type="text" id="inSearch" title="Busca única nas abas Leads e WhatsApp: Lead, Time Comercial, Prospect, Cidade, CNPJ, Temperatura, UF e E-mail" placeholder="Buscar lead, CNPJ, cidade, UF..."></div>
+    </div>
+    <nav class="side-menu">
+      <div class="side-menu-lbl">Menu</div>
+      <button class="side-item active" id="tabFunil" onclick="switchTab('funil')"><span class="si-ic">📊</span><span>Funil de Vendas</span></button>
+      <button class="side-item" id="tabLeads" onclick="switchTab('leads')"><span class="si-ic">📋</span><span>Leads Multicanais</span></button>
+      <button class="side-item" id="tabWA" onclick="switchTab('wa')"><span class="si-ic">💬</span><span>WhatsApp</span></button>
+    </nav>
+    <div class="side-sec">
+      <div class="side-sec-lbl">Filtro geral</div>
+      <div class="main-flt" id="mainFlt">
+        <div class="fg"><label>Prospect</label><div class="sf-wrap" id="sfProspect"></div></div>
+        <div class="fg"><label>Time Comercial</label><div class="sf-wrap" id="sfTime"></div></div>
+        <div class="fg"><label>UF</label><div class="sf-wrap" id="sfUF"></div></div>
+        <div class="fg"><label>Canal</label><div class="sf-wrap" id="sfCanal"></div></div>
+        <div class="fg"><label>Período</label>
+          <select id="fltPeriodo" onchange="onMainPeriodo()">
+            <option value="all">Todos os períodos</option>
+            <option value="mesatual">Mês atual</option>
+            <option value="7">Últimos 7 dias</option>
+            <option value="30">Últimos 30 dias</option>
+            <option value="90">Últimos 90 dias</option>
+            <option value="365">Este ano</option>
+            <option value="custom">Personalizado</option>
+          </select>
+        </div>
+        <div class="fg hidden" id="fltCustomWrap"><label>Intervalo</label>
+          <div class="ffbar-row"><input type="date" id="fltDe" onchange="renderActive()" style="flex:1;min-width:0"><span class="ffbar-sep">→</span><input type="date" id="fltAte" onchange="renderActive()" style="flex:1;min-width:0"></div>
+        </div>
+        <div class="fg"><label>&nbsp;</label><button class="btn btn-sm btn-teal" style="width:100%" onclick="clearMainFlt()">Limpar filtros</button></div>
+      </div>
+    </div>
+  </aside>
+  <main class="app-main">
+  <div class="pipe-header" id="pipeHeader">
     <h2 id="secTitle" style="display:none">Leads Multicanais</h2>
-    <div class="search-box"><input type="text" id="inSearch" title="Busca única nas abas Leads e WhatsApp: Lead, Time Comercial, Prospect, Cidade, CNPJ, Temperatura, UF e E-mail" placeholder="Buscar em Leads e WhatsApp: lead, time, prospect, cidade, CNPJ, UF, e-mail..."></div>
-  </div>
-  <!-- TABS -->
-  <div class="tabs">
-    <div class="tab active" id="tabFunil" onclick="switchTab('funil')">📊 Funil de Vendas</div>
-    <div class="tab" id="tabLeads" onclick="switchTab('leads')">📋 Leads Multicanais</div>
-    <div class="tab" id="tabWA" onclick="switchTab('wa')">💬 WhatsApp</div>
   </div>
   <!-- STATUS KPIs -->
   <div style="padding:0 24px 8px;display:flex;gap:10px;flex-wrap:wrap" id="stPills"></div>
@@ -924,27 +1001,6 @@ html body .login-crm-subtitle{display:block!important;margin:8px 0 10px!importan
     <span class="bulk-grp"><label>Status:</label><select id="bulkStatus"></select><button class="btn btn-sm btn-teal" onclick="bulkApplyStatus()">Aplicar</button></span>
     <span class="bulk-grp"><label>Reatribuir a:</label><select id="bulkProspect"></select><button class="btn btn-sm btn-navy" onclick="bulkReassign()">Reatribuir</button></span>
     <span class="bulk-grp hidden" id="bulkOcultoGrp"><label>Visibilidade:</label><button class="btn btn-sm btn-teal" onclick="bulkSetOculto('')">👁️ Tornar visível</button><button class="btn btn-sm btn-outline" onclick="bulkSetOculto('1')">🙈 Ocultar</button></span>
-  </div>
-  <!-- MAIN FILTERS -->
-  <div class="main-flt" id="mainFlt">
-    <div class="fg"><label>Prospect</label><div class="sf-wrap" id="sfProspect"></div></div>
-    <div class="fg"><label>Time Comercial</label><div class="sf-wrap" id="sfTime"></div></div>
-    <div class="fg"><label>UF</label><div class="sf-wrap" id="sfUF"></div></div>
-    <div class="fg"><label>Canal</label><div class="sf-wrap" id="sfCanal"></div></div>
-    <div class="fg"><label>Período</label>
-      <select id="fltPeriodo" onchange="onMainPeriodo()">
-        <option value="all">Todos os períodos</option>
-        <option value="7">Últimos 7 dias</option>
-        <option value="30">Últimos 30 dias</option>
-        <option value="90">Últimos 90 dias</option>
-        <option value="365">Este ano</option>
-        <option value="custom">Personalizado</option>
-      </select>
-    </div>
-    <div class="fg hidden" id="fltCustomWrap"><label>Intervalo</label>
-      <div class="ffbar-row"><input type="date" id="fltDe" onchange="renderAll()" style="flex:1;min-width:0"><span class="ffbar-sep">→</span><input type="date" id="fltAte" onchange="renderAll()" style="flex:1;min-width:0"></div>
-    </div>
-    <div class="fg"><label>&nbsp;</label><button class="btn btn-sm btn-teal" style="width:100%" onclick="clearMainFlt()">Limpar filtros</button></div>
   </div>
   <!-- TABLE -->
   <div class="tbl-count" id="tblCount"></div>
@@ -975,6 +1031,22 @@ html body .login-crm-subtitle{display:block!important;margin:8px 0 10px!importan
     <th data-key="Nº do Pedido" onclick="sortCol('Nº do Pedido')">Nº<br>do Pedido <span class="sort-arrow"></span></th>
   </tr></thead><tbody id="tblBody"></tbody></table></div>
   <div id="loadMain" class="loading"><div class="loader"></div><span>Carregando dados...</span></div>
+  <div id="kpiLegend" class="kpi-legend">
+    <div class="kpi-legend-hd">O que significa cada indicador</div>
+    <div class="kpi-legend-grid">
+      <span><b>Prospecção</b> — leads que já tiveram alguma interação (pela data da mudança de status).</span>
+      <span><b>Contato feito</b> — leads nesse status, pela data em que mudaram.</span>
+      <span><b>Proposta enviada</b> — leads nesse status, pela data em que mudaram.</span>
+      <span><b>Negociando</b> — leads nesse status, pela data em que mudaram.</span>
+      <span><b>Ganho</b> — leads nesse status (nº e valor total), pela data da mudança.</span>
+      <span><b>Perdido</b> — leads nesse status, pela data em que mudaram.</span>
+      <span><b>Inativo</b> — automático: 30 dias sem interação (90 p/ LOJ. Licitação).</span>
+      <span><b>Taxa de ganho</b> — ganhos ÷ total de leads.</span>
+      <span><b>Ticket médio</b> — valor médio por lead no período filtrado.</span>
+      <span><b>Forecast</b> — pipeline ponderado pela etapa.</span>
+      <span><b>Leads ativos</b> — total de leads do vendedor.</span>
+    </div>
+  </div>
 <!-- FUNIL DE VENDAS (aba fixa, inline) -->
 <div id="funilView" class="hidden">
   <div class="funil-inline-head">📊 Funil de Vendas <span id="funilBadge" style="font-size:.7rem;font-weight:400;color:var(--muted)"></span></div>
@@ -1013,6 +1085,8 @@ html body .login-crm-subtitle{display:block!important;margin:8px 0 10px!importan
     <div class="funil-kbar" id="funilKbar"></div>
     <div class="kb-board" id="funilBody"></div>
 </div>
+  </main>
+  </div>
 </div>
 
 <!-- FORM MODAL -->
@@ -1556,6 +1630,62 @@ function _parseDMY(v){
   var d=new Date(+p[2],+p[1]-1,+p[0]); d.setHours(0,0,0,0);
   return isNaN(d.getTime())?null:d;
 }
+// Parse LOCAL (sem escorregar por fuso GMT-3): aceita dd/mm/aaaa, aaaa-mm-dd ou Date.
+function _parseAnyLocal(v){
+  if(!v) return null;
+  if(v instanceof Date){ var d0=new Date(v.getTime()); d0.setHours(0,0,0,0); return isNaN(d0.getTime())?null:d0; }
+  var srt=String(v).trim(); if(!srt) return null;
+  if(srt.indexOf('/')>=0){ var p=srt.split(' ')[0].split('/'); if(p.length!==3) return null; var d=new Date(+p[2],+p[1]-1,+p[0]); d.setHours(0,0,0,0); return isNaN(d.getTime())?null:d; }
+  var m=srt.match(/^(\d{4})-(\d{2})-(\d{2})/); if(m){ var d2=new Date(+m[1],+m[2]-1,+m[3]); d2.setHours(0,0,0,0); return isNaN(d2.getTime())?null:d2; }
+  return null;
+}
+// Chave AAAA-MM (local) a partir de dd/mm/aaaa, aaaa-mm-dd ou Date. Usada nos gráficos mensais.
+function _ymKey(v){ var d=_parseAnyLocal(v); if(!d) return ''; return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); }
+// Teste do período do FILTRO GERAL (barra lateral): all / N dias / custom (fltDe..fltAte). Usado por FUNIL e DASHBOARD.
+function _periodTestIds(selId, deId, ateId){
+  var periodo=($(selId)||{value:'all'}).value||'all';
+  if(periodo==='all') return function(){return true;};
+  if(periodo==='mesatual'){
+    // Mês mais recente COM registro (cadastro) em ambos os menus (Leads + WhatsApp).
+    var _all=(typeof LEADS!=='undefined'?LEADS:[]).concat(typeof WA_LEADS!=='undefined'?WA_LEADS:[]);
+    var _mx=0;
+    _all.forEach(function(l){ var d=_parseAnyLocal(l['Data']); if(d){ var k=d.getFullYear()*100+(d.getMonth()+1); if(k>_mx)_mx=k; } });
+    if(!_mx) return function(){return false;};
+    var _y=Math.floor(_mx/100), _m=_mx%100;
+    var mStart=new Date(_y,_m-1,1); mStart.setHours(0,0,0,0);
+    var mEnd=new Date(_y,_m,0); mEnd.setHours(23,59,59,999);
+    return function(dateStr){ var ld=_parseAnyLocal(dateStr); if(!ld) return false; return ld>=mStart && ld<=mEnd; };
+  }
+  if(periodo==='custom'){
+    var dFrom=_parseAnyLocal(($(deId)||{}).value||'');
+    var dTo=_parseAnyLocal(($(ateId)||{}).value||''); if(dTo) dTo.setHours(23,59,59,999);
+    return function(dateStr){ var ld=_parseAnyLocal(dateStr); if(!ld) return false; if(dFrom && ld<dFrom) return false; if(dTo && ld>dTo) return false; return true; };
+  }
+  var now=new Date(); now.setHours(0,0,0,0);
+  var cutoff=new Date(now); cutoff.setDate(cutoff.getDate()-parseInt(periodo,10));
+  return function(dateStr){ var ld=_parseAnyLocal(dateStr); if(!ld) return false; return ld>=cutoff; };
+}
+// Filtro geral (barra lateral): usado pelo FUNIL e pelas TABELAS.
+function _periodTest(){ return _periodTestIds('fltPeriodo','fltDe','fltAte'); }
+// Handler do período PRÓPRIO do dashboard (independente da barra lateral).
+function onDashPeriodo(){
+  var v=($('dfPeriodo')||{}).value;
+  var w=$('dfCustomWrap');
+  if(w){ if(v==='custom') w.classList.remove('hidden'); else w.classList.add('hidden'); }
+  renderDash();
+}
+// Rótulo legível do período do filtro geral (mostrado no dashboard).
+function _periodLabel(){
+  var p=($('fltPeriodo')||{value:'all'}).value||'all';
+  if(p==='all') return 'Todos os períodos';
+  if(p==='mesatual') return 'Mês atual';
+  if(p==='custom'){
+    function br(v){ var d=_parseAnyLocal(v); return d?(String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear()):''; }
+    var de=br(($('fltDe')||{}).value||''), ate=br(($('fltAte')||{}).value||'');
+    return (de||ate)?('Personalizado: '+(de||'…')+' – '+(ate||'…')):'Personalizado';
+  }
+  return 'Últimos '+p+' dias';
+}
 // Data PASSADA (<= hoje) mais recente entre QUALQUER campo de data do lead (inclui registro).
 function _leadRefPastDate(lead, today){
   if(!lead) return null; var most=null;
@@ -1642,19 +1772,10 @@ function switchTab(tab) {
   $('btnDashGeral').classList.remove('hidden');
   $('btnDashWA').classList.add('hidden');
   // alterna a visão: tabela (leads/wa) x funil, sem pop-up
-  ['stPills','qfBar','mainFlt','tblCount','tblWrap'].forEach(function(id){ var e=$(id); if(e) e.classList.toggle('hidden', isFunil); });
+  ['stPills','tblCount','tblWrap','kpiLegend'].forEach(function(id){ var e=$(id); if(e) e.classList.toggle('hidden', isFunil); });
   var fv=$('funilView'); if(fv) fv.classList.toggle('hidden', !isFunil);
   if(isFunil){ openFunil(); return; }
-  $('inSearch').value = '';
-  ['sfProspect','sfTime','sfUF','sfCanal'].forEach(id => {
-    const w=$(id); if(!w)return;
-    if(w._selected) w._selected.length=0;
-    const inp=w.querySelector('.sf-input'); if(inp)inp.value='';
-    const chips=w.querySelector('.sf-chips'); if(chips)chips.innerHTML='';
-    const cl=w.querySelector('.sf-clear'); if(cl)cl.classList.remove('show');
-  });
-  $('fltDe').value = ''; $('fltAte').value = '';
-  { var _fp=$('fltPeriodo'); if(_fp)_fp.value='all'; var _fcw=$('fltCustomWrap'); if(_fcw)_fcw.classList.add('hidden'); }
+  // Filtro geral (barra lateral) e compartilhado entre os menus: nao zera ao trocar de visao.
   buildMainFilters();
   renderAll();
 }
@@ -1709,7 +1830,7 @@ function sortCol(key) {
 
 function buildMainFilters() {
   updateStatusKPIs();
-  const data = curData();
+  const data = LEADS.concat(WA_LEADS);
   // Save current selections before rebuilding so filters survive reload/save
   const savedSel = {
     sfProspect: sfVal('sfProspect'),
@@ -1731,7 +1852,7 @@ function buildMainFilters() {
 // Searchable filter component
 function buildSF(containerId, options, onChange, initialSelected) {
   const wrap = $(containerId);
-  const cb = onChange || renderAll;
+  const cb = onChange || renderActive;
   wrap.innerHTML = '';
   wrap.dataset.value = '';
   const inp = document.createElement('input');
@@ -1923,8 +2044,12 @@ function getMainFiltered() {
   return data;
 }
 var ocultoView = false;
-function toggleOcultoView(){ ocultoView=!ocultoView; if(typeof bulkSel!=='undefined'){bulkSel.clear();} renderQuickChips(); renderAll(); }
+function toggleOcultoView(){ ocultoView=!ocultoView; if(typeof bulkSel!=='undefined'){bulkSel.clear();} renderQuickChips(); renderActive(); }
 
+function renderActive(){
+  var fv=$('funilView');
+  if (fv && !fv.classList.contains('hidden')) renderFunil(); else renderAll();
+}
 function renderAll() { setTimeout(applyFilterStyle,50);
   LEADS.forEach(function(l){l._src='leads';}); WA_LEADS.forEach(function(l){l._src='wa';});
   renderQuickChips();
@@ -2025,7 +2150,7 @@ function onMainPeriodo() {
   var v = ($('fltPeriodo')||{}).value;
   var wrap = $('fltCustomWrap');
   if (wrap) { if (v==='custom') wrap.classList.remove('hidden'); else wrap.classList.add('hidden'); }
-  renderAll();
+  renderActive();
 }
 function clearMainFlt() {
   activeStatus = '';
@@ -2043,7 +2168,7 @@ function clearMainFlt() {
   $('inSearch').value = '';
   if(typeof bulkSel!=='undefined'){ bulkSel.clear(); var _ba=$('bulkAll'); if(_ba)_ba.checked=false; }
   updateStatusKPIs();
-  renderAll();
+  renderActive();
 }
 
 // ═══════ FORM ═══════
@@ -2494,26 +2619,8 @@ var KB_STAGES = [
 ];
 
 function openFunil() {
-  // Popula filtros com dados de LEADS + WhatsApp
-  var allLeads = LEADS.concat(WA_LEADS);
-  function fillSel(id, vals) {
-    var sel = $(id); if (!sel) return;
-    var cur = sel.value;
-    while (sel.options.length > 1) sel.remove(1);
-    vals.forEach(function(v){ var o=document.createElement('option'); o.value=o.text=v; sel.add(o); });
-    if (cur) sel.value = cur;
-  }
-  function uniq(arr) {
-    return [...new Set(arr.filter(Boolean).map(function(v){return String(v).trim();}))].sort(function(a,b){return a.localeCompare(b,'pt-BR');});
-  }
-  fillSel('ffl_time',     uniq(allLeads.map(function(l){return l['Time Comercial'];})));
-  fillSel('ffl_prospect', uniq(allLeads.map(function(l){return l['Prospect'];})));
-  // Se o usuário logado é um prospect, abre o funil filtrado no nome dele
-  var _up = VENDEDORES.find(function(v){
-    return v.email.toLowerCase()===(U&&U.email||'').toLowerCase();
-  });
-  if (_up) { var _ps=$('ffl_prospect'); if(_ps)_ps.value=_up.nome; }
-  renderFunilChips();
+  // O funil usa o MESMO filtro geral (barra lateral) da tabela.
+  renderQuickChips();
   renderFunil();
 }
 
@@ -2540,11 +2647,11 @@ function _funilLeads() {
   var leads = LEADS.concat(WA_LEADS);
   var _fq = normFreeSearch(($('inSearch')||{value:''}).value || '');
   var _funilTerms = _fq ? _fq.split(/\s+/).filter(Boolean) : [];
-  var periodo  = ($('ffl_periodo')||{}).value || 'all';
-  var fltTime  = ($('ffl_time')||{}).value || '';
-  var fltPros  = ($('ffl_prospect')||{}).value || '';
-  var fltFrom  = ($('ffl_from')||{}).value || '';
-  var fltTo    = ($('ffl_to')||{}).value || '';
+  // Controles do FILTRO GERAL compartilhado (mesma barra lateral usada pela tabela)
+  var fp = sfVal('sfProspect'), ftime = sfVal('sfTime'), fu = sfVal('sfUF'), fc = sfVal('sfCanal');
+  var periodo = ($('fltPeriodo')||{value:'all'}).value || 'all';
+  var fltFrom = ($('fltDe')||{}).value || '';
+  var fltTo   = ($('fltAte')||{}).value || '';
   var now = new Date(); now.setHours(0,0,0,0);
 
   function parseDt(d) {
@@ -2555,30 +2662,23 @@ function _funilLeads() {
   }
 
   return leads.filter(function(l) {
-    // Filtro de tempo
-    if (fltTime && String(l['Time Comercial']||'').trim() !== fltTime) return false;
-    // Filtro de prospect
-    if (fltPros && String(l['Prospect']||'').trim() !== fltPros) return false;
-    if (funilQuick && !matchesQuick(l, funilQuick)) return false;
+    if (fp.length    && !fp.some(function(f){return f.toLowerCase()===(l['Prospect']||'').toLowerCase();})) return false;
+    if (ftime.length && !ftime.some(function(f){return f.toLowerCase()===(l['Time Comercial']||'').toLowerCase();})) return false;
+    if (fu.length    && !fu.some(function(f){return f.toLowerCase()===(l['UF']||'').toLowerCase();})) return false;
+    if (fc.length    && !fc.some(function(f){return f.toLowerCase()===(l['Canal Principal']||'').toLowerCase();})) return false;
+    if (activeQuick && !matchesQuick(l, activeQuick)) return false;
     if (_funilTerms.length) { var _h = leadFreeSearchText(l); if (!_funilTerms.every(function(t){return _h.includes(t);})) return false; }
-    // Filtro de data
-    if (periodo !== 'all') {
-      var ld = parseDt(l['Data']);
-      if (!ld) return false;
-      if (periodo === 'custom') {
-        if (fltFrom) { var df=new Date(fltFrom); if (ld<df) return false; }
-        if (fltTo)   { var dt=new Date(fltTo); dt.setHours(23,59,59); if (ld>dt) return false; }
-      } else {
-        var cutoff = new Date(now); cutoff.setDate(cutoff.getDate()-parseInt(periodo));
-        if (ld < cutoff) return false;
-      }
-    }
+    // Período NÃO é aplicado aqui: cada métrica do funil filtra por sua própria data (Total=cadastro, status=data da mudança).
+    if (U && U.admin && ocultoView) { if (String(l['Oculto']||'')!=='1') return false; }
+    else { if (String(l['Oculto']||'')==='1') return false; }
     return true;
   });
 }
 
 function renderFunil() { setTimeout(applyFilterStyle,80);
-  var leads = _funilLeads();
+  renderQuickChips();
+  var leads = _funilLeads();                 // base: filtros não-data (prospect/time/uf/canal/busca/atalho/oculto)
+  var inPer = _periodTest();                 // período do filtro geral (mesma regra do dashboard)
   var now = new Date(); now.setHours(0,0,0,0);
 
   function parseVal(v) {
@@ -2601,8 +2701,20 @@ function renderFunil() { setTimeout(applyFilterStyle,80);
   KB_STAGES.forEach(function(s){ byStage[s.key]=[]; });
   var OTHER = [];
   leads.forEach(function(l) {
+    if (!inPer(_stageDate(l))) return;       // status contabilizado pela DATA DA MUDANÇA (cadastro p/ Prospecção)
     var st = String(l['Status']||'').trim();
-    if (byStage[st]) byStage[st].push(l); else OTHER.push(l);
+    var stL = st.toLowerCase();
+    // Inativo automático: 30 dias sem interação (90 p/ LOJ. Licitação) — exceto Ganho/Perdido.
+    if (stL!=='ganho' && stL!=='perdido' && (stL==='inativo' || isInativoAuto(l) || _isEsfriadoRule(l))) {
+      byStage['Inativo'].push(l);
+    } else if (stL==='' || stL==='novo') {
+      // Prospecção: só entram leads que já tiveram ALGUMA interação (não os recém-cadastrados sem contato).
+      if (_hasInteraction(l)) byStage['Novo'].push(l); else OTHER.push(l);
+    } else if (byStage[st]) {
+      byStage[st].push(l);
+    } else {
+      OTHER.push(l);
+    }
   });
 
   // KPIs
@@ -2617,30 +2729,34 @@ function renderFunil() { setTimeout(applyFilterStyle,80);
   byStage['Ganho'].forEach(function(l){var v=parseVal(l['Valor do Pedido']); cG++; vG+=v; allVals.push(v);});
   byStage['Perdido'].forEach(function(){cP++;});
   activeKeys.forEach(function(k){byStage[k].forEach(function(l){var v=parseVal(l['Valor do Pedido']); if(v>0)allVals.push(v);});});
-  var winRate = (cG+cP)>0 ? Math.round(cG/(cG+cP)*100) : 0;
+  var totalLeads = leads.filter(function(l){ return inPer(l['Data']); }).length;   // Total de Leads = data de CADASTRO no período
+  var winRate = totalLeads>0 ? Math.round(cG/totalLeads*100) : 0;   // ganhos ÷ total de leads
   var avgTk   = allVals.length>0 ? allVals.reduce(function(a,b){return a+b;},0)/allVals.length : 0;
-  var activeTotal = activeKeys.reduce(function(a,k){return a+byStage[k].length;},0);
+  var activeTotal = totalLeads;                                     // Leads Ativos = total de leads do vendedor
 
   // Render KPI bar
   $('funilKbar').innerHTML =
     fkpi2('💰','Pipeline Ativo',   fmtBRL(pipeVal)||'R$ 0',     'leads em negociação')+
-    fkpi2('🎯','Taxa de Ganho',    winRate+'%',                  'ganho / (ganho+perdido)')+
-    fkpi2('🧾','Ticket Médio',     fmtBRL(avgTk)||'—',          'valor médio por lead')+
-    fkpi2('📈','Forecast',         fmtBRL(forecast)||'R$ 0',    'ponderado por etapa')+
-    fkpi2('📋','Leads Ativos',     activeTotal+' leads',         'fora de Ganho e Perdido');
+    fkpi2('🎯','Taxa de Ganho',    winRate+'%',                  'ganhos ÷ total de leads')+
+    fkpi2('🏆','Ganhos',           String(cG),                   (fmtBRL(vG)||'R$ 0')+' no período')+
+    fkpi2('🧾','Ticket Médio',     fmtBRL(avgTk)||'—',          'valor médio por lead (datas filtradas)')+
+    fkpi2('📈','Forecast',         fmtBRL(forecast)||'R$ 0',    'pipeline ponderado por etapa')+
+    fkpi2('📋','Leads Ativos',     activeTotal+' leads',         'total de leads do vendedor');
 
   // Filtro badge
-  var fltPeriodo = ($('ffl_periodo')||{}).value||'all';
+  var fltPeriodo = ($('fltPeriodo')||{}).value||'all';
   var fBadge = [];
   if (fltPeriodo!=='all') fBadge.push(fltPeriodo==='custom'?'Período personalizado':'Últimos '+fltPeriodo+' dias');
-  if (($('ffl_time')||{}).value) fBadge.push('Time: '+$('ffl_time').value);
-  if (($('ffl_prospect')||{}).value) fBadge.push($('ffl_prospect').value);
-  $('funilFltBadge').textContent = fBadge.length ? leads.length+' leads • '+fBadge.join(' • ') : leads.length+' leads';
+  var _bT=sfVal('sfTime'); if(_bT.length) fBadge.push('Time: '+_bT.join(', '));
+  var _bP=sfVal('sfProspect'); if(_bP.length) fBadge.push(_bP.join(', '));
+  var _bU=sfVal('sfUF'); if(_bU.length) fBadge.push('UF: '+_bU.join(', '));
+  var _bC=sfVal('sfCanal'); if(_bC.length) fBadge.push('Canal: '+_bC.join(', '));
+  $('funilFltBadge').textContent = fBadge.length ? totalLeads+' leads • '+fBadge.join(' • ') : totalLeads+' leads';
 
   // Render kanban columns
   $('funilBody').innerHTML = KB_STAGES.map(function(s) {
     var ls = byStage[s.key];
-    if(DATE_QUICKS.indexOf(funilQuick)>=0){
+    if(DATE_QUICKS.indexOf(activeQuick)>=0){
       ls = ls.slice().sort(function(a,b){ return _dprKey(a['Data Próxima Ação']).localeCompare(_dprKey(b['Data Próxima Ação'])); });
     }
     var stageVal = ls.reduce(function(a,l){return a+parseVal(l['Valor do Pedido']);},0);
@@ -3422,7 +3538,7 @@ function buildDF() {
   const ufs=duniq(src.map(l=>l['UF']));
   const mts=duniq(src.flatMap(l=>String(l['Motivo da Perda']||'').split(',').map(s=>s.trim())));
   const tps=['Frio','Morno','Quente'];
-  const fs=[{id:'dfA',l:'Ano',o:yrs},{id:'dfM',l:'Mês',o:mos},{id:'dfP',l:'Prospect',o:pros},{id:'dfT',l:'Time Comercial',o:tms},{id:'dfC',l:'Canal',o:cas},{id:'dfU',l:'UF',o:ufs},{id:'dfMo',l:'Motivo Perda',o:mts},{id:'dfTp',l:'Temperatura',o:tps}];
+  const fs=[{id:'dfP',l:'Prospect',o:pros},{id:'dfT',l:'Time Comercial',o:tms},{id:'dfC',l:'Canal',o:cas},{id:'dfU',l:'UF',o:ufs},{id:'dfMo',l:'Motivo Perda',o:mts},{id:'dfTp',l:'Temperatura',o:tps}];
   // Mês/ano mais recente presente nos dados → abre o dashboard já filtrado nele
   var _latestYM = src.map(function(l){var p=String(l['Data']||'').split('/');return (p.length>=3 && /^\d{4}$/.test(p[2]) && /^\d{1,2}$/.test(p[1])) ? (p[2]+'-'+String(p[1]).padStart(2,'0')) : '';}).filter(Boolean).sort().pop() || '';
   var _ly = _latestYM ? _latestYM.split('-')[0] : '';
@@ -3432,9 +3548,23 @@ function buildDF() {
       '<button type="button" class="chan-btn'+(dashChannels.leads?' on':'')+'" onclick="toggleDashChan(\'leads\')">Multicanais</button>'+
       '<button type="button" class="chan-btn'+(dashChannels.wa?' on':'')+'" onclick="toggleDashChan(\'wa\')">WhatsApp</button>'+
     '</div></div>'+
+    '<div class="dfg"><label>Período</label>'+
+      '<select id="dfPeriodo" onchange="onDashPeriodo()">'+
+        '<option value="all">Todos os períodos</option>'+
+        '<option value="mesatual" selected>Mês atual</option>'+
+        '<option value="7">Últimos 7 dias</option>'+
+        '<option value="30">Últimos 30 dias</option>'+
+        '<option value="90">Últimos 90 dias</option>'+
+        '<option value="365">Este ano</option>'+
+        '<option value="custom">Personalizado</option>'+
+      '</select>'+
+    '</div>'+
+    '<div class="dfg hidden" id="dfCustomWrap"><label>Intervalo</label>'+
+      '<div class="ffbar-row"><input type="date" id="dfDe" onchange="renderDash()" style="flex:1;min-width:0"><span class="ffbar-sep">→</span><input type="date" id="dfAte" onchange="renderDash()" style="flex:1;min-width:0"></div>'+
+    '</div>'+
     fs.map(f=>'<div class="dfg"><label>'+f.l+'</label><div class="sf-wrap" id="'+f.id+'"></div></div>').join('')+'<div class="dfg"><label>&nbsp;</label><button class="btn btn-sm btn-teal" style="width:100%" onclick="clearDF()">Limpar filtros</button></div>';
   fs.forEach(function(f){
-    var init = f.id==='dfA' ? (_ly?[_ly]:[]) : (f.id==='dfM' ? (_lm?[_lm]:[]) : []);
+    var init = [];   // sem pré-seleção: o dashboard segue o período do FILTRO GERAL (barra lateral)
     buildSF(f.id, f.o, renderDash, init);
   });
 }
@@ -3447,10 +3577,13 @@ function clearDF(){
     const cl=w.querySelector('.sf-clear');if(cl)cl.classList.remove('show');
   });
   dashKpiFilter='';   // limpar também o KPI selecionado
+  { var _dp=$('dfPeriodo'); if(_dp) _dp.value='all'; var _dcw=$('dfCustomWrap'); if(_dcw) _dcw.classList.add('hidden'); var _de=$('dfDe'); if(_de)_de.value=''; var _da=$('dfAte'); if(_da)_da.value=''; }
   renderDash();
 }
 
-function gfLeads() {
+function gfLeads(dateMode) {
+  // dateMode: 'cadastro' => filtra Ano/Mês pela data de CADASTRO; padrão => pela data de MUDANÇA DE STATUS.
+  var _gd=function(l){ return dateMode==='cadastro' ? (l['Data']||'') : _stageDate(l); };
   let d=[...dashData()];
   // KPI click filter
   if (dashKpiFilter) {
@@ -3461,26 +3594,26 @@ function gfLeads() {
     else if (dashKpiFilter==='Morno') d=d.filter(l=>temp(l['Status'],l)==='Morno');
     else if (dashKpiFilter==='Quente') d=d.filter(l=>temp(l['Status'],l)==='Quente');
   }
-  const fA=sfVal('dfA'),fM=sfVal('dfM'),fP=sfVal('dfP'),fT=sfVal('dfT'),fC=sfVal('dfC'),fU=sfVal('dfU'),fMo=sfVal('dfMo'),fTp=sfVal('dfTp');
-  if(fA.length)d=d.filter(l=>{const p=String(l['Data']||'').split('/');return p.length>=3&&fA.some(y=>y===p[2]);});
-  if(fM.length)d=d.filter(l=>{const p=String(l['Data']||'').split('/');return p.length>=2&&fM.some(m=>m===p[1]);});
+  const fP=sfVal('dfP'),fT=sfVal('dfT'),fC=sfVal('dfC'),fU=sfVal('dfU'),fMo=sfVal('dfMo'),fTp=sfVal('dfTp');
   if(fP.length)d=d.filter(l=>fP.some(f=>f.toLowerCase()===(l['Prospect']||'').toLowerCase()));
   if(fT.length)d=d.filter(l=>fT.some(f=>f.toLowerCase()===(l['Time Comercial']||'').toLowerCase()));
   if(fC.length)d=d.filter(l=>fC.some(f=>f.toLowerCase()===(l['Canal Principal']||'').toLowerCase()));
   if(fU.length)d=d.filter(l=>fU.some(f=>f.toLowerCase()===(l['UF']||'').toLowerCase()));
   if(fMo.length)d=d.filter(l=>{const m=l['Motivo da Perda']||'';return fMo.some(f=>m.toLowerCase().includes(f.toLowerCase()));});
   if(fTp.length)d=d.filter(l=>fTp.includes(temp(l['Status'],l)));
+  var _inPer=_periodTestIds('dfPeriodo','dfDe','dfAte'); d=d.filter(l=>_inPer(_gd(l)));   // período PRÓPRIO do dashboard, pela data do modo
   return d;
 }
 
 // ── Ligações (a partir das Atividades type='call') ──
 function _callsOf(l){ return _getActs(l).filter(function(x){ return x && x.type==='call'; }); }
-function _callsByMonth(leads){
+function _callsByMonth(leads, inPer){
   var m={};
   (leads||[]).forEach(function(l){
     _callsOf(l).forEach(function(c){
-      var p=String(c.date||'').split(' ')[0].split('/');
-      if(p.length===3){ var k=p[2]+'-'+p[1]; m[k]=(m[k]||0)+1; }
+      if(inPer && !inPer(c.date)) return;           // só ligações dentro do período
+      var k=_ymKey(c.date);
+      if(k){ m[k]=(m[k]||0)+1; }
     });
   });
   return m;
@@ -3558,12 +3691,14 @@ function renderDash() {
   // Get data filtered by dropdowns but NOT by KPI click
   const savedKpi = dashKpiFilter;
   dashKpiFilter = '';
-  const dropdownFiltered = gfLeads();
+  const dropdownFiltered = gfLeads('stage');            // KPIs de status/charts: por data de mudança de status
+  const totLeadsCad = gfLeads('cadastro').length;       // Total de Leads: por data de CADASTRO
   dashKpiFilter = savedKpi;
   // Get data filtered by EVERYTHING (including KPI click) for charts
-  const d = gfLeads();
+  const d = gfLeads('stage');
+  var inPerDash = _periodTestIds('dfPeriodo','dfDe','dfAte');   // mesmo período dos filtros do dashboard
 
-  const totAll=dropdownFiltered.length;
+  const totAll=totLeadsCad;
   const gan=dropdownFiltered.filter(l=>l['Status']==='Ganho').length;
   const per=dropdownFiltered.filter(l=>l['Status']==='Perdido').length;
   const neg=dropdownFiltered.filter(l=>l['Status']==='Negociando').length;
@@ -3627,8 +3762,8 @@ function renderDash() {
     var perdidos=d.filter(function(l){return l['Status']==='Perdido';});
     var monthsSet={}, motivesSet={};
     perdidos.forEach(function(l){
-      var p=String(l['Data']||'').split('/'); if(p.length<3) return;
-      monthsSet[p[2]+'-'+p[1]]=true;
+      var _k=_ymKey(_stageDate(l)); if(!_k) return;   // mês pela DATA DA PERDA
+      monthsSet[_k]=true;
       String(l['Motivo da Perda']||'').split(',').map(function(x){return x.trim();}).filter(Boolean).forEach(function(mo){motivesSet[mo]=true;});
     });
     var months=Object.keys(monthsSet).sort();
@@ -3638,8 +3773,8 @@ function renderDash() {
       var idx={}; motives.forEach(function(m,i){idx[m]=i;});
       var matrix=motives.map(function(){return months.map(function(){return 0;});});
       perdidos.forEach(function(l){
-        var p=String(l['Data']||'').split('/'); if(p.length<3) return;
-        var ci=mIdx[p[2]+'-'+p[1]]; if(ci==null) return;
+        var _k=_ymKey(_stageDate(l)); if(!_k) return;
+        var ci=mIdx[_k]; if(ci==null) return;
         String(l['Motivo da Perda']||'').split(',').map(function(x){return x.trim();}).filter(Boolean).forEach(function(mo){ matrix[idx[mo]][ci]++; });
       });
       dCharts.push(mkPerdaMensal('c7', months.map(monthLabel), motives, matrix, pal(motives.length)));
@@ -3652,6 +3787,7 @@ function renderDash() {
   const weekLabels=['Segunda','Terça','Quarta','Quinta','Sexta','Sábado','Domingo'];
   const weekVals=[0,0,0,0,0,0,0];
   d.forEach(l=>{
+    if(!inPerDash(l['Data Primeiro Contato']))return;   // respeita o período do dashboard
     const p=String(l['Data Primeiro Contato']||'').split('/');
     if(p.length!==3)return;
     const dd=parseInt(p[0],10),mm=parseInt(p[1],10),yy=parseInt(p[2],10);
@@ -3667,10 +3803,8 @@ function renderDash() {
   // Ganhos por Mês (sum of Valor do Pedido) — original rule preserved.
   const ganhosMes = {};
   d.filter(l=>l['Status']==='Ganho').forEach(l => {
-    const dt = l['Data']||'';
-    const p = dt.split('/');
-    if (p.length>=3) {
-      const key = p[2]+'-'+p[1];
+    const key = _ymKey(_stageDate(l));   // mês pela DATA DO GANHO
+    if (key) {
       const val = String(l['Valor do Pedido']||'').replace(/[^\d,]/g,'').replace(',','.');
       ganhosMes[key] = (ganhosMes[key]||0) + (parseFloat(val)||0);
     }
@@ -3678,11 +3812,12 @@ function renderDash() {
   const gk = Object.keys(ganhosMes).sort();
   const gv2 = gk.map(k=>ganhosMes[k]);
   if (gk.length) dCharts.push(mkMoneyChart('c9',gk.map(monthLabel),gv2));
-  { var _cbm=_callsByMonth(d); var _ck=Object.keys(_cbm).sort(); if(_ck.length) dCharts.push(mkCallChart('cLig', _ck.map(function(k){var p=k.split('-');return p[1]+'/'+p[0];}), _ck.map(function(k){return _cbm[k];}))); }
+  { var _cbm=_callsByMonth(d, inPerDash); var _ck=Object.keys(_cbm).sort(); if(_ck.length) dCharts.push(mkCallChart('cLig', _ck.map(function(k){var p=k.split('-');return p[1]+'/'+p[0];}), _ck.map(function(k){return _cbm[k];}))); }
 
   // Evolução Mensal — requested source field: Data Primeiro Contato.
   const mo={};
   d.forEach(l=>{
+    if(!inPerDash(l['Data Primeiro Contato']))return;   // respeita o período do dashboard
     const p=String(l['Data Primeiro Contato']||'').split('/');
     if(p.length>=3 && /^\d{1,2}$/.test(p[1]) && /^\d{4}$/.test(p[2])){
       const mm=String(p[1]).padStart(2,'0');
@@ -4333,6 +4468,27 @@ function _daysSinceContact(l){
 }
 // chave ordenável yyyymmdd a partir de dd/mm/aaaa
 function _dprKey(v){ var p=String(v||'').split('/'); return p.length===3?(p[2]+p[1]+p[0]):''; }
+// Data em que o lead ENTROU no status informado (lê o log de status em Atividades; usa a ocorrência mais recente).
+function _statusEntryDate(l, statusName){
+  try{
+    var acts=JSON.parse(l['Atividades']||'[]');
+    if(Array.isArray(acts)){
+      var _esc=String(statusName).replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+      var re=new RegExp('\u2192\\s*'+_esc+'\\s*$','i');
+      var found='';
+      for(var i=0;i<acts.length;i++){ var a=acts[i]; if(a && a.type==='status' && re.test(a.title||'')) found=a.date; }
+      return found;
+    }
+  }catch(_){}
+  return '';
+}
+// Data para contabilizar o lead no funil: Prospecção/Novo (e vazio) => cadastro; demais => data do status atual (log),
+// com fallback para Último Contato e Cadastro. Base para "contabilizar conforme as datas alteradas".
+function _stageDate(l){
+  var st=String(l['Status']||'').trim().toLowerCase();
+  if(st===''||st==='novo') return l['Data']||'';
+  return _statusEntryDate(l, l['Status']) || l['Data Último Contato'] || l['Data'] || '';
+}
 // Opção B: quando a proposta foi enviada (log de status na timeline); fallback p/ leads antigos
 function _proposalDate(l){
   try{
@@ -4541,7 +4697,8 @@ var QUICK_DEFS = [
 var TABLE_QUICK_DEFS = QUICK_DEFS.filter(function(d){ return DATE_QUICKS.indexOf(d.key)<0; });
 function renderQuickChips(){
   var bar=$('qfChips'); if(!bar) return;
-  var html = TABLE_QUICK_DEFS.map(function(d){
+  var _fvq=$('funilView'); var _defs=(_fvq && !_fvq.classList.contains('hidden')) ? QUICK_DEFS : TABLE_QUICK_DEFS;
+  var html = _defs.map(function(d){
     return '<button class="qf-chip'+(activeQuick===d.key?' active':'')+'" onclick="toggleQuick(\''+d.key+'\')">'+d.label+'</button>';
   }).join('');
   if (U && U.admin) {
@@ -4549,7 +4706,7 @@ function renderQuickChips(){
   }
   bar.innerHTML = html;
 }
-function toggleQuick(k){ activeQuick=(activeQuick===k?'':k); renderQuickChips(); renderAll(); }
+function toggleQuick(k){ activeQuick=(activeQuick===k?'':k); renderQuickChips(); renderActive(); }
 function renderFunilChips(){
   var bar=$('ffQuick'); if(!bar) return;
   bar.innerHTML = QUICK_DEFS.map(function(d){
