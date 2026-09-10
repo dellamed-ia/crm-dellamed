@@ -358,7 +358,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--teal)}
 .leads-tbl tbody tr:hover td{background:#EDF2FF}
 .temp-badge{padding:4px 12px;border-radius:4px;font-size:.75rem;font-weight:600;letter-spacing:.03em;display:inline-block;font-family:'Montserrat',sans-serif}
 .tb-frio{background:#e3f2fd;color:#0F3C6E}.tb-morno{background:#fff3cd;color:#7d5a00}.tb-quente{background:#fce4ec;color:#880e4f}
-.st-badge{padding:4px 12px;border-radius:4px;font-size:.75rem;font-weight:600;letter-spacing:.03em;display:inline-block;color:#fff;font-family:'Montserrat',sans-serif}
+.st-badge{padding:4px 12px;border-radius:4px;font-size:.75rem;font-weight:600;letter-spacing:.03em;display:inline-block;font-family:'Montserrat',sans-serif}
 .temp-badge{padding:4px 12px;border-radius:4px;font-size:.75rem;font-weight:600;letter-spacing:.03em;display:inline-block;white-space:nowrap;font-family:'Montserrat',sans-serif}
 .tbl-count{font-size:.82rem;color:var(--muted);padding:8px 24px}
 .loader{display:inline-block;width:36px;height:36px;border:3px solid rgba(0,0,0,.1);border-top-color:var(--teal);border-radius:50%;animation:spin .6s linear infinite}
@@ -366,13 +366,13 @@ input:focus,select:focus,textarea:focus{border-color:var(--teal)}
 .loading{display:flex;align-items:center;justify-content:center;min-height:60vh;flex-direction:column;gap:12px;color:var(--muted)}
 
 /* STATUS COLORS */
-.s-novo{background:#E3F2FD;color:#1565C0}
-.s-contato{background:#E0F2F1;color:#00695C}
-.s-proposta{background:#E1F5FE;color:#0277BD}
-.s-negociando{background:#FFF3E0;color:#E65100}
-.s-ganho{background:#E0F2F1;color:#004D40}
-.s-perdido{background:#FFEBEE;color:#B71C1C}
-.s-inativo{background:#F3E5F5;color:#6A1B9A}
+.s-novo{background:#e3f2fd;color:#0F3C6E}
+.s-contato{background:#e0f2f1;color:#00695c}
+.s-proposta{background:#e1f5fe;color:#01579b}
+.s-negociando{background:#fff3cd;color:#7d5a00}
+.s-ganho{background:#c8e6c9;color:#1b5e20}
+.s-perdido{background:#ffcdd2;color:#b71c1c}
+.s-inativo{background:#f5f5f5;color:#616161}
 
 @media(max-width:768px){
   .pipe-cols{padding:0 12px 12px}.pipe-col{min-width:220px}
@@ -730,7 +730,7 @@ html body .dcard.dcard-wide{grid-column:1/-1!important}
 /* ── Tabelas: TODA a fonte preta ─────────────────────────────────── */
 html body .leads-tbl td{color:#000!important}
 html body .leads-tbl td *{color:inherit!important}
-html body .leads-tbl td .st-badge{color:#fff!important}
+html body .leads-tbl td .st-badge{color:inherit!important}
 html body .leads-tbl td .temp-badge{color:inherit!important}
 html body .leads-tbl td .kb-tag-hot{color:#A6192E!important}
 html body .leads-tbl td .kb-tag-warm{color:#002f63!important}
@@ -1468,7 +1468,8 @@ function _canModifyLead(L){
 let U = null, LEADS = [], WA_LEADS = [], CFG = {}, editRow = null, curTab = 'leads', waError = '';
 let _cnpjLookupOK = ''; // dígitos do CNPJ cuja busca na lupa foi concluída com sucesso no form atual
 const ST = ['Novo','Contato feito','Proposta enviada','Negociando','Ganho','Perdido','Inativo'];
-const ST_C = {'Novo':'#1A6BB5','Contato feito':'#002f63','Proposta enviada':'#0D4A8A','Negociando':'#3B82C4','Ganho':'#1B7E34','Perdido':'#A6192E','Inativo':'#6B7280'};
+const ST_C = {'Novo':'#e3f2fd','Contato feito':'#e0f2f1','Proposta enviada':'#e1f5fe','Negociando':'#fff3cd','Ganho':'#c8e6c9','Perdido':'#ffcdd2','Inativo':'#f5f5f5'};
+const ST_CT = {'Novo':'#0F3C6E','Contato feito':'#00695c','Proposta enviada':'#01579b','Negociando':'#7d5a00','Ganho':'#1b5e20','Perdido':'#b71c1c','Inativo':'#616161'};
 const ST_S = {'Novo':'s-novo','Contato feito':'s-contato','Proposta enviada':'s-proposta','Negociando':'s-negociando','Ganho':'s-ganho','Perdido':'s-perdido','Inativo':'s-inativo'};
 
 // ═══════ API ═══════
@@ -1950,8 +1951,8 @@ function updateStatusKPIs() {
       '<span class="sp-val">'+total+'</span>'+
       '<span class="sp-lbl" style="color:var(--navy)">Todos</span></div>' +
     ST.map(s =>
-      '<div class="st-pill'+(activeStatus===s?' active':'')+'" style="border-bottom:3px solid '+ST_C[s]+'" onclick="filterSt(\''+s+'\')">'+
-        '<span class="sp-val" style="color:'+ST_C[s]+'">'+counts[s]+'</span>'+
+      '<div class="st-pill'+(activeStatus===s?' active':'')+'" style="border-bottom:3px solid '+(ST_CT[s]||'#0F3C6E')+'" onclick="filterSt(\''+s+'\')">'+
+        '<span class="sp-val" style="color:'+(ST_CT[s]||'#0F3C6E')+'">'+counts[s]+'</span>'+
         '<span class="sp-lbl" style="color:var(--text)">'+s+'</span></div>'
     ).join('');
 }
@@ -2128,7 +2129,7 @@ function renderAll() { setTimeout(applyFilterStyle,50);
     return '<tr class="'+dueCls+'" onclick="openLeadPanel('+l._row+',\''+(l._src||curTab)+'\')">'+
       '<td style="text-align:center;color:var(--muted);font-size:.75rem;white-space:nowrap"><input type="checkbox" class="bulk-cb" onclick="event.stopPropagation();toggleRow(event,'+l._row+',\''+(l._src||curTab)+'\')" '+(bulkSel.has((l._src||curTab)+':'+l._row)?'checked':'')+' style="vertical-align:middle;margin-right:5px;cursor:pointer">'+(String(l['Oculto']||'')==='1'?'<span title="Lead oculto — só admin vê" style="margin-right:3px">🕶️</span>':'')+esc(l['Nº']||'')+'</td>'+
       '<td style="font-size:.78rem">'+esc(l['Data']||'')+'</td>'+
-      '<td><span class="st-badge" style="background:'+sc+'">'+esc(l['Status']||'')+'</span></td>'+
+      '<td><span class="st-badge" style="background:'+sc+';color:'+(ST_CT[l['Status']]||'#333')+'">'+esc(l['Status']||'')+'</span></td>'+
       '<td style="font-weight:600;color:#000" title="'+esc(l['Razão Social']||'')+(l['UF']?(' — '+esc(l['UF'])):'')+'"><div class="rs-cell"><span class="rs-name">'+esc(l['Razão Social']||'')+'</span>'+(l['UF']?'<span class="rs-uf">'+esc(String(l['UF']).toUpperCase())+'</span>':'')+(String(l['Time Comercial']||'').toLowerCase().indexOf('exporta')>=0?'<span class="rs-uf rs-exp" title="Lead de exportação">🌎</span>':'')+'</div></td>'+
       '<td title="'+esc(l['Canal Principal']||'')+(l['Porte']?(' — Porte: '+esc(l['Porte'])):'')+'"><div class="rs-cell"><span class="rs-name">'+esc(l['Canal Principal']||'')+'</span>'+(l['Porte']?'<span class="rs-uf rs-porte" title="Porte: '+esc(l['Porte'])+'">'+esc(_porteShort(l['Porte']))+'</span>':'')+'</div></td>'+
       '<td>'+tc+attachIcon+'</td>'+
@@ -3641,7 +3642,7 @@ function _drillRowsHtml(list){
     return '<tr style="cursor:pointer" onclick="closeDrill();openLeadPanel('+l._row+',\''+src+'\')">'+
       '<td style="font-size:.75rem;white-space:nowrap">'+(src==='wa'?'💬 ':'')+esc(l['Nº']||'')+'</td>'+
       '<td style="font-size:.78rem">'+esc(l['Data']||'')+'</td>'+
-      '<td><span class="st-badge" style="background:'+sc+'">'+esc(l['Status']||'')+'</span></td>'+
+      '<td><span class="st-badge" style="background:'+sc+';color:'+(ST_CT[l['Status']]||'#333')+'">'+esc(l['Status']||'')+'</span></td>'+
       '<td style="font-weight:600"><div class="rs-cell"><span class="rs-name">'+esc(l['Razão Social']||l['Lead']||'')+'</span>'+(l['UF']?'<span class="rs-uf">'+esc(String(l['UF']).toUpperCase())+'</span>':'')+'</div></td>'+
       '<td><div class="rs-cell"><span class="rs-name">'+esc(l['Canal Principal']||'')+'</span>'+(l['Porte']?'<span class="rs-uf rs-porte" title="Porte: '+esc(l['Porte'])+'">'+esc(_porteShort(l['Porte']))+'</span>':'')+'</div></td>'+
       '<td>'+esc(l['Prospect']||'')+'</td>'+
@@ -4966,7 +4967,7 @@ function renderPanel(){
   $('lpTitle').textContent=L['Razão Social']||L['Lead']||'Lead';
   var sub=[L['Cidade'],L['UF'],L['CNPJ']?('CNPJ '+L['CNPJ']):''].filter(Boolean).join(' · ');
   $('lpSub').textContent=sub||(L['E-mail']||'');
-  $('lpBadges').innerHTML='<span class="st-badge" style="background:'+sc+'">'+esc(st)+'</span>'+(t?(' <span class="lp-temp">'+thermoHTML(t)+' '+esc(t)+'</span>'):'');
+  $('lpBadges').innerHTML='<span class="st-badge" style="background:'+sc+';color:'+(ST_CT[st]||'#333')+'">'+esc(st)+'</span>'+(t?(' <span class="lp-temp">'+thermoHTML(t)+' '+esc(t)+'</span>'):'');
   var items=_buildTimeline(L);
   var tl=items.map(function(a){
     var dotc={call:'dot-call',email:'dot-email',note:'dot-note',status:'dot-status',proposal:'dot-proposal',task:'dot-task',contact:'dot-contact',created:'dot-created'}[a.type]||'dot-status';
@@ -5583,7 +5584,11 @@ html body .st-badge {
   font-weight: 600 !important;
   letter-spacing: .03em !important;
   font-family: 'Montserrat', sans-serif !important;
+  color: inherit !important;
 }
+
+/* St-badge na tabela: respeitar cor inline */
+html body .leads-tbl td .st-badge { color: inherit !important; }
 
 /* Cores neutras pastéis — estilo amostragem */
 html body .tb-frio { background: #e3f2fd !important; color: #0F3C6E !important; }
