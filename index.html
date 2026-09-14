@@ -1595,14 +1595,47 @@ async function initApp() {
   switchTab('funil');
 }
 
-async function reload() {
-  if (curTab==='leads') {
-    const d = await api('GET',{action:'getData'});
-    if (!d.error) { LEADS = (d.leads||[]).map(function(l){l._src='leads';return l;}); buildMainFilters(); renderAll(); }
-  } else {
-    const d = await api('GET',{action:'getWAData'});
-    if (!d.error) { WA_LEADS = (d.leads||[]).map(function(l){l._src='wa';return l;}); buildMainFilters(); renderAll(); }
+// ═══════ SINCRONIZACAO UNICA (formulario <-> painel <-> tabela <-> funil) ═══════
+// Regra: toda gravacao altera O MESMO objeto em memoria e re-renderiza todas as telas
+// abertas. Nenhuma tela mantem estado proprio, e nenhum POST envia patch parcial.
+function _findLead(row, src){
+  if(row==null) return null;
+  var first = (src==='wa') ? WA_LEADS : (src==='leads' ? LEADS : (curTab==='wa'?WA_LEADS:LEADS));
+  var second = (first===LEADS) ? WA_LEADS : LEADS;
+  var arrs=[first,second];
+  for(var i=0;i<arrs.length;i++){
+    var a=arrs[i]||[];
+    for(var j=0;j<a.length;j++){ if(a[j]&&a[j]._row===row) return a[j]; }
   }
+  return null;
+}
+// Temperatura derivada do status — mesma formula usada no kanban, para o valor gravado
+// pelo formulario e pelo funil nunca divergirem.
+function _tempAuto(status){
+  var s=String(status||'').toLowerCase();
+  if(s==='negociando'||s==='ganho') return 'Quente';
+  if(s==='contato feito'||s==='proposta enviada') return 'Morno';
+  if(s==='perdido') return 'Perdido';
+  return 'Frio';
+}
+function _mergeLocal(row, patch, src){
+  var L=_findLead(row, src); if(!L||!patch) return null;
+  Object.keys(patch).forEach(function(k){ if(k.charAt(0)!=='_') L[k]=patch[k]; });
+  return L;
+}
+// Re-renderiza tudo que estiver aberto a partir do estado em memoria.
+function syncViews(){
+  try{ renderAll(); }catch(_){}
+  try{ if(_panelRow!=null && $('leadPanel') && $('leadPanel').classList.contains('open')) renderPanel(); }catch(_){}
+  try{ var _fv=$('funilView'); if(_fv && !_fv.classList.contains('hidden')) renderFunil(); }catch(_){}
+}
+// Recarrega AS DUAS bases (Leads + WhatsApp). Antes recarregava so a aba ativa, o que
+// deixava a outra base — e o painel lateral aberto sobre ela — com dado velho.
+async function reload() {
+  const [d, w] = await Promise.all([api('GET',{action:'getData'}), api('GET',{action:'getWAData'})]);
+  if (!d.error) LEADS = (d.leads||[]).map(function(l){l._src='leads';return l;});
+  if (!w.error) WA_LEADS = (w.leads||[]).map(function(l){l._src='wa';return l;});
+  buildMainFilters(); syncViews();
 }
 
 async function doRefresh() {
@@ -2185,7 +2218,7 @@ var _formViewOnly = false;
 function openForm(row, viewOnly) {
   editRow = row||null;
   _formViewOnly = !!viewOnly;
-  const L = editRow ? curData().find(l=>l._row===editRow) : null;
+  const L = editRow ? _findLead(editRow) : null;
   const isE = !!L;
   // Exige clique na lupa do CNPJ antes de salvar. Em edição, pré-marca o CNPJ já existente
   // como verificado (não trava edições que não mexem no CNPJ); em lead novo, começa vazio.
@@ -2434,7 +2467,7 @@ async function saveLead() {
   // Trava de segurança: não salva em modo visualização nem lead de outro vendedor
   if (_formViewOnly) return;
   if (editRow) {
-    var _Lg = curData().find(function(l){return l._row===editRow;});
+    var _Lg = _findLead(editRow);
     if (_Lg && !_canModifyLead(_Lg)) {
       toast('Este lead é de outro vendedor. Você não pode editá-lo.','err');
       return;
@@ -2467,7 +2500,10 @@ async function _doSaveLead() {
   })();
   const d1=$('f_d1').value.replace(/\D/g,''),n1=$('f_n1').value,d2=$('f_d2').value.replace(/\D/g,''),n2=$('f_n2').value;
   const t1=d1&&n1?'('+d1+') '+n1:n1||'', t2=d2&&n2?'('+d2+') '+n2:n2||'';
-  const lead = {
+  // Base = registro atual completo. Sem isto, toda coluna que existe na planilha mas nao
+  // tem campo no formulario (Temperatura Lead, colunas novas, etc.) era apagada ao salvar.
+  const _prevLead = editRow ? _findLead(editRow) : null;
+  const lead = Object.assign({}, _prevLead ? _fullLeadPayload(_prevLead) : {}, {
     'Data':gv('f_data'),
     'Status':gv('f_st'),'Status Inicial':gv('f_si'),'Prospect':assignedProspect||gv('f_pr'),'E-mail Prospect':($('f_pr_email')||{value:''}).value.trim(),'Time Comercial':gv('f_tm'),
     'Razão Social':gv('f_rs'),'Lead':gv('f_lead'),'CNPJ':gv('f_cnpj'),'Registro':gv('f_registro'),'País':gv('f_pais'),'Contato Principal':gv('f_cp'),
@@ -2482,22 +2518,22 @@ async function _doSaveLead() {
     'Motivo da Perda':msVal('ms_mp'),'Observações':gv('f_ob'),
     'Links':[...document.querySelectorAll('#linksContainer .link-row-input')].map(function(i){return i.value.trim();}).filter(Boolean).join(' | '),
     'Anexos':JSON.stringify(_getAttachmentList()),
-  };
+  });
   // Preserva o histórico de pedidos (coluna JSON 'Pedidos') — o formulário só edita os campos
   // planos Valor/Nº do Pedido; sem isto uma edição pelo form poderia zerar o histórico.
-  if (editRow) { var _Lped=curData().find(function(l){return l._row===editRow;}); if(_Lped && _Lped['Pedidos']!=null && _Lped['Pedidos']!=='') lead['Pedidos']=_Lped['Pedidos']; }
+  if (editRow) { var _Lped=_findLead(editRow); if(_Lped && _Lped['Pedidos']!=null && _Lped['Pedidos']!=='') lead['Pedidos']=_Lped['Pedidos']; }
   // Oculto: só admin controla; preserva valor existente se o toggle não estiver presente
   if (U.admin) {
     lead['Oculto'] = (($('f_oculto')||{value:''}).value)==='1' ? '1' : '';
   } else if (editRow) {
-    var _Lo = curData().find(function(l){return l._row===editRow;});
+    var _Lo = _findLead(editRow);
     if (_Lo && String(_Lo['Oculto']||'')==='1') lead['Oculto']='1';
   }
   // Log automático de atividades (Lead criado / mudança de status)
   (function(){
     var acts=[];
     if(editRow){
-      var _L=curData().find(function(l){return l._row===editRow;});
+      var _L=_findLead(editRow);
       acts=_L?_getActs(_L):[];
       var prev=_L?(_L['Status']||''):'';
       if(prev && lead['Status'] && prev!==lead['Status']){
@@ -2510,6 +2546,7 @@ async function _doSaveLead() {
     }
     lead['Atividades']=JSON.stringify(acts);
   })();
+  lead['Temperatura Lead']=_tempAuto(lead['Status']);
   // Admin NÃO tem campos obrigatórios. Todas as validações valem só para os demais
   // usuários (inclui Camily e qualquer e-mail autorizado — eles não são admin).
   if (!U.admin) {
@@ -2570,7 +2607,7 @@ async function _doSaveLead() {
     else notifyAdminActivity('editou o cadastro do lead', lead['Razão Social'], (curTab==='wa'?'wa':'leads'), editRow);
     // Se transfer pendente, enviar solicitação
     if (pendingTransfer && editRow && !U.admin) {
-      const L = curData().find(l=>l._row===editRow);
+      const L = _findLead(editRow);
       const tr = await api('POST', {
         action:'requestTransfer', userEmail:U.email,
         sheetName:curTab==='wa'?'WHATSAPP':'LEADS', row:editRow,
@@ -2585,7 +2622,7 @@ async function _doSaveLead() {
       toast('Lead atualizado e atribuído diretamente!','ok');
     } else if (assignedProspect && assignEmail) {
       // Notificar o prospect atribuído — passa quem atribuiu, para quem e prospect anterior
-      const _origLead = editRow ? curData().find(function(l){return l._row===editRow;}) : null;
+      const _origLead = editRow ? _findLead(editRow) : null;
       const _oldName = _origLead ? (_origLead['Prospect']||'') : '';
       const _remEmail = _oldName ? ((VENDEDORES.find(function(v){return v.nome===_oldName;})||{}).email||'') : '';
       await api('POST', {
@@ -2599,9 +2636,11 @@ async function _doSaveLead() {
     } else {
       toast(editRow?'Lead atualizado!':'Lead cadastrado!','ok');
     }
-    closeForm(); await reload();
-    if($('leadPanel')&&$('leadPanel').classList.contains('open')) renderPanel();
-    { var _fv=$('funilView'); if(_fv&&!_fv.classList.contains('hidden')) renderFunil(); }
+    // Reflexo imediato: grava no objeto em memoria ANTES de renderizar, para o painel
+    // lateral (reaberto por closeForm) e a tabela ja aparecerem com o dado novo.
+    if (editRow) _mergeLocal(editRow, lead, curTab==='wa'?'wa':'leads');
+    closeForm(); syncViews();
+    await reload(); syncViews();
   }
 }
 
@@ -2877,6 +2916,11 @@ window.kbMove = async function(row, newStatus, src) {
     var nb = nowBR();
     acts.unshift({type:'status',date:nb.date,time:nb.time,author:(U&&U.nome)||'—',title:'🔄 Status alterado: '+(prev||'—')+' → '+newStatus});
     payload['Atividades'] = JSON.stringify(acts);
+  }
+  if (lead) {
+    Object.keys(payload).forEach(function(k){ lead[k]=payload[k]; });
+    lead['Temperatura Lead']=_tempAuto(newStatus);
+    payload=_fullLeadPayload(lead);
   }
   var r = await api('POST', {action:action, userEmail:U.email, row:row, lead:payload});
   if (r.ok || r.error) {
@@ -4607,11 +4651,11 @@ async function bulkReassign(){
       var it=items[i];
       var _oldName = it.lead['Prospect']||'';
       var _oldEmail = _oldName ? ((VENDEDORES.find(function(vd){return vd.nome===_oldName;})||{}).email||'') : '';
-      var patch={'Prospect':nome,'E-mail Prospect':email};
+      it.lead['Prospect']=nome; it.lead['E-mail Prospect']=email;
       try{
-        var r=await api('POST',{action:(it.src==='wa'?'editWA':'editLead'),userEmail:U.email,row:it.row,lead:patch});
+        var r=await api('POST',{action:(it.src==='wa'?'editWA':'editLead'),userEmail:U.email,row:it.row,lead:_fullLeadPayload(it.lead)});
         if(r&&r.error){err++;} else {
-          it.lead['Prospect']=nome; it.lead['E-mail Prospect']=email; okc++;
+          okc++;
           if(_oldName!==nome){
             try{ await api('POST',{action:'notifyAssign', assignEmail:email, assignToName:nome, prospectAtual:_oldName, removedEmail:_oldEmail, razaoSocial:(it.lead['Razão Social']||''), fromUser:U.nome}); }catch(_){}
           }
@@ -4801,9 +4845,9 @@ async function removePedido(i){
   var patch={ 'Pedidos':JSON.stringify(peds), 'Valor do Pedido':(peds.length?tot.valor:''), 'Nº do Pedido':tot.numeros };
   Object.keys(patch).forEach(function(k){ L[k]=patch[k]; });
   renderPanel();
-  var r=await api('POST',{action:(_panelSrc==='wa'?'editWA':'editLead'),userEmail:U.email,row:_panelRow,lead:patch});
+  var r=await api('POST',{action:(_panelSrc==='wa'?'editWA':'editLead'),userEmail:U.email,row:_panelRow,lead:_fullLeadPayload(L)});
   if(r&&r.error) toast('Erro ao remover: '+r.error,'err'); else toast('Pedido removido.','ok');
-  renderAll();
+  syncViews();
 }
 function _callRows(calls){
   if(!calls||!calls.length) return '<div class="lp-empty" style="padding:6px 0">Nenhuma ligação registrada.</div>';
