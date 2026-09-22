@@ -2112,8 +2112,8 @@ function renderAll() { setTimeout(applyFilterStyle,50);
       }
       // Currency sort for Valor
       if (sortKey === 'Valor do Pedido') {
-        const na = parseFloat(String(va).replace(/[^\d,]/g,'').replace(',','.'))||0;
-        const nb = parseFloat(String(vb).replace(/[^\d,]/g,'').replace(',','.'))||0;
+        const na = _brlNum(va);
+        const nb = _brlNum(vb);
         return sortDir==='asc' ? na-nb : nb-na;
       }
       // String sort
@@ -2371,7 +2371,7 @@ function openForm(row, viewOnly) {
     fld('Próxima Ação',_proxSelectHTML(L?L['Próxima Ação']:'',dis))+
     fldF('Observação da próxima ação','<textarea id="f_pa" rows="2" '+dis+' placeholder="Detalhe da ação...">'+esc(_proxObs(L?L['Próxima Ação']:''))+'</textarea>')+
     fld('Data Próxima Ação','<input id="f_da" value="'+esc(L?L['Data Próxima Ação']:'')+'" '+dis+' placeholder="dd/mm/aaaa" maxlength="10" oninput="mDate(this)"><div class="fld-err" id="err_da">Formato inválido. Use dd/mm/aaaa</div>')+
-    fld('Valor do Pedido','<input id="f_vl" value="'+esc(L?L['Valor do Pedido']:'')+'" '+dis+' placeholder="R$ 0,00" oninput="mBRL(this)">',ganhoRq)+
+    fld('Valor do Pedido','<input id="f_vl" value="'+esc(L&&L['Valor do Pedido']!==''&&L['Valor do Pedido']!=null?_brlFmt(_brlNum(L['Valor do Pedido'])):'')+'" '+dis+' placeholder="R$ 0,00" oninput="mBRL(this)">',ganhoRq)+
     fld('Nº do Pedido','<input id="f_np" value="'+esc(L?L['Nº do Pedido']:'')+'" '+dis+'>',ganhoRq)+
     (isE ? _histPed(L) : '')+
     fld('Motivo da Perda','<div id="ms_mp" class="msel" data-sel="'+esc(L?L['Motivo da Perda']:'')+'"></div>',perdidoRq)+
@@ -2731,7 +2731,7 @@ function renderFunil() { setTimeout(applyFilterStyle,80);
 
   function parseVal(v) {
     if (!v) return 0;
-    return parseFloat(String(v).replace(/[R$\s.]/g,'').replace(',','.')) || 0;
+    return _brlNum(v);
   }
   function parseDt(d) {
     if (!d) return null;
@@ -3858,8 +3858,7 @@ function renderDash() {
   d.filter(l=>l['Status']==='Ganho').forEach(l => {
     const key = _ymKey(_stageDate(l));   // mês pela DATA DO GANHO
     if (key) {
-      const val = String(l['Valor do Pedido']||'').replace(/[^\d,]/g,'').replace(',','.');
-      ganhosMes[key] = (ganhosMes[key]||0) + (parseFloat(val)||0);
+      ganhosMes[key] = (ganhosMes[key]||0) + _brlNum(l['Valor do Pedido']);
     }
   });
   const gk = Object.keys(ganhosMes).sort();
@@ -4809,7 +4808,24 @@ function _pedsEfetivos(L){
   }
   return [];
 }
-function _brlNum(v){ return parseFloat(String(v==null?'':v).replace(/[R$\s.]/g,'').replace(',','.'))||0; }
+// Converte qualquer formato de valor em número: "R$ 1.234,56", "1234,56", "12918.46" (vindo da planilha), 12918.46 (number).
+// Antes, o ponto decimal de "12918.46" era tratado como milhar e virava 1.291.846,00.
+function _brlNum(v){
+  if(typeof v==='number') return isFinite(v)?v:0;
+  var s=String(v==null?'':v).replace(/[^\d.,-]/g,'');
+  if(!s) return 0;
+  var lc=s.lastIndexOf(','), ld=s.lastIndexOf('.');
+  if(lc>-1 && ld>-1){
+    s = lc>ld ? s.replace(/\./g,'').replace(',','.') : s.replace(/,/g,'');
+  } else if(lc>-1){
+    var pc=s.split(',');
+    s = (pc.length===2 && pc[1].length<=2) ? pc[0]+'.'+pc[1] : s.replace(/,/g,'');
+  } else if(ld>-1){
+    var pd=s.split('.');
+    if(pd.length>2 || pd[1].length===3) s=s.replace(/\./g,''); // 1.234.567 ou 12.918 = milhar
+  }
+  return parseFloat(s)||0;
+}
 function _brlFmt(n){ return 'R$ '+Number(n||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}); }
 function _pedTotais(peds){
   var soma=0, somaUsd=0, nums=[], temUsd=false; (peds||[]).forEach(function(p){ soma+=_brlNum(p.valor); if(p.usd){temUsd=true; somaUsd+=_usdNum(p.usd);} if(p.numero) nums.push(p.numero); });
