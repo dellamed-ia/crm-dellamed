@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>CRM Dellamed</title>
+<link rel="icon" id="fav" href="">
 <style>
   html,body{margin:0;height:100%;background:#002f63}
   iframe{position:fixed;inset:0;width:100%;height:100%;border:0;background:#002f63}
@@ -13,5 +14,53 @@
 <!-- Esta página só abre o CRM. Não há dados aqui: o acesso exige login com senha. -->
 <iframe src="https://script.google.com/macros/s/AKfycbwn43yGwRyB5TMq8G1q8WcQJj8dJx5R4eNOmEtmsKT2XDFVPyYqzdnGTGxApT0uAJCGPg/exec"
         title="CRM Dellamed" allow="clipboard-write"></iframe>
+<script>
+/* Lembretes do CRM: quando o CRM avisa que tem lembrete aberto, a aba pisca
+   (título + ícone com ponto vermelho) até o lembrete ser fechado. */
+(function(){
+  var TITULO = 'CRM Dellamed';
+  function ico(alerta){
+    var svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">' +
+      '<rect width="64" height="64" rx="14" fill="#0F3C6E"/>' +
+      '<text x="31" y="46" font-family="Arial,sans-serif" font-size="40" font-weight="700" fill="#fff" text-anchor="middle">D</text>' +
+      (alerta ? '<circle cx="50" cy="14" r="13" fill="#e02020" stroke="#fff" stroke-width="3"/>' : '') + '</svg>';
+    return 'data:image/svg+xml,' + encodeURIComponent(svg);
+  }
+  var fav = document.getElementById('fav'), ICO = ico(false), ICO_A = ico(true);
+  fav.href = ICO;
+  var timer = null, n = 0, fase = false, ultimaNotif = null;
+
+  function parar(){ if (timer) clearInterval(timer); timer = null; document.title = TITULO; fav.href = ICO; }
+  function piscar(){
+    if (timer) return;
+    timer = setInterval(function(){
+      fase = !fase;
+      document.title = fase ? '(' + n + ') LEMBRETE' : TITULO;
+      fav.href = fase ? ICO_A : ICO;
+    }, 1000);
+  }
+  function notificar(texto){
+    if (!('Notification' in window) || Notification.permission !== 'granted') return;
+    try {
+      if (ultimaNotif) ultimaNotif.close();
+      ultimaNotif = new Notification('Lembrete · CRM Dellamed', { body: texto || 'Você tem um lembrete.', tag: 'crm-dellamed', requireInteraction: true });
+      ultimaNotif.onclick = function(){ window.focus(); this.close(); };
+    } catch (_) {}
+  }
+
+  window.addEventListener('message', function(e){
+    // Só aceita mensagens do próprio CRM (Apps Script)
+    if (!/\.googleusercontent\.com$/.test(new URL(e.origin).hostname)) return;
+    var d = e.data || {};
+    if (d.type !== 'crm-dellamed') return;
+    if (d.acao === 'permissao') { if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission(); return; }
+    if (d.acao === 'lembrete') {
+      n = +d.n || 0;
+      if (n > 0) { piscar(); if (d.novo) notificar(d.texto); }
+      else { parar(); if (ultimaNotif) { ultimaNotif.close(); ultimaNotif = null; } }
+    }
+  });
+})();
+</script>
 </body>
 </html>
